@@ -1,0 +1,369 @@
+import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui';
+import 'package:com.tara.passenger/core/utils/app_log.dart';
+import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
+import 'package:com.tara.passenger/presentation/screens/booking_map_screen/state.dart';
+import 'package:com.tara.passenger/service/location_imp.dart';
+import 'package:com.tara.passenger/translations/app_locale.dart';
+import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:get/get.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../app/logic.dart';
+import '../../../core/resources/asset_resource.dart';
+import '../../../core/theme/colors.dart';
+import '../../../core/utils/app_ext.dart';
+import '../../../core/utils/load_custom_marker.dart';
+import '../../../core/utils/pretty_logger.dart';
+import '../../../core/utils/status_util.dart';
+import '../map_screen/logic.dart';
+
+class BookingMapLogic extends GetxController {
+  final LocationRepo _locationRepo = Get.find<LocationRepo>();
+  final CheckBookingApi checkBookingApi = CheckBookingApi();
+  final BookingMapState state = BookingMapState();
+
+  final AppLogic appLogic = Get.find<AppLogic>();
+
+  Timer? _refreshTimer;
+
+  @override
+  Future<void> onInit() async {
+    await getBookingInfo();
+    await _loadMarkerIcons();
+    await refreshMarkers();
+    super.onInit();
+  }
+
+  @override
+  Future<void> onReady() async {
+    super.onReady();
+    _startTimer();
+  }
+
+  @override
+  void onClose() {
+    _stopTimer();
+    super.onClose();
+  }
+
+  void _startTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      getBookingInfo(isSilent: true);
+    });
+  }
+
+  void _stopTimer() {
+    if (_refreshTimer != null) {
+      _refreshTimer!.cancel();
+      _refreshTimer = null;
+    }
+  }
+
+  Future<void> _loadMarkerIcons() async {
+    // Passenger
+    final Uint8List sourceBytes =
+        await getBytesFromAsset(ImageAssets.passengerIconMarker, 65);
+    state.passengerIcon = BitmapDescriptor.bytes(sourceBytes);
+
+    // Destination
+    final Uint8List destBytes =
+        await getBytesFromAsset(ImageAssets.destinationMarker, 45);
+    state.destinationIcon = BitmapDescriptor.bytes(destBytes);
+
+    // Driver
+    final Uint8List driverBytes = await getBytesFromAsset(
+        driverMarkerImage(
+            id: state.bookingRequestData?.data?.typeVehicleId ?? 0),
+        25);
+    state.driverIcon = BitmapDescriptor.bytes(driverBytes);
+    update();
+  }
+
+  Future<void> refreshMarkers() async {
+    Set<Marker> newMarkers = {};
+    var data = state.bookingRequestData?.data;
+
+    if (data == null) return;
+
+    // 1. Add Passenger Marker (Remove if trip has started)
+    if (data.status != BookingStatus.onGoing) {
+      double pLat = double.tryParse(data.startLatitude ?? "") ?? 0.0;
+      double pLng = double.tryParse(data.startLongitude ?? "") ?? 0.0;
+      if (pLat != 0) {
+        newMarkers.add(Marker(
+          markerId: const MarkerId("current_location"),
+          position: LatLng(pLat, pLng),
+          icon: state.passengerIcon ?? BitmapDescriptor.defaultMarker,
+        ));
+      }
+    }
+
+    // 2. Add Driver Marker
+    var driverLoc = data.driver?.lastLocation;
+    if (driverLoc != null) {
+      double dLat = double.tryParse(driverLoc.latitude ?? "") ?? 0.0;
+      double dLng = double.tryParse(driverLoc.longitude ?? "") ?? 0.0;
+      newMarkers.add(Marker(
+        markerId: const MarkerId('driver'),
+        position: LatLng(dLat, dLng),
+        rotation: (driverLoc.heading ?? 0).toDouble(),
+        flat: true,
+        anchor: const Offset(0.5, 0.5),
+        icon: state.driverIcon ?? BitmapDescriptor.defaultMarker,
+      ));
+    }
+
+    // 3. Add Destination Marker (Only if On-Going)
+    if (data.status == BookingStatus.onGoing) {
+      double destLat = double.tryParse(data.endLatitude ?? "") ?? 0.0;
+      double destLng = double.tryParse(data.endLongitude ?? "") ?? 0.0;
+      if (destLat != 0) {
+        newMarkers.add(Marker(
+          markerId: const MarkerId("destination"),
+          position: LatLng(destLat, destLng),
+          icon: state.destinationIcon ?? BitmapDescriptor.defaultMarker,
+        ));
+      }
+    }
+
+    state.markers = newMarkers;
+    update();
+  }
+
+  Future<void> drawPolyline() async {
+    var data = state.bookingRequestData?.data;
+    if (data == null) return;
+
+    // Rule: If driver arrived, clear path to keep the map clean
+    if (data.status == BookingStatus.arrival) {
+      state.polyline = {};
+      update();
+      return;
+    }
+
+    LatLng start;
+    LatLng end;
+
+    if (data.status == BookingStatus.accepted) {
+      // Path: Driver -> Passenger Pickup
+      double dLat =
+          double.tryParse(data.driver?.lastLocation?.latitude ?? "") ?? 0.0;
+      double dLng =
+          double.tryParse(data.driver?.lastLocation?.longitude ?? "") ?? 0.0;
+      double pLat = double.tryParse(data.startLatitude ?? "") ?? 0.0;
+      double pLng = double.tryParse(data.startLongitude ?? "") ?? 0.0;
+      start = LatLng(dLat, dLng);
+      end = LatLng(pLat, pLng);
+    } else if (data.status == BookingStatus.onGoing) {
+      // Path: Pickup Point -> Final Destination
+      double pLat = double.tryParse(data.startLatitude ?? "") ?? 0.0;
+      double pLng = double.tryParse(data.startLongitude ?? "") ?? 0.0;
+      double destLat = double.tryParse(data.endLatitude ?? "") ?? 0.0;
+      double destLng = double.tryParse(data.endLongitude ?? "") ?? 0.0;
+      start = LatLng(pLat, pLng);
+      end = LatLng(destLat, destLng);
+    } else {
+      state.polyline = {};
+      update();
+      return;
+    }
+
+    // Guard: Don't call API if coordinates are invalid
+    if (start.latitude == 0 || end.latitude == 0) return;
+
+    // Fetch road points from your LocationRepo
+    List<LatLng> points = await _locationRepo.getDirectionPoint(start, end);
+
+    if (points.isNotEmpty) {
+      state.polyline = {
+        Polyline(
+          polylineId: const PolylineId("trip_route"),
+          points: points,
+          color: AppColors.main,
+          width: 5,
+          jointType: JointType.round,
+          startCap: Cap.roundCap,
+          endCap: Cap.roundCap,
+        ),
+      };
+      update();
+    }
+  }
+
+  void navigateMapPerspective() {
+    var data = state.bookingRequestData?.data;
+    if (data == null || state.mapController == null) return;
+
+    // 1. Official Pickup Point (The location stored in the booking)
+    double pLat = double.tryParse(data.startLatitude ?? "") ?? 0.0;
+    double pLng = double.tryParse(data.startLongitude ?? "") ?? 0.0;
+    LatLng officialPickup = LatLng(pLat, pLng);
+
+    // 2. Official Destination Point
+    double dLat = double.tryParse(data.endLatitude ?? "") ?? 0.0;
+    double dLng = double.tryParse(data.endLongitude ?? "") ?? 0.0;
+    LatLng officialDestination = LatLng(dLat, dLng);
+
+    // 3. Driver's Current Location
+    var driverLoc = data.driver?.lastLocation;
+    double drLat = double.tryParse(driverLoc?.latitude ?? "") ?? 0.0;
+    double drLng = double.tryParse(driverLoc?.longitude ?? "") ?? 0.0;
+    LatLng driverLatLng = LatLng(drLat, drLng);
+
+    switch (data.status) {
+      case BookingStatus.accepted:
+        // Show Driver approaching the Selected Pickup Point
+        _fitTwoPoints(driverLatLng, officialPickup);
+        break;
+
+      case BookingStatus.arrival:
+        // Zoom in strictly on the Pickup Point
+        _fitTwoPoints(driverLatLng, officialPickup);
+        // state.mapController!.animateCamera(
+        //   CameraUpdate.newLatLngZoom(driverLatLng, 18.0),
+        // );
+        break;
+
+      case BookingStatus.onGoing:
+        // Show Driver moving toward the Official Destination
+        _fitTwoPoints(driverLatLng, officialDestination);
+        state.mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(driverLatLng, 18.0),
+        );
+        break;
+
+      default:
+        // For payment/completed, just center on destination
+        state.mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(officialDestination, 15.0),
+        );
+        break;
+    }
+  }
+
+// Helper to frame two points on the screen
+  void _fitTwoPoints(LatLng a, LatLng b) {
+    // Guard against invalid coordinates
+    if (a.latitude == 0 || b.latitude == 0) return;
+
+    LatLngBounds bounds;
+
+    if (a.latitude <= b.latitude && a.longitude <= b.longitude) {
+      bounds = LatLngBounds(southwest: a, northeast: b);
+    } else if (a.latitude <= b.latitude) {
+      bounds = LatLngBounds(
+        southwest: LatLng(a.latitude, b.longitude),
+        northeast: LatLng(b.latitude, a.longitude),
+      );
+    } else if (a.longitude <= b.longitude) {
+      bounds = LatLngBounds(
+        southwest: LatLng(b.latitude, a.longitude),
+        northeast: LatLng(a.latitude, b.longitude),
+      );
+    } else {
+      bounds = LatLngBounds(southwest: b, northeast: a);
+    }
+
+    state.mapController!.animateCamera(
+      CameraUpdate.newLatLngBounds(bounds, 70.d),
+    );
+  }
+
+  Future<void> getBookingInfo({bool isSilent = false}) async {
+    try {
+      // 1. Only show loading on manual entry or hard refresh
+      if (!isSilent) EasyLoading.show();
+
+      var response = await checkBookingApi.checkBookingApi();
+
+      if (response.data != null) {
+        // Determine state changes
+        bool firstLoad = state.bookingRequestData == null;
+        bool statusChanged =
+            state.bookingRequestData?.data?.status != response.data?.status;
+
+        // Update the local state
+        state.bookingRequestData = response;
+        _bookingInfo(); // Updates UI Text/Titles
+
+        // 2. Always refresh markers (This makes the car move every 30s)
+        await refreshMarkers();
+        await drawPolyline(); // Re-calculates road path
+        navigateMapPerspective();
+        // 3. Logic for Redrawing Polylines and Moving Camera
+        // We only do this on status changes or first load to save API costs and prevent flickering
+        // if (statusChanged || firstLoad || !isSilent) {
+        //   // Short delay ensures the Map widget processes the markers before camera moves
+        //   Future.delayed(const Duration(milliseconds: 400), () async {
+        //     if (state.mapController != null) {
+        //       navigateMapPerspective();
+        //     }
+        //   });
+        // }
+      }
+    } catch (e) {
+      tlog("Booking Update Error: $e");
+    } finally {
+      if (!isSilent) EasyLoading.dismiss();
+    }
+  }
+
+  _bookingInfo() {
+    var data = state.bookingRequestData?.data;
+    if (data != null) {
+      switch (data.status) {
+        case BookingStatus.arrival:
+          appLogic.titleEvent = AppLocale.driverArrivedLocation.tr;
+          appLogic.update([AppUpdate.titleEventID]);
+          break;
+
+        case BookingStatus.accepted:
+          appLogic.titleEvent = AppLocale.waitingDriverArrived.tr;
+          appLogic.update([AppUpdate.titleEventID]);
+          break;
+        case BookingStatus.onGoing:
+          appLogic.titleEvent = AppLocale.startRide.tr;
+          appLogic.update([AppUpdate.titleEventID]);
+        case BookingStatus.completed:
+        case BookingStatus.pendingPayment:
+          appLogic.titleEvent = AppLocale.pendingPayment.tr;
+          appLogic.update([AppUpdate.titleEventID]);
+        default:
+          tlog("Default Route from Checking Status API");
+      }
+    }
+  }
+
+  void onMapCreated(GoogleMapController controller) async {
+    EasyLoading.show();
+    state.mapController = controller;
+    // 1. Get real location immediately
+    var pos = await _locationRepo.getCurrentLocation();
+    if (pos != null) {
+      LatLng userLatLng = LatLng(pos.latitude, pos.longitude);
+      // updateCurrentLatLng(latLng: userLatLng);
+      state.mapController?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(target: userLatLng, zoom: 15),
+        ),
+      );
+    }
+    EasyLoading.dismiss();
+  }
+
+  Future<void> makePhoneCall(String phoneNumber) async {
+    try {
+      final uri = Uri.parse('tel:$phoneNumber');
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        xLog(message: 'Could not launch $phoneNumber');
+      }
+    } catch (e) {
+      xLog(message: 'Error in makePhoneCall: $e');
+    }
+  }
+}
