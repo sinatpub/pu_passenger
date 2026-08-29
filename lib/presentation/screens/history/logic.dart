@@ -1,4 +1,3 @@
-import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/core/utils/x_paging_data_handler.dart';
 import 'package:com.tara.passenger/data/datasources/history_booking_info_source.dart';
 import 'package:com.tara.passenger/presentation/screens/history/state.dart';
@@ -50,8 +49,11 @@ class HistoryLogic extends GetxController
 
     await xPagingDataHandler(
       pagingController: state.propertyPagingController.value,
-      function:
-          _repo.getAllHistoryPaging(filterStatus: state.filterStatus.value),
+      // P-12 — was called with no pageNo, so every "page" the paging
+      // controller requested silently re-fetched page 1 forever (same bug
+      // as P-13's announcements).
+      function: _repo.getAllHistoryPaging(
+          filterStatus: state.filterStatus.value, pageNo: pageNo),
       isRefresh: isRefresh,
       pageNo: pageNo,
     );

@@ -1,46 +1,41 @@
-import 'package:com.tara.passenger/core/api_service/base_api_service.dart';
+import 'package:com.tara.passenger/core/network/api_client.dart';
 import 'package:com.tara.passenger/core/network_config/paging.dart';
-import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/data/models/history_booking_model.dart';
 
-import 'package:com.tara.passenger/storages/get_storage.dart';
-import 'package:logger/logger.dart';
+/// `totalPages` matches `Paging.fromMap`'s original formula
+/// (`ceil(total/perPage)`), since `HistoryBookingModel` has no `last_page`
+/// field to compare against. Extracted so this is unit-testable without a
+/// network mock.
+Paging<Datum> historyBookingModelToPaging(HistoryBookingModel model) {
+  return Paging<Datum>(
+    data: model.data,
+    currentPage: model.currentPage,
+    perPage: model.perPage,
+    totalPages: ((model.total ?? 0) / (model.perPage ?? 1)).ceil(),
+    totalRecords: model.total,
+  );
+}
 
-import '../../core/network_config/api_handler.dart';
-
+/// P-12 (docs/12) — ported off `ApiHandler`/raw-`http` onto
+/// `core/network/ApiClient` + `Result<T>` (F-02), same as P-13's
+/// announcements. `histroyBookingApi()`, the old non-paginated
+/// `BaseApiService`-based method, had no callers anywhere in the app and
+/// is dropped rather than ported.
 class HistroyBookingApi {
-  Future<HistoryBookingModel> histroyBookingApi(
-      {required String pageNumer}) async {
-    return BaseApiService().onRequest<HistoryBookingModel>(
-      path: "/taxi-passenger/history-booking-info?page=$pageNumer",
-      method: "GET",
-      onSuccess: (result) {
-        return HistoryBookingModel.fromJson(result.data);
+  HistroyBookingApi({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+
+  final ApiClient _apiClient;
+
+  Future<Paging<Datum>?> getAllHistoryPaging({int? filterStatus, int? pageNo}) async {
+    final result = await _apiClient.request<HistoryBookingModel>(
+      path: '/taxi-passenger/history-booking-info',
+      method: 'GET',
+      query: {
+        'page': (pageNo ?? 1).toString(),
+        'status': (filterStatus ?? 0).toString(),
       },
+      decode: (response) => HistoryBookingModel.fromJson(response.data),
     );
-  }
-
-  // History Pagination
-  Future<Paging<Datum>?> getAllHistoryPaging(
-      {int? filterStatus, int? pageNo}) async {
-    ApiHandler<Paging<Datum>> handler = ApiHandler<Paging<Datum>>.get(
-      converter: (json) => Paging<Datum>.fromMap(json, type: Datum),
-    );
-
-    var result = await handler.executePaging<Datum>(
-        onComplete: (data) {
-          return data;
-        },
-        onFail: (Exception e) {
-          Logger().e("Request failed: ${e.toString()}");
-        },
-        queryParams: {
-          "page": (pageNo ?? 1).toString(),
-          "status": (filterStatus ?? 0).toString()
-        },
-        endPoint:
-            "${AppConstant.baseUrlApi}/taxi-passenger/history-booking-info");
-
-    return result;
+    return result.when(ok: historyBookingModelToPaging, err: (_) => null);
   }
 }
