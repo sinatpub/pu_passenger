@@ -27,7 +27,9 @@ class AnnouncementLogic extends GetxController {
 
     await xPagingDataHandler(
       pagingController: state.announcementPagingController.value,
-      function: _repo.getAllAnnouncement(),
+      // P-13 — was called with no pageNo, so every "page" the paging
+      // controller requested silently re-fetched page 1 forever.
+      function: _repo.getAllAnnouncement(pageNo: pageNo),
       isRefresh: isRefresh,
       pageNo: pageNo,
     );
