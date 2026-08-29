@@ -1,10 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:com.tara.passenger/core/utils/app_ext.dart';
-import 'package:com.tara.passenger/core/utils/app_log.dart';
+import 'package:com.tara.passenger/features/auth/data/repository/auth_repository.dart';
 import 'package:com.tara.passenger/presentation/screens/login/logic.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
-import 'package:com.tara.passenger/storages/get_storage.dart';
 import 'package:com.tara.passenger/storages/remove_storage.dart';
 import 'package:com.tara.passenger/storages/save_storage.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +12,6 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/colors.dart';
 import '../../../core/theme/text_styles.dart';
-import '../../../data/datasources/register_remote_data_source.dart';
 import '../../../translations/app_locale.dart';
 import '../../widgets/error_dialog_widget.dart';
 import '../../widgets/x_button.dart';
@@ -23,7 +20,7 @@ import 'state.dart';
 
 class RegisterLogic extends GetxController {
   final RegisterState state = RegisterState();
-  final UserRegisterRemoteDataSource _repo = UserRegisterRemoteDataSource();
+  final AuthRepository _repository = Get.find<AuthRepository>();
   final SaveStoragePref _savePref = SaveStoragePref();
   final RemoveStoragePref _removePref = RemoveStoragePref();
   final ImagePicker _picker = ImagePicker();
@@ -32,67 +29,49 @@ class RegisterLogic extends GetxController {
   final LoginLogic loginLogic = Get.find<LoginLogic>();
 
   void passengerRegister() async {
+    EasyLoading.show();
     try {
       String passengerName = state.passengerName == ''
           ? "${DateTime.now().year}${DateTime.now().month}${DateTime.now().day}${DateTime.now().hour}${DateTime.now().minute}${DateTime.now().second}"
           : state.passengerName;
 
-      EasyLoading.show();
-      var result = await _repo.passengerRegister(
+      final result = await _repository.register(
         fullName: passengerName,
         phoneNumber: loginLogic.state.phoneNumber.value,
         platform: Platform.isAndroid ? "android" : "ios",
         profileImage: state.profileImage,
       );
-      if (result.data?.token != null && result.data?.user != null) {
-        _savePref.saveJsonToken(authModel: json.encode(result));
-        Get.offAllNamed(AppRoutes.BOTTOMNAV);
-      } else {
-        throw Exception();
-      }
-    } catch (e) {
-      HapticFeedback.heavyImpact();
-      showErrorCustomDialog(
-        Get.context!,
-        AppLocale.pleaseTryAgain.tr,
-        AppLocale.pleaseLoginAgain.tr,
-        () {
-          Get.back();
+      result.when(
+        ok: (data) {
+          if (data.data?.token != null && data.data?.user != null) {
+            _savePref.saveJsonToken(authModel: json.encode(data));
+            Get.offAllNamed(AppRoutes.BOTTOMNAV);
+          } else {
+            _showRegisterError();
+          }
         },
+        err: (_) => _showRegisterError(),
       );
     } finally {
       EasyLoading.dismiss();
     }
   }
 
+  void _showRegisterError() {
+    HapticFeedback.heavyImpact();
+    showErrorCustomDialog(
+      Get.context!,
+      AppLocale.pleaseTryAgain.tr,
+      AppLocale.pleaseLoginAgain.tr,
+      () {
+        Get.back();
+      },
+    );
+  }
+
   removeProfileImage() {
     state.profileImage = null;
     update();
-  }
-
-  _saveIsRegister() async {
-    SaveStoragePref _pref = SaveStoragePref();
-    _pref.saveRegister(register: true);
-  }
-
-  _getPhoneNumber() async {
-    GetStoragePref pref = GetStoragePref();
-    String? phoneNum = await pref.phoneNumberPref;
-    if (phoneNum != null) {
-      state.phoneNumber = phoneNum;
-      update();
-    } else {
-      HapticFeedback.heavyImpact();
-      showErrorCustomDialog(
-        isDismiss: false,
-        Get.context!,
-        AppLocale.pleaseLoginAgain.tr,
-        AppLocale.desPleaseLoginAgain.tr,
-        () {
-          Get.offNamed(AppRoutes.LOGIN);
-        },
-      );
-    }
   }
 
   // image picker

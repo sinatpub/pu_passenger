@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:com.tara.passenger/core/utils/app_log.dart';
-import 'package:com.tara.passenger/data/datasources/otp_verify_api.dart';
+import 'package:com.tara.passenger/features/auth/data/repository/auth_repository.dart';
 import 'package:com.tara.passenger/presentation/screens/login/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/otp/view.dart';
 import 'package:com.tara.passenger/presentation/widgets/error_dialog_widget.dart';
@@ -16,7 +15,7 @@ import 'package:pinput/pinput.dart';
 import 'package:smart_auth/smart_auth.dart';
 
 class OtpLogic extends GetxController {
-  final OtpVerifyApi _repo = OtpVerifyApi();
+  final AuthRepository _repository = Get.find<AuthRepository>();
   final SaveStoragePref _savePref = SaveStoragePref();
   LoginLogic loginLogic = Get.find<LoginLogic>();
 
@@ -68,31 +67,32 @@ class OtpLogic extends GetxController {
   }
 
   void verifyOtp(String otpCode) async {
+    loading.value = true;
     try {
-      loading.value = true;
-      var data = await _repo.verifyOTPApi(
-          phoneNumer: phoneNumber.toString(), otpCode: otpCode.toString());
-      if (data.data?.user == null && data.data?.token == null) {
-        Get.toNamed(AppRoutes.REGISTER);
-        // _savePhoneNumber();
-      } else {
-        // save to local storage
-        forceErrorPinPut.value = false;
-        _savePref.saveJsonToken(authModel: json.encode(data));
-
-        Get.offAllNamed(AppRoutes.BOTTOMNAV);
-      }
-    } catch (e) {
-      forceErrorPinPut.value = true;
-      HapticFeedback.heavyImpact();
-      phoneShake.currentState?.shake();
-      showErrorCustomDialog(
-        Get.context!,
-        AppLocale.pleaseTryAgain.tr,
-        AppLocale.desErrorOTP.tr,
-        () {
-          Get.back();
-          // resendCode();
+      final result = await _repository.verifyOtp(
+          phone: phoneNumber.toString(), otpCode: otpCode.toString());
+      result.when(
+        ok: (data) {
+          if (data.data?.user == null && data.data?.token == null) {
+            Get.toNamed(AppRoutes.REGISTER);
+          } else {
+            forceErrorPinPut.value = false;
+            _savePref.saveJsonToken(authModel: json.encode(data));
+            Get.offAllNamed(AppRoutes.BOTTOMNAV);
+          }
+        },
+        err: (_) {
+          forceErrorPinPut.value = true;
+          HapticFeedback.heavyImpact();
+          phoneShake.currentState?.shake();
+          showErrorCustomDialog(
+            Get.context!,
+            AppLocale.pleaseTryAgain.tr,
+            AppLocale.desErrorOTP.tr,
+            () {
+              Get.back();
+            },
+          );
         },
       );
     } finally {
@@ -105,11 +105,5 @@ class OtpLogic extends GetxController {
     loginLogic.phoneLogin(phoneNumber, Get.context);
     startTimer();
     isResendEnabled.value = false;
-  }
-
-  // why this => save phone number for save resource otp in case user reaching to register page
-  void _savePhoneNumber() async {
-    SaveStoragePref pref = SaveStoragePref();
-    pref.savePhoneNumber(phoneNum: phoneNumber);
   }
 }
