@@ -26,8 +26,9 @@ class AppConstant {
   static const String userToken = '';
   static String? driverToken;
 
-  static const googleKeyApi = "AIzaSyAEZtLQKJGA-Phcfn339c2A5ppu9eh9lAY";
-  static const placeApiKey = "AIzaSyC0Esr9Gr0GctcVxfH6rth4Spa4IJWhxiY";
+  // Supplied via `--dart-define-from-file=dart_defines.json`
+  static const googleKeyApi = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
+  static const placeApiKey = String.fromEnvironment('GOOGLE_PLACES_API_KEY');
 
   // Marker
   static const passengerMarker = "PassengerMarker";

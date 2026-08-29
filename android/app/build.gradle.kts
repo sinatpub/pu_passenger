@@ -9,6 +9,16 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Flutter forwards `--dart-define`/`--dart-define-from-file` values here as
+// base64-encoded "key=value" pairs, comma-separated.
+fun dartDefine(key: String): String {
+    val raw = project.findProperty("dart-defines") as String? ?: return ""
+    return raw.split(",")
+        .map { String(java.util.Base64.getDecoder().decode(it)) }
+        .map { it.split("=", limit = 2) }
+        .firstOrNull { it.getOrNull(0) == key }
+        ?.getOrNull(1) ?: ""
+}
 
 android {
     namespace = "com.tara.passenger.tara_passenger_mobile_application"
@@ -36,6 +46,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = dartDefine("GOOGLE_MAPS_API_KEY")
     }
 
 
