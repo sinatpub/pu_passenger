@@ -8,6 +8,7 @@ import 'package:com.tara.passenger/core/theme/text_styles.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
+import 'package:com.tara.passenger/core/utils/fare_estimate.dart';
 import 'package:com.tara.passenger/core/utils/load_custom_marker.dart';
 import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
@@ -15,8 +16,6 @@ import 'package:com.tara.passenger/data/datasources/driver_around_api.dart';
 import 'package:com.tara.passenger/data/datasources/request_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/update_passenger_location_api.dart';
 import 'package:com.tara.passenger/data/models/driver_around_model.dart';
-import 'package:com.tara.passenger/data/models/request_booking_model.dart'
-    hide Driver;
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
@@ -225,33 +224,26 @@ class MapLogic extends GetxController {
   }
 
   Future<void> calculateDistance() async {
-    double totalDistance = 0.0;
     if (state.destinationLatLng == null) return;
 
     var vehicle = state.vehicleTypeSelection;
-    // Get distance in meters
-    double distanceInMeters = await _locationRepo.getDistance(
+    double distanceInKm = await _locationRepo.getDistance(
       start:
           LatLng(state.currentLatLng!.latitude, state.currentLatLng!.longitude),
       destination: state.destinationLatLng!,
     );
-    totalDistance = distanceInMeters;
 
-    double distanceInKm = distanceInMeters;
     int km = distanceInKm.floor();
     int meters = ((distanceInKm - km) * 1000).round();
 
     state.distance = "$km km $meters m";
 
     // Calculate price
-    double price = 0.0;
-    if (totalDistance > 1.0) {
-      price = ((distanceInKm - 1) * (vehicle?.price ?? 1)) +
-          (vehicle?.miniMunFare ?? 1);
-    } else {
-      price = (vehicle?.miniMunFare ?? 1).toDouble();
-    }
-    state.totalFare = price.roundToDouble();
+    state.totalFare = estimateFare(
+      distanceKm: distanceInKm,
+      pricePerKm: vehicle?.price ?? 1,
+      minimumFare: vehicle?.miniMunFare ?? 1,
+    );
   }
 
   /// Draw Polyline
@@ -329,15 +321,18 @@ class MapLogic extends GetxController {
   }
 
   Future<void> getAvailableDriver() async {
+    EasyLoading.show();
     try {
-      EasyLoading.show();
-      var data = await driverRepo.getAllDriverAroundApi(
+      final result = await driverRepo.getAllDriverAroundApi(
           typeVehicle: state.vehicleTypeId ?? 0);
-      state.driverAroundData = data;
-      // 2. Process markers
-      await displayDriverMarker();
-    } catch (e) {
-      Logger().e("Exception $e");
+      await result.when(
+        ok: (data) async {
+          state.driverAroundData = data;
+          // 2. Process markers
+          await displayDriverMarker();
+        },
+        err: (error) async => Logger().e("Exception ${error.message}"),
+      );
     } finally {
       EasyLoading.dismiss();
     }
@@ -505,28 +500,30 @@ class MapLogic extends GetxController {
   }
 
   Future<void> requestBooking() async {
-    try {
-      if (state.currentLatLng != null) {
-        double currentLat = state.currentLatLng?.latitude ?? 0.0;
-        double currentLng = state.currentLatLng?.longitude ?? 0.0;
-        String? currentAddress = state.currentAddress;
+    if (state.currentLatLng == null) return;
 
-        // Destination
-        double? destinationLat = state.destinationLatLng?.latitude ?? null;
-        double? destinationLng = state.destinationLatLng?.longitude ?? null;
+    double currentLat = state.currentLatLng?.latitude ?? 0.0;
+    double currentLng = state.currentLatLng?.longitude ?? 0.0;
+    String? currentAddress = state.currentAddress;
 
-        // Vehicle Type
-        int vehicleId = state.vehicleTypeSelection?.id ?? 0;
+    // Destination
+    double? destinationLat = state.destinationLatLng?.latitude;
+    double? destinationLng = state.destinationLatLng?.longitude;
 
-        RequestBookingModel? data = await requestBookingApi.requestBookingApi(
-          startLatitude: currentLat,
-          startLongitude: currentLng,
-          address: currentAddress,
-          destinationLatitude: destinationLat,
-          destinationLongitude: destinationLng,
-          typeVehicleId: vehicleId,
-        );
+    // Vehicle Type
+    int vehicleId = state.vehicleTypeSelection?.id ?? 0;
 
+    final result = await requestBookingApi.requestBookingApi(
+      startLatitude: currentLat,
+      startLongitude: currentLng,
+      address: currentAddress,
+      destinationLatitude: destinationLat,
+      destinationLongitude: destinationLng,
+      typeVehicleId: vehicleId,
+    );
+
+    result.when(
+      ok: (data) {
         if (data.data != null) {
           socket.rideRequestSocket(
             data: data,
@@ -538,25 +535,25 @@ class MapLogic extends GetxController {
           updatePassengerLocationApi.updatePassengerLocationApi(
               lat: currentLat.toString(), lng: currentLng.toString());
         }
-      }
-    } catch (e) {
-      toggleBookLoading();
-      EasyLoading.showError(AppLocale.pleaseTryAgain.tr);
-      await 1.delay();
-      EasyLoading.dismiss();
-      Logger().e("Exception $e");
-    }
+      },
+      err: (error) async {
+        toggleBookLoading();
+        EasyLoading.showError(AppLocale.pleaseTryAgain.tr);
+        await 1.delay();
+        EasyLoading.dismiss();
+        Logger().e("Exception ${error.message}");
+      },
+    );
   }
 
   Future<void> cancelBookingApi() async {
-    try {
-      var result = await cancelBookingRepo.cancelBookingApi();
-      if (result) {
-        socket.handleCancelRide();
-      }
-    } catch (e) {
-      xPrettyLog(message: e.toString());
-    } finally {}
+    final result = await cancelBookingRepo.cancelBookingApi();
+    result.when(
+      ok: (success) {
+        if (success) socket.handleCancelRide();
+      },
+      err: (error) => xPrettyLog(message: error.message),
+    );
   }
 }
 

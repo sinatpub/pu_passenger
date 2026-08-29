@@ -1,18 +1,20 @@
-import 'package:com.tara.passenger/core/api_service/base_api_service.dart';
-import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
+import 'package:com.tara.passenger/core/network/api_client.dart';
+import 'package:com.tara.passenger/core/network/result.dart';
 import 'package:com.tara.passenger/data/models/driver_around_model.dart';
 
+/// P-06 (docs/12) — ported off `BaseApiService` onto `ApiClient` +
+/// `Result<T>` (F-02).
 class GetDriverAroundDataSource {
-  Future<DriverAroundModel> getAllDriverAroundApi(
-      {required int typeVehicle}) async {
-    return BaseApiService().onRequest(
+  GetDriverAroundDataSource({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+
+  final ApiClient _apiClient;
+
+  Future<Result<DriverAroundModel>> getAllDriverAroundApi({required int typeVehicle}) {
+    return _apiClient.request<DriverAroundModel>(
       path: "/taxi-passenger/get-driver-location-around",
       method: "POST",
-      bodyParse: {"type_vehicle": "$typeVehicle"},
-      onSuccess: (result) {
-        tlog("Message after success: ${result.data}");
-        return DriverAroundModel.fromJson(result.data);
-      },
+      body: {"type_vehicle": "$typeVehicle"},
+      decode: (response) => DriverAroundModel.fromJson(response.data),
     );
   }
 }
