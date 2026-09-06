@@ -1,6 +1,5 @@
 import 'package:com.tara.passenger/core/theme/text_styles.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
-import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
@@ -251,7 +250,7 @@ class MapDragPage extends StatelessWidget {
               onCameraMove: (CameraPosition position) async {
                 logic.onCameraMove(latlng: position.target);
               },
-              onCameraIdle: () async {},
+              onCameraIdle: () => logic.onCameraIdle(),
             ),
             Positioned.fill(
               child: RepaintBoundary(
@@ -289,6 +288,12 @@ class MapDragPage extends StatelessWidget {
     );
   }
 
+  /// P-05 (docs/12) — the confirm affordance is disabled until the map has
+  /// reported a position, so it can no longer hand back the `LatLng(0, 0)`
+  /// the state used to be seeded with. `FBTNWidget` renders a null
+  /// `onPressed` with `disabledColor`, which is the spec's "Confirm disabled
+  /// while resolving" state (`ux_ui_design/taxi-booking-ux-spec.md`,
+  /// Screen 3).
   Widget _buildBackButton() {
     return Positioned(
       bottom: 10,
@@ -296,13 +301,18 @@ class MapDragPage extends StatelessWidget {
       right: 0,
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: 100..d),
-        child: FBTNWidget(
-          onPressed: () {
-            Get.back(result: state.latlng);
+        child: GetBuilder<MapDragLogic>(
+          id: MapDragUpdate.cameraMove,
+          builder: (logic) {
+            return FBTNWidget(
+              onPressed: logic.hasPin
+                  ? () => Get.back(result: logic.state.latlng)
+                  : null,
+              color: AppColors.main,
+              textColor: AppColors.light4,
+              label: AppLocale.confirmDropOff.tr,
+            );
           },
-          color: AppColors.main,
-          textColor: AppColors.light4,
-          label: AppLocale.confirmDropOff.tr,
         ),
       ),
     );

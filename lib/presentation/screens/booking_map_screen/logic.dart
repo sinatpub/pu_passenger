@@ -20,13 +20,35 @@ import '../../../core/utils/status_util.dart';
 import '../map_screen/logic.dart';
 
 class BookingMapLogic extends GetxController {
+  BookingMapLogic({CheckBookingApi? checkBookingApi})
+      : checkBookingApi = checkBookingApi ?? CheckBookingApi();
+
   final LocationRepo _locationRepo = Get.find<LocationRepo>();
-  final CheckBookingApi checkBookingApi = CheckBookingApi();
+  final CheckBookingApi checkBookingApi;
   final BookingMapState state = BookingMapState();
 
   final AppLogic appLogic = Get.find<AppLogic>();
 
   Timer? _refreshTimer;
+
+  // P-09 (docs/12, docs/09 §7/docs/08 M-2) — this screen is refreshed by two
+  // independent channels: the 10s poll below and socket events
+  // (`PassengerSocketService._handleBookingUpdate`), both calling
+  // `getBookingInfo`. Nothing stopped a slower, now-stale fetch from
+  // completing (and overwriting `state.bookingRequestData`) after a faster,
+  // more current one already had — "socket says onGoing" could be
+  // regressed by "the poll I kicked off 2s earlier still thinks accepted".
+  // This counter makes a response only apply if no newer request has
+  // started since — standard out-of-order-response guard, independent of
+  // which channel triggered which fetch.
+  //
+  // Still open: stopping the poll entirely while the socket is healthy
+  // (the other half of "socket primary, bounded poll fallback") needs a
+  // connection-state signal `PassengerSocketService` doesn't expose yet —
+  // blocked on F-03's passenger-side work, not attempted here. This guard
+  // only fixes the data-corruption half of the race, not the redundant
+  // server load from always-on polling.
+  int _requestSeq = 0;
 
   @override
   Future<void> onInit() async {
@@ -273,11 +295,17 @@ class BookingMapLogic extends GetxController {
   }
 
   Future<void> getBookingInfo({bool isSilent = false}) async {
+    final requestId = ++_requestSeq;
     try {
       // 1. Only show loading on manual entry or hard refresh
       if (!isSilent) EasyLoading.show();
 
       var response = await checkBookingApi.checkBookingApi();
+
+      // A newer call (poll or socket-triggered) has started since this one
+      // did — its response will supersede ours. Applying this one now would
+      // regress state with stale data. See the field comment on _requestSeq.
+      if (requestId != _requestSeq) return;
 
       if (response.data != null) {
         // Determine state changes

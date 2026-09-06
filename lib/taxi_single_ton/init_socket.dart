@@ -157,8 +157,13 @@ class PassengerSocketService extends BaseSocketService {
       },
       SocketEvent.driverAcceptPayment: (data) =>
           _handleDriverAcceptedPayment(context, data),
-      // SocketEvent.onDriverCancel: (data) =>
-      //     _handleOnDriverCancel(context, data),
+      // P-15 (docs/12) — re-enabled 2026-09-03. Was dead: the handler and
+      // its user-facing panel (ShowInfoWidget, wired in main.dart) already
+      // existed; only this registration was commented out, so a
+      // driver-initiated mid-trip cancellation reached the passenger only
+      // via the 10s poll or a push notification (docs/08 H-7).
+      SocketEvent.onDriverCancel: (data) =>
+          _handleOnDriverCancel(context, data),
     });
   }
 

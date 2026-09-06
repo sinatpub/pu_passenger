@@ -118,7 +118,15 @@ class MapScreen extends StatelessWidget {
                   if (logic.state.destinationAddress == null)
                     SearchWhereToGo(
                       onTap: () async {
-                        var result = await Get.toNamed(AppRoutes.DRAGMAP);
+                        // P-05 (docs/12) — backing out of the drag map pops
+                        // with no result, and `updateDestinationLocation`
+                        // takes a non-nullable `LatLng`, so the implicit
+                        // downcast of that `null` threw
+                        // "type 'Null' is not a subtype of type 'LatLng'".
+                        // Cancelling the picker is a normal exit, not a
+                        // destination change.
+                        final result = await Get.toNamed(AppRoutes.DRAGMAP);
+                        if (result is! LatLng) return;
                         logic.updateDestinationLocation(latLng: result);
                       },
                     )

@@ -4,12 +4,12 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:com.tara.passenger/app/google_map_logic.dart';
 import 'package:com.tara.passenger/core/theme/colors.dart';
-import 'package:com.tara.passenger/core/theme/text_styles.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/core/utils/fare_estimate.dart';
 import 'package:com.tara.passenger/core/utils/load_custom_marker.dart';
+import 'package:com.tara.passenger/core/utils/vehicle_seat_capacity.dart';
 import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
 import 'package:com.tara.passenger/data/datasources/driver_around_api.dart';
@@ -19,10 +19,8 @@ import 'package:com.tara.passenger/data/models/driver_around_model.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
+import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/driver_info_sheet.dart';
 import 'package:com.tara.passenger/presentation/widgets/error_dialog_widget.dart';
-import 'package:com.tara.passenger/presentation/widgets/fbtn_widget.dart';
-import 'package:com.tara.passenger/presentation/widgets/g_showmodal_bottom.dart';
-import 'package:com.tara.passenger/presentation/widgets/x_network_image.dart';
 import 'package:com.tara.passenger/presentation/widgets/yesno_dialog_widget.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/service/location_imp.dart';
@@ -35,7 +33,6 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:logger/logger.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/resources/asset_resource.dart';
 
@@ -370,103 +367,7 @@ class MapLogic extends GetxController {
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
           anchor: const Offset(0.5, 0.5),
           flat: true,
-          onTap: () {
-            gShowModalBottomSheet(
-              initialChildSize: 0.3,
-              minChildSize: .2,
-              context: Get.context!,
-              body: (context, scrollController) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        AppLocale.driverInfo.tr,
-                        style: ThemeConstands.font14SemiBold,
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            width: 65,
-                            height: 65,
-                            padding: const EdgeInsets.all(2),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                              border: Border.all(
-                                  color: Colors.grey.shade300, width: 1),
-                            ),
-                            child: ClipOval(
-                              child: XNetworkImage(
-                                src: driver.profileImage ?? '',
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(driver.name ?? AppLocale.unKnown.tr,
-                                  style: ThemeConstands.font16SemiBold),
-                              Text(driver.vehicle?.model ?? "",
-                                  style: ThemeConstands.font14SemiBold),
-                              InkWell(
-                                onTap: () {
-                                  if (driver.phone != null &&
-                                      driver.phone!.isNotEmpty) {
-                                    _makePhoneCall(driver.phone!);
-                                  }
-                                },
-                                borderRadius: BorderRadius.circular(4),
-                                child: Padding(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 4),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.phone,
-                                          size: 16, color: Colors.blue),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        driver.phone ?? "",
-                                        style: ThemeConstands.font14SemiBold
-                                            .copyWith(
-                                          color: Colors
-                                              .blue, // Visual cue that it's a link
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        ],
-                      ),
-                      const SizedBox(height: 28),
-                      Center(
-                        child: FBTNWidget(
-                          onPressed: () {
-                            Get.back();
-                            // requestBooking(
-                            //     isClickOnDriverMarker: true, driverID: driver.id);
-                          },
-                          color: AppColors.main,
-                          textColor: AppColors.light4,
-                          label: AppLocale.back.tr,
-                          width: MediaQuery.of(context).size.width / 2,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            );
-          },
+          onTap: () => showDriverInfoSheet(Get.context!, driver: driver),
         ),
       );
     }
@@ -474,24 +375,11 @@ class MapLogic extends GetxController {
     // 5. Trigger partial update for the Map layer only
     update([MapUpdate.mapID]);
   }
-
-  Future<void> _makePhoneCall(String phoneNumber) async {
-    final Uri launchUri = Uri(
-      scheme: 'tel',
-      path: phoneNumber,
-    );
-    if (await canLaunchUrl(launchUri)) {
-      await launchUrl(launchUri);
-    } else {
-      // Handle error or show a Toast
-      debugPrint('Could not launch $phoneNumber');
-    }
-  }
   // Tap on Marker
 
   String getVehicleSet() {
     var data = state.vehicleTypeSelection;
-    return "${data?.id == 1 ? 3 : data?.id == 2 ? 4 : data?.id == 3 ? 7 : data?.id == 4 ? 4 : 5} ${AppLocale.seatCapacity.tr}";
+    return "${seatCapacityForVehicleId(data?.id)} ${AppLocale.seatCapacity.tr}";
   }
 
   void toggleBookLoading() {
