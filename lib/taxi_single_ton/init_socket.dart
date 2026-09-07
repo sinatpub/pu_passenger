@@ -59,21 +59,57 @@ extension SocketEventName on SocketEvent {
   }
 }
 
+/// F-03 (docs/12) — the old config (4 attempts, flat 60s delay) gave up for
+/// good after ~4 minutes of no connectivity and never tried again, silently
+/// going deaf mid-trip. Omitting the attempts cap is what makes the client
+/// default (infinite retries) apply, so its *absence* from this map is
+/// load-bearing, not an oversight; the delay backs off from 2s toward a 30s
+/// ceiling instead of a flat wait.
+///
+/// Extracted so the reconnection policy can be asserted without opening a
+/// socket — see `test/taxi_single_ton/socket_event_contract_test.dart`.
+@visibleForTesting
+Map<String, dynamic> buildSocketOptions() => io.OptionBuilder()
+    .setTransports(['websocket'])
+    .enableAutoConnect()
+    .enableReconnection()
+    .setReconnectionDelay(2000)
+    .setReconnectionDelayMax(30000)
+    .build();
+
+/// Resolves the vehicle type for an outbound ride request.
+///
+/// This used to be `int.parse("${data.data?.typeVehicleId}")` inline in both
+/// request emits. `typeVehicleId` is typed `dynamic` on the model, so a null
+/// stringified to `"null"` and `int.parse` threw `FormatException` — killing
+/// the ride request inside `MapScreenLogic.requestBooking()`'s `ok` branch,
+/// which only calls `toggleBookLoading()` on the error path and so left the
+/// booking spinner stuck on screen for good. Every other field in that
+/// payload already degraded to a default (`vehiclePrice` to 0) rather than
+/// taking the whole request down with it.
+///
+/// Falls back to the nested `typeVehicle.id`, which is the same vehicle type
+/// carried elsewhere in the very same response, before giving up and sending
+/// 0. Valid input — an `int` or a numeric `String`, both of which the old
+/// `int.parse` accepted — is unaffected.
+int resolveVehicleTypeId(RequestBookingModel data) {
+  final raw = data.data?.typeVehicleId;
+  if (raw is int) return raw;
+  if (raw is double) return raw.toInt();
+  if (raw is String) {
+    final parsed = int.tryParse(raw);
+    if (parsed != null) return parsed;
+  }
+  return data.data?.typeVehicle?.id ?? 0;
+}
+
 // Base socket service
 abstract class BaseSocketService {
   io.Socket? _socket;
 
   void connectToSocket(String url, String id, String role,
       {required BuildContext context}) {
-    _socket = io.io(
-      url,
-      io.OptionBuilder()
-          .setTransports(['websocket'])
-          .enableAutoConnect()
-          .setReconnectionAttempts(4)
-          .setReconnectionDelay(60000)
-          .build(),
-    );
+    _socket = io.io(url, buildSocketOptions());
 
     _socket?.onConnect((_) {
       tlog('$role connected to socket');
@@ -91,13 +127,33 @@ abstract class BaseSocketService {
 
   void register(String id);
 
+  /// Emits [event], letting Socket.IO buffer it when the connection is
+  /// temporarily down.
+  ///
+  /// The old body refused to emit unless `connected` was already true and
+  /// logged "socket is not connected" instead. That **permanently dropped**
+  /// the event: `Socket.emit` on a disconnected-but-live socket appends to
+  /// `sendBuffer` and `emitBuffered()` flushes it on reconnect, so the guard
+  /// was throwing away a packet the client would otherwise have delivered a
+  /// few seconds later. It cost `rideRequest`, `rideRequestSpecificDriver`
+  /// and `passengerCancelDrive` — a passenger tapping "book" during a brief
+  /// loss of signal got a request that was never sent and never retried.
+  ///
+  /// A null socket is still unrecoverable — there is nothing to buffer into —
+  /// so that case keeps its log line and stays the only real failure.
   void emitEvent(SocketEvent event, dynamic data) {
-    if (_socket != null && _socket!.connected) {
-      _socket?.emit(event.eventName, data);
+    final socket = _socket;
+    if (socket == null) {
+      tlog('Failed to emit event: ${event.eventName}, '
+          'socket was never created.');
+      return;
+    }
+
+    socket.emit(event.eventName, data);
+    if (socket.connected) {
       tlog('Event emitted: ${event.eventName}, data: $data');
     } else {
-      tlog(
-          'Failed to emit event: ${event.eventName}, socket is not connected.');
+      tlog('Event buffered until reconnect: ${event.eventName}, data: $data');
     }
   }
 
@@ -111,14 +167,18 @@ class PassengerSocketService extends BaseSocketService {
   static final PassengerSocketService _instance =
       PassengerSocketService._internal();
 
+  /// The singleton's own constructor is private, so nothing outside this
+  /// library can build an instance to assert against. This exists purely so
+  /// tests can subclass and observe `emitEvent`; production code must keep
+  /// going through the `PassengerSocketService()` factory.
+  @visibleForTesting
+  PassengerSocketService.forTesting();
+
   factory PassengerSocketService() {
     return _instance;
   }
 
   PassengerSocketService._internal();
-
-  // Add a flag to track whether listeners were already set up
-  bool _listenersSetup = false;
 
   @override
   void register(String id) {
@@ -129,20 +189,23 @@ class PassengerSocketService extends BaseSocketService {
   @override
   void connectToSocket(String url, String id, String role,
       {required BuildContext context}) {
-    // Only connect if not already connected
-    if (_socket == null || !_socket!.connected) {
-      super.connectToSocket(url, id, role, context: context);
-    } else {
+    if (_socket != null && _socket!.connected) {
       tlog('Socket already connected.');
+      return;
     }
 
+    super.connectToSocket(url, id, role, context: context);
     xPrettyLog(message: "connect socket: url$url, user id $id");
 
-    // Only setup listeners once
-    if (!_listenersSetup) {
-      setupListeners(context);
-      _listenersSetup = true;
-    }
+    // F-03 (docs/12) — this line only runs when `_socket` was just replaced
+    // with a fresh instance above (the guard at the top of this method
+    // returns early otherwise), so it's always safe — and, unlike the old
+    // one-shot `_listenersSetup` flag, always necessary — to attach these to
+    // the new socket. The flag left every socket created after the app's
+    // first one (e.g. after the built-in reconnection exhausted its 4
+    // attempts and the passenger reopened a screen) with no listener for
+    // ride acceptance, driver arrival, trip start/end, or payment at all.
+    setupListeners(context);
   }
 
   void setupListeners(BuildContext context) {
@@ -225,7 +288,7 @@ class PassengerSocketService extends BaseSocketService {
         "passengerId": data.data?.passenger?.id.toString(),
         "location": {"latitude": startLatitude, "longitude": startLongitude},
         "vehiclePrice": data.data?.typeVehicle?.price ?? 0,
-        "vehicleType": int.parse("${data.data?.typeVehicleId}"),
+        "vehicleType": resolveVehicleTypeId(data),
         "timeout": data.data?.timeoutParam,
         "passenger": {
           "name": data.data?.passenger?.name,
@@ -254,7 +317,7 @@ class PassengerSocketService extends BaseSocketService {
       "passengerId": data.data?.passenger?.id.toString(),
       "location": {"latitude": startLatitude, "longitude": startLongitude},
       "vehiclePrice": data.data?.typeVehicle?.price ?? 0,
-      "vehicleType": int.parse("${data.data?.typeVehicleId}"),
+      "vehicleType": resolveVehicleTypeId(data),
       "timeout": data.data?.timeoutParam,
       "passenger": {
         "name": data.data?.passenger?.name,

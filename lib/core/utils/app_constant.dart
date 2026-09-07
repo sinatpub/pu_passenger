@@ -9,14 +9,21 @@ class AppConstant {
 
   static const String titleApp = 'TAARRAA';
 
-  // Based Url
-  static const baseUrlApi = "https://api.tara-taxi.com";
-  //'http://206.189.38.88:3007/'; // Dev
+  // Based Url — overridable via `--dart-define=API_BASE_URL=...`
+  // (F-07, docs/12); default points at the current passenger backend.
+  static const baseUrlApi = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: 'https://taxi-api.simpledevelopertools.com',
+  );
 
-  // Socket IO Client
-  static const socketBasedUrl =
-      // "http://192.250.228.136:3009/";//
-      "https://socket.tara-taxi.com";
+  // Socket IO Client — overridable via `--dart-define=SOCKET_BASE_URL=...`.
+  // Same host as the REST API on this backend: the Socket.IO server is
+  // mounted at `/socket.io/` on `baseUrlApi` rather than on a separate
+  // host as the old `socket.tara-taxi.com` deployment was (docs/04 §1.1).
+  static const socketBasedUrl = String.fromEnvironment(
+    'SOCKET_BASE_URL',
+    defaultValue: 'https://taxi-api.simpledevelopertools.com',
+  );
 
   // Socket Event Client
 
