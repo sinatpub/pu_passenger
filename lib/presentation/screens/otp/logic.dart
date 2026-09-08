@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:com.tara.passenger/core/utils/debug_auth_bypass.dart';
 import 'package:com.tara.passenger/features/auth/data/repository/auth_repository.dart';
 import 'package:com.tara.passenger/presentation/screens/login/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/otp/view.dart';
@@ -67,6 +68,32 @@ class OtpLogic extends GetxController {
   }
 
   void verifyOtp(String otpCode) async {
+    // Debug-only shortcut — see [DebugAuthBypass] for the three conditions
+    // that must all hold. Compiled out of release builds entirely.
+    if (DebugAuthBypass.accepts(otpCode)) {
+      loading.value = true;
+      try {
+        final ok = await DebugAuthBypass.seedSession();
+        if (!ok) {
+          forceErrorPinPut.value = true;
+          showErrorCustomDialog(
+            Get.context!,
+            AppLocale.pleaseTryAgain.tr,
+            'Debug bypass could not obtain a session — see the log.',
+            () {
+              Get.back();
+            },
+          );
+          return;
+        }
+        forceErrorPinPut.value = false;
+        Get.offAllNamed(AppRoutes.BOTTOMNAV);
+      } finally {
+        loading.value = false;
+      }
+      return;
+    }
+
     loading.value = true;
     try {
       final result = await _repository.verifyOtp(
