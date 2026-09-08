@@ -4,7 +4,6 @@ import 'package:com.tara.passenger/core/theme/colors.dart';
 import 'package:com.tara.passenger/core/theme/text_styles.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/data/models/history_booking_model.dart';
-import 'package:com.tara.passenger/presentation/screens/history/logic.dart';
 import 'package:com.tara.passenger/presentation/widgets/x_network_image.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';

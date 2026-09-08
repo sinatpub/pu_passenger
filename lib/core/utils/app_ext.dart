@@ -26,7 +26,6 @@ extension ScreenUtilInt on int {
   double get d {
     final util = ScreenUtilHelper();
     var di = util.deviceDiagonal * (toDouble() / 1000);
-    var ar = (util.deviceArea / 4) * (toDouble() / 100000);
     var dii = double.parse(di.roundToDouble().toStringAsFixed(2));
     return dii;
   }

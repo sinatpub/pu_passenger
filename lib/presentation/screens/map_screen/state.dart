@@ -1,6 +1,4 @@
-import 'dart:async';
 import 'package:com.tara.passenger/data/models/driver_around_model.dart';
-import 'package:com.tara.passenger/data/models/request_booking_model.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';

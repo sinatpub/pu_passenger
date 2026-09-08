@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:http/http.dart' as http;
 import 'exception.dart';
 

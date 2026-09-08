@@ -1,7 +1,6 @@
 import 'package:com.tara.passenger/core/theme/app_theme.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/main.dart';
-import 'package:flutter/foundation.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/translations/app_translation.dart';
 import 'package:flutter/material.dart';

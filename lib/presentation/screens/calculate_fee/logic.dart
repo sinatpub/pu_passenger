@@ -5,7 +5,6 @@ import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 
-import '../booking_map_screen/logic.dart';
 
 class CalculateFeeLogic extends GetxController {
   final CheckBookingApi requestBookingApi = CheckBookingApi();

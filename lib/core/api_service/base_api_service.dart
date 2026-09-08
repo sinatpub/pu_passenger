@@ -3,7 +3,6 @@ import 'package:com.tara.passenger/core/api_service/client/dio_http_client.dart'
 import 'package:com.tara.passenger/core/api_service/client/http_exception.dart';
 import 'package:com.tara.passenger/core/utils/errror_message.dart';
 import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
-import 'package:com.tara.passenger/presentation/widgets/custom_snackbar_widget.dart';
 import 'package:com.tara.passenger/services/session_service.dart';
 import 'package:dio/dio.dart';
 import 'package:logger/logger.dart';

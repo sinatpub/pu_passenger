@@ -1,5 +1,4 @@
 import 'package:com.tara.passenger/core/theme/text_styles.dart';
-import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/data/models/announcement_model.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:flutter/material.dart';

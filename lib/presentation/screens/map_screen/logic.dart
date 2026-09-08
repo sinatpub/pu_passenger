@@ -1,8 +1,6 @@
 import 'dart:async';
-import 'dart:math';
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'package:com.tara.passenger/app/google_map_logic.dart';
 import 'package:com.tara.passenger/core/theme/colors.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
@@ -11,21 +9,15 @@ import 'package:com.tara.passenger/core/utils/fare_estimate.dart';
 import 'package:com.tara.passenger/core/utils/load_custom_marker.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_seat_capacity.dart';
 import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
-import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
 import 'package:com.tara.passenger/data/datasources/driver_around_api.dart';
 import 'package:com.tara.passenger/data/datasources/request_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/update_passenger_location_api.dart';
 import 'package:com.tara.passenger/data/models/driver_around_model.dart';
-import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/driver_info_sheet.dart';
-import 'package:com.tara.passenger/presentation/widgets/error_dialog_widget.dart';
-import 'package:com.tara.passenger/presentation/widgets/yesno_dialog_widget.dart';
-import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/service/location_imp.dart';
 import 'package:com.tara.passenger/taxi_single_ton/init_socket.dart';
-import 'package:com.tara.passenger/taxi_single_ton/taxi_notification.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
@@ -344,9 +336,6 @@ class MapLogic extends GetxController {
 
     // 2. Clear only driver markers to avoid duplicating icons on update
     state.mapMarkers.removeWhere((m) => m.markerId.value.startsWith("driver_"));
-
-    final double userLat = state.currentLatLng!.latitude;
-    final double userLng = state.currentLatLng!.longitude;
 
     // 3. Filter and Add Markers
     // We use for-in for better readability and performance in large lists

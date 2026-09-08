@@ -1,11 +1,8 @@
 import 'package:com.tara.passenger/app/logic.dart';
 import 'package:com.tara.passenger/core/helper/local_notification_helper.dart';
-import 'package:com.tara.passenger/core/network_config/telegram.dart';
-import 'package:com.tara.passenger/core/resources/asset_resource.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
 import 'package:com.tara.passenger/core/utils/status_util.dart';
-import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
 import 'package:com.tara.passenger/storages/get_storage.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
 import 'package:com.tara.passenger/data/datasources/get_vehical_remote_data_source.dart';

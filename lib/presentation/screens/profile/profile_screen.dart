@@ -13,7 +13,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 
-import '../../../taxi_single_ton/taxi_notification.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});

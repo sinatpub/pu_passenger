@@ -308,11 +308,6 @@ class BookingMapLogic extends GetxController {
       if (requestId != _requestSeq) return;
 
       if (response.data != null) {
-        // Determine state changes
-        bool firstLoad = state.bookingRequestData == null;
-        bool statusChanged =
-            state.bookingRequestData?.data?.status != response.data?.status;
-
         // Update the local state
         state.bookingRequestData = response;
         _bookingInfo(); // Updates UI Text/Titles
@@ -321,16 +316,6 @@ class BookingMapLogic extends GetxController {
         await refreshMarkers();
         await drawPolyline(); // Re-calculates road path
         navigateMapPerspective();
-        // 3. Logic for Redrawing Polylines and Moving Camera
-        // We only do this on status changes or first load to save API costs and prevent flickering
-        // if (statusChanged || firstLoad || !isSilent) {
-        //   // Short delay ensures the Map widget processes the markers before camera moves
-        //   Future.delayed(const Duration(milliseconds: 400), () async {
-        //     if (state.mapController != null) {
-        //       navigateMapPerspective();
-        //     }
-        //   });
-        // }
       }
     } catch (e) {
       tlog("Booking Update Error: $e");

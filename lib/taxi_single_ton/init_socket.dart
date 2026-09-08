@@ -3,10 +3,6 @@ import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
 import 'package:com.tara.passenger/data/models/request_booking_model.dart';
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/calculate_fee/logic.dart';
-import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
-import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
-import 'package:com.tara.passenger/taxi_single_ton/taxi_notification.dart';
-import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
@@ -14,7 +10,6 @@ import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
-import '../app/logic.dart';
 import '../routes/app_pages.dart';
 
 // Enum for socket events

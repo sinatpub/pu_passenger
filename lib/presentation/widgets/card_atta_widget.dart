@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:com.tara.passenger/core/theme/colors.dart';
