@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
@@ -14,7 +16,7 @@ plugins {
 fun dartDefine(key: String): String {
     val raw = project.findProperty("dart-defines") as String? ?: return ""
     return raw.split(",")
-        .map { String(java.util.Base64.getDecoder().decode(it)) }
+        .map { String(Base64.getDecoder().decode(it)) }
         .map { it.split("=", limit = 2) }
         .firstOrNull { it.getOrNull(0) == key }
         ?.getOrNull(1) ?: ""
