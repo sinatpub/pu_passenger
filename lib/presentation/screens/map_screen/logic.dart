@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:com.tara.passenger/core/theme/colors.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
@@ -14,6 +13,7 @@ import 'package:com.tara.passenger/data/datasources/request_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/update_passenger_location_api.dart';
 import 'package:com.tara.passenger/data/models/driver_around_model.dart';
 import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
+import 'package:com.tara.passenger/presentation/screens/map_screen/map_presentation.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/driver_info_sheet.dart';
 import 'package:com.tara.passenger/service/location_imp.dart';
@@ -141,36 +141,15 @@ class MapLogic extends GetxController {
   }
 
   void refreshMarkers() {
-    Set<Marker> newMarkers = {};
-
-    // 1. Add Current Location Marker
-    if (state.currentLatLng != null) {
-      newMarkers.add(
-        Marker(
-          markerId: const MarkerId("current_location"),
-          position: state.currentLatLng!,
-          icon: state.sourceIcon ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          infoWindow: const InfoWindow(title: "My Location"),
-        ),
-      );
-    }
-
-    // 2. Add Destination Marker
-    if (state.destinationLatLng != null) {
-      newMarkers.add(
-        Marker(
-          markerId: const MarkerId("destination_location"),
-          position: state.destinationLatLng!,
-          icon: state.destinationIcon ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          infoWindow: InfoWindow(
-              title: "Destination", snippet: state.destinationAddress),
-        ),
-      );
-    }
-
-    state.mapMarkers = newMarkers;
+    // P-06: marker construction is a pure function of the trip being
+    // composed — see map_presentation.dart.
+    state.mapMarkers = buildTripMarkers(
+      currentLatLng: state.currentLatLng,
+      destinationLatLng: state.destinationLatLng,
+      sourceIcon: state.sourceIcon,
+      destinationIcon: state.destinationIcon,
+      destinationAddress: state.destinationAddress,
+    );
     update([MapUpdate.mapID]);
   }
 
@@ -349,29 +328,18 @@ class MapLogic extends GetxController {
 
   // Helper to zoom the map so both markers are visible
   void _fitBounds() {
-    if (state.mapController == null ||
-        state.currentLatLng == null ||
-        state.destinationLatLng == null) return;
+    if (state.mapController == null) return;
 
-    LatLngBounds bounds;
-
-    // Find the absolute min and max for both Latitude and Longitude
-    double minLat = math.min(
-        state.currentLatLng!.latitude, state.destinationLatLng!.latitude);
-    double maxLat = math.max(
-        state.currentLatLng!.latitude, state.destinationLatLng!.latitude);
-    double minLng = math.min(
-        state.currentLatLng!.longitude, state.destinationLatLng!.longitude);
-    double maxLng = math.max(
-        state.currentLatLng!.longitude, state.destinationLatLng!.longitude);
-
-    bounds = LatLngBounds(
-      southwest: LatLng(minLat, minLng),
-      northeast: LatLng(maxLat, maxLng),
+    // P-06: bounds are a pure function of the two endpoints. A null result
+    // means one end is missing and the camera should be left alone.
+    final bounds = tripCameraBounds(
+      currentLatLng: state.currentLatLng,
+      destinationLatLng: state.destinationLatLng,
     );
+    if (bounds == null) return;
 
     state.mapController!.animateCamera(
-      CameraUpdate.newLatLngBounds(bounds, 80.d), // 80 is the padding in pixels
+      CameraUpdate.newLatLngBounds(bounds, 80.d), // 80 is padding in pixels
     );
   }
 
