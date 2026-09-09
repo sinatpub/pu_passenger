@@ -4,7 +4,10 @@ plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
-//    id("com.google.firebase.crashlytics")
+    // F-09: firebase_crashlytics was a declared-but-unused dependency; the
+    // Dart side is wired in main.dart and this applies the Gradle plugin so
+    // native symbols actually upload.
+    id("com.google.firebase.crashlytics")
     // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.

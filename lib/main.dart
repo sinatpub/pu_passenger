@@ -5,6 +5,8 @@ import 'package:com.tara.passenger/service/notification_logic.dart';
 import 'package:com.tara.passenger/taxi_single_ton/taxi_notification.dart';
 import 'package:com.tara.passenger/presentation/widgets/custom_animated_loading.dart';
 import 'package:com.tara.passenger/core/api_service/client/dio_http_client.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -19,7 +21,23 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 void main() async {
   BaseHttpClient.init();
   WidgetsFlutterBinding.ensureInitialized();
+  // init firebase notification — also initializes Firebase itself, which
+  // Crashlytics below depends on
   await NotificationLogic().setupInteractedMessage();
+
+  // F-09 / Phase 0.6 (docs/12, docs/05): firebase_crashlytics was declared in
+  // pubspec.yaml but never referenced anywhere in lib/, so the passenger app
+  // shipped with crash reporting as a dependency and not as a feature. Wired
+  // here to match pu_driver (2026-08-29), including the debug-mode opt-out so
+  // local crashes stay out of production data.
+  await FirebaseCrashlytics.instance
+      .setCrashlyticsCollectionEnabled(!kDebugMode);
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
+
   await TaxiNotification.shared.initLocationNotification();
 
   await initialService();
