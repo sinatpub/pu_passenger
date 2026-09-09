@@ -19,12 +19,9 @@ dependencies:
   cupertino_icons: ^1.0.6
   arc_text: ^0.0.3
   # state management
-  flutter_bloc: ^8.1.6
 
   # dependency injection in bloc
-  get_it: ^7.7.0
 
-  dartz: ^0.10.1
   # network
   http: ^1.2.2
   # svg icon-
@@ -57,7 +54,6 @@ dependencies:
   # auto fill otp
   smart_auth: ^3.2.0
   # dot container
-  dotted_border: ^2.1.0
   # dropdown button
   dropdown_button2: ^2.3.9
   # image picker 
