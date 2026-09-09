@@ -18,10 +18,26 @@ import '../../../core/utils/load_custom_marker.dart';
 import '../../../core/utils/pretty_logger.dart';
 import '../../../core/utils/status_util.dart';
 import '../map_screen/logic.dart';
+import 'package:com.tara.passenger/taxi_single_ton/init_socket.dart';
+import 'poll_policy.dart';
 
 class BookingMapLogic extends GetxController {
-  BookingMapLogic({CheckBookingApi? checkBookingApi})
-      : checkBookingApi = checkBookingApi ?? CheckBookingApi();
+  BookingMapLogic({
+    CheckBookingApi? checkBookingApi,
+    bool Function()? isSocketConnected,
+  })  : checkBookingApi = checkBookingApi ?? CheckBookingApi(),
+        _isSocketConnected = isSocketConnected;
+
+  /// P-09: reads F-03's connection-state signal. Injectable so the poll
+  /// policy is testable without a live socket.
+  final bool Function()? _isSocketConnected;
+
+  bool get socketConnected =>
+      (_isSocketConnected ?? () => PassengerSocketService().isConnected)();
+
+  /// Timer ticks since the poll started, counting from 1. Incremented on
+  /// every fire whether or not it polled.
+  int _pollTick = 0;
 
   final LocationRepo _locationRepo = Get.find<LocationRepo>();
   final CheckBookingApi checkBookingApi;
@@ -42,12 +58,12 @@ class BookingMapLogic extends GetxController {
   // started since — standard out-of-order-response guard, independent of
   // which channel triggered which fetch.
   //
-  // Still open: stopping the poll entirely while the socket is healthy
-  // (the other half of "socket primary, bounded poll fallback") needs a
-  // connection-state signal `PassengerSocketService` doesn't expose yet —
-  // blocked on F-03's passenger-side work, not attempted here. This guard
-  // only fixes the data-corruption half of the race, not the redundant
-  // server load from always-on polling.
+  // The other half — "socket primary, bounded poll fallback" — is now done
+  // too (2026-09-09), once F-03 exposed `BaseSocketService.isConnected`.
+  // While the socket is healthy the poll drops to one tick in six; it never
+  // stops entirely, because a transport-level connection can be up while the
+  // server has gone quiet. See `poll_policy.dart` for why bounded rather
+  // than off.
   int _requestSeq = 0;
 
   @override
@@ -72,9 +88,23 @@ class BookingMapLogic extends GetxController {
 
   void _startTimer() {
     _refreshTimer?.cancel();
+    _pollTick = 0;
     _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      getBookingInfo(isSilent: true);
+      onPollTick();
     });
+  }
+
+  /// One timer fire. Separated from the `Timer.periodic` callback so the
+  /// policy can be driven directly in a test without waiting on wall time.
+  void onPollTick() {
+    _pollTick++;
+    if (!shouldPollOnTick(
+      socketConnected: socketConnected,
+      tick: _pollTick,
+    )) {
+      return;
+    }
+    getBookingInfo(isSilent: true);
   }
 
   void _stopTimer() {

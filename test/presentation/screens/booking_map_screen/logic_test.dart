@@ -107,4 +107,56 @@ void main() {
       expect(logic.state.bookingRequestData?.data?.status, BookingStatus.arrival);
     });
   });
+
+  group('poll policy driven through the controller (P-09 remainder / F-03)',
+      () {
+    test('a healthy socket suppresses five ticks in six', () async {
+      final fake = _FakeCheckBookingApi();
+      final logic = BookingMapLogic(
+        checkBookingApi: fake,
+        isSocketConnected: () => true,
+      );
+
+      for (var i = 0; i < 5; i++) {
+        logic.onPollTick();
+      }
+      expect(fake.callCount, 0,
+          reason: 'the socket is primary while it is up');
+
+      logic.onPollTick(); // sixth tick — the safety net
+      expect(fake.callCount, 1);
+    });
+
+    test('a down socket polls on every tick', () async {
+      final fake = _FakeCheckBookingApi();
+      final logic = BookingMapLogic(
+        checkBookingApi: fake,
+        isSocketConnected: () => false,
+      );
+
+      for (var i = 0; i < 5; i++) {
+        logic.onPollTick();
+      }
+      expect(fake.callCount, 5);
+    });
+
+    test('losing the socket mid-cycle resumes polling on the next tick',
+        () async {
+      final fake = _FakeCheckBookingApi();
+      var connected = true;
+      final logic = BookingMapLogic(
+        checkBookingApi: fake,
+        isSocketConnected: () => connected,
+      );
+
+      logic.onPollTick();
+      logic.onPollTick();
+      expect(fake.callCount, 0);
+
+      connected = false;
+      logic.onPollTick();
+      expect(fake.callCount, 1,
+          reason: 'the fallback must take over without waiting for tick 6');
+    });
+  });
 }

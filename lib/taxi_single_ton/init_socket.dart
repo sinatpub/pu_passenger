@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
 import 'package:com.tara.passenger/data/models/request_booking_model.dart';
@@ -103,21 +104,50 @@ int resolveVehicleTypeId(RequestBookingModel data) {
 abstract class BaseSocketService {
   io.Socket? _socket;
 
+  /// F-03 (docs/12, docs/10 §2.3) — the connection-state signal.
+  ///
+  /// Nothing outside this class could previously tell whether the socket was
+  /// actually up. `_socket` is private and `io.Socket.connected` was never
+  /// surfaced, so every consumer had to assume the worst and keep its own
+  /// fallback running unconditionally. That is what blocked P-09's remaining
+  /// half — "socket primary, bounded poll fallback" cannot be built without
+  /// a way to ask whether the socket is primary right now.
+  final StreamController<bool> _connectionChanges =
+      StreamController<bool>.broadcast();
+
+  /// Whether the socket is up *at this instant*. False when the socket was
+  /// never created, which is a different condition from "created and down"
+  /// but the same answer for anyone deciding whether to fall back.
+  bool get isConnected => _socket?.connected ?? false;
+
+  /// Emits on every transition. Broadcast, so several consumers can listen;
+  /// late subscribers get the next change, not the current value — read
+  /// [isConnected] for that.
+  Stream<bool> get connectionChanges => _connectionChanges.stream;
+
+  void _publishConnectionState(bool connected) {
+    if (_connectionChanges.isClosed) return;
+    _connectionChanges.add(connected);
+  }
+
   void connectToSocket(String url, String id, String role,
       {required BuildContext context}) {
     _socket = io.io(url, buildSocketOptions());
 
     _socket?.onConnect((_) {
       tlog('$role connected to socket');
+      _publishConnectionState(true);
       register(id);
     });
 
     _socket?.onConnectError((err) {
       tlog('Connection Error: $err');
+      _publishConnectionState(false);
     });
 
     _socket?.onDisconnect((_) {
       tlog('$role socket disconnected');
+      _publishConnectionState(false);
     });
   }
 
@@ -156,6 +186,7 @@ abstract class BaseSocketService {
   void disconnectSocket() {
     _socket?.disconnect();
     _socket = null;
+    _publishConnectionState(false);
   }
 }
 
