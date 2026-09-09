@@ -17,7 +17,7 @@ import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/driver_info_sheet.dart';
 import 'package:com.tara.passenger/service/location_imp.dart';
-import 'package:com.tara.passenger/taxi_single_ton/init_socket.dart';
+import 'package:com.tara.passenger/services/socket_service.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';

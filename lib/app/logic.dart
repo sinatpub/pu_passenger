@@ -11,7 +11,7 @@ import 'package:com.tara.passenger/storages/get_storage.dart';
 import 'package:com.tara.passenger/storages/key_storage.dart';
 import 'package:com.tara.passenger/storages/remove_storage.dart';
 import 'package:com.tara.passenger/storages/save_storage.dart';
-import 'package:com.tara.passenger/taxi_single_ton/init_socket.dart';
+import 'package:com.tara.passenger/services/socket_service.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';

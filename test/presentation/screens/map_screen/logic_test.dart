@@ -8,7 +8,7 @@ import 'package:com.tara.passenger/data/datasources/update_passenger_location_ap
 import 'package:com.tara.passenger/data/models/passenger_location_model.dart'
     show UpdateLocationModel;
 import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
-import 'package:com.tara.passenger/taxi_single_ton/init_socket.dart';
+import 'package:com.tara.passenger/services/socket_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';

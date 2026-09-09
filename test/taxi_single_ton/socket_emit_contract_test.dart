@@ -1,5 +1,5 @@
 import 'package:com.tara.passenger/data/models/request_booking_model.dart';
-import 'package:com.tara.passenger/taxi_single_ton/init_socket.dart';
+import 'package:com.tara.passenger/services/socket_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Characterization tests for the *payloads* the passenger puts on the wire,

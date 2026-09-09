@@ -1,4 +1,4 @@
-import 'package:com.tara.passenger/taxi_single_ton/init_socket.dart';
+import 'package:com.tara.passenger/services/socket_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Characterization tests for the passenger half of the Socket.IO wire contract

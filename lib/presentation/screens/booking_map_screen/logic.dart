@@ -18,7 +18,7 @@ import '../../../core/utils/load_custom_marker.dart';
 import '../../../core/utils/pretty_logger.dart';
 import '../../../core/utils/status_util.dart';
 import '../map_screen/logic.dart';
-import 'package:com.tara.passenger/taxi_single_ton/init_socket.dart';
+import 'package:com.tara.passenger/services/socket_service.dart';
 import 'poll_policy.dart';
 
 class BookingMapLogic extends GetxController {
