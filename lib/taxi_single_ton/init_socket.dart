@@ -77,9 +77,10 @@ Map<String, dynamic> buildSocketOptions() => io.OptionBuilder()
 /// This used to be `int.parse("${data.data?.typeVehicleId}")` inline in both
 /// request emits. `typeVehicleId` is typed `dynamic` on the model, so a null
 /// stringified to `"null"` and `int.parse` threw `FormatException` — killing
-/// the ride request inside `MapScreenLogic.requestBooking()`'s `ok` branch,
-/// which only calls `toggleBookLoading()` on the error path and so left the
-/// booking spinner stuck on screen for good. Every other field in that
+/// the ride request inside `MapLogic.requestBooking()`'s `ok` branch. At the
+/// time that left the booking spinner stuck on screen for good, because the
+/// loading flag was only cleared on the error path (fixed under P-08, which
+/// gave the flag a single owner and a cancel escape hatch). Every other field in that
 /// payload already degraded to a default (`vehiclePrice` to 0) rather than
 /// taking the whole request down with it.
 ///

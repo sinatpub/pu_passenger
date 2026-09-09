@@ -28,18 +28,74 @@ import 'package:logger/logger.dart';
 
 import '../../../core/resources/asset_resource.dart';
 
-class MapLogic extends GetxController {
-  final HomeLogic homeLogic = Get.find<HomeLogic>();
-  final RequestBookingApi requestBookingApi = RequestBookingApi();
-  CancelBookingApi cancelBookingRepo = CancelBookingApi();
-  final MapState state = MapState();
-  final GetDriverAroundDataSource driverRepo =
-      Get.find<GetDriverAroundDataSource>();
-  final LocationRepo _locationRepo = Get.find<LocationRepo>();
+/// How the booking flow surfaces a failure to the passenger. Injectable so
+/// the controller does not reach into `EasyLoading` directly — the Definition
+/// of Done (`.agent/RULES.md`) rules out ad hoc `EasyLoading` calls inside a
+/// controller, and a direct call also makes every failure path untestable
+/// without a MaterialApp.
+typedef BookingErrorPresenter = Future<void> Function(String userMessage);
 
-  PassengerSocketService socket = Get.find<PassengerSocketService>();
-  final UpdatePassengerLocationApi updatePassengerLocationApi =
-      Get.find<UpdatePassengerLocationApi>();
+Future<void> _defaultBookingErrorPresenter(String userMessage) async {
+  EasyLoading.showError(userMessage);
+  await 1.delay();
+  EasyLoading.dismiss();
+}
+
+class MapLogic extends GetxController {
+  /// P-08 (docs/12) — constructor injection with `Get.find` defaults, the
+  /// pattern already used by `BookingMapLogic`. Previously every dependency
+  /// was resolved in a field initializer, which made `requestBooking()`
+  /// untestable (`.agent/TODO.md` Discovered Tasks) and violated the
+  /// Definition of Done's "dependencies injected, not self-instantiated".
+  MapLogic({
+    HomeLogic? homeLogic,
+    RequestBookingApi? requestBookingApi,
+    CancelBookingApi? cancelBookingRepo,
+    GetDriverAroundDataSource? driverRepo,
+    LocationRepo? locationRepo,
+    PassengerSocketService? socket,
+    UpdatePassengerLocationApi? updatePassengerLocationApi,
+    BookingErrorPresenter? errorPresenter,
+  })  : _presentError = errorPresenter ?? _defaultBookingErrorPresenter,
+        _homeLogic = homeLogic,
+        _requestBookingApi = requestBookingApi,
+        _cancelBookingRepo = cancelBookingRepo,
+        _driverRepo = driverRepo,
+        _injectedLocationRepo = locationRepo,
+        _socket = socket,
+        _updatePassengerLocationApi = updatePassengerLocationApi;
+
+  final HomeLogic? _homeLogic;
+  final RequestBookingApi? _requestBookingApi;
+  final CancelBookingApi? _cancelBookingRepo;
+  final GetDriverAroundDataSource? _driverRepo;
+  final LocationRepo? _injectedLocationRepo;
+  final PassengerSocketService? _socket;
+  final UpdatePassengerLocationApi? _updatePassengerLocationApi;
+
+  /// Resolved lazily rather than in a field initializer. A field initializer
+  /// runs `Get.find` at construction time, so building a `MapLogic` demanded
+  /// that every collaborator already be registered — even the ones the code
+  /// path under test never touches. That is what made this controller
+  /// untestable (`.agent/TODO.md` Discovered Tasks). Behaviour in production
+  /// is unchanged: the binding registers everything before the first access.
+  late final HomeLogic homeLogic = _homeLogic ?? Get.find<HomeLogic>();
+  late final RequestBookingApi requestBookingApi =
+      _requestBookingApi ?? RequestBookingApi();
+  late final CancelBookingApi cancelBookingRepo =
+      _cancelBookingRepo ?? CancelBookingApi();
+  late final GetDriverAroundDataSource driverRepo =
+      _driverRepo ?? Get.find<GetDriverAroundDataSource>();
+  late final LocationRepo _locationRepo =
+      _injectedLocationRepo ?? Get.find<LocationRepo>();
+  late final PassengerSocketService socket =
+      _socket ?? Get.find<PassengerSocketService>();
+  late final UpdatePassengerLocationApi updatePassengerLocationApi =
+      _updatePassengerLocationApi ?? Get.find<UpdatePassengerLocationApi>();
+
+  final BookingErrorPresenter _presentError;
+
+  final MapState state = MapState();
 
   @override
   void onInit() {
@@ -371,13 +427,48 @@ class MapLogic extends GetxController {
     return "${seatCapacityForVehicleId(data?.id)} ${AppLocale.seatCapacity.tr}";
   }
 
-  void toggleBookLoading() {
-    state.isBookingLoading = !state.isBookingLoading;
+  /// P-08 (docs/12) — the booking-request lifecycle.
+  ///
+  /// This was previously a public toggle driven from the view, which the
+  /// button pressed *before* calling [requestBooking]. That produced four
+  /// distinct stuck-overlay states, all of them unrecoverable because the
+  /// overlay's cancel button was commented out:
+  ///
+  ///  * a double-tap flipped the flag back to `false` and fired a *second*
+  ///    booking while the first was still in flight;
+  ///  * the `currentLatLng == null` early return left the overlay up forever;
+  ///  * an `ok` result carrying a null `data` did nothing at all — no emit,
+  ///    no error, no state change;
+  ///  * on error the toggle assumed the flag was `true`, so after a double-tap
+  ///    it switched the overlay back *on*.
+  ///
+  /// The flag is now owned here and set explicitly, never toggled. Ownership
+  /// of the "am I busy" question sits with the code that starts and finishes
+  /// the work, not with the widget that starts it.
+  void setBookingLoading(bool value) {
+    if (state.isBookingLoading == value) return;
+    state.isBookingLoading = value;
     update([MapUpdate.bookingID]);
   }
 
+  /// Terminal failure: drop the overlay and surface the reason.
+  Future<void> _failBooking(String logMessage) async {
+    setBookingLoading(false);
+    xPrettyLog(message: "requestBooking failed: $logMessage");
+    await _presentError(AppLocale.pleaseTryAgain.tr);
+  }
+
   Future<void> requestBooking() async {
-    if (state.currentLatLng == null) return;
+    // Re-entrancy guard. A second tap while a request is in flight is a
+    // no-op, not a second booking.
+    if (state.isBookingLoading) return;
+
+    if (state.currentLatLng == null) {
+      await _failBooking("no current location");
+      return;
+    }
+
+    setBookingLoading(true);
 
     double currentLat = state.currentLatLng?.latitude ?? 0.0;
     double currentLng = state.currentLatLng?.longitude ?? 0.0;
@@ -399,28 +490,36 @@ class MapLogic extends GetxController {
       typeVehicleId: vehicleId,
     );
 
-    result.when(
-      ok: (data) {
-        if (data.data != null) {
-          socket.rideRequestSocket(
-            data: data,
-            startLatitude: currentLat,
-            startLongitude: currentLng,
-            startDestinationLat: destinationLat,
-            startDestinationLong: destinationLng,
-          );
-          updatePassengerLocationApi.updatePassengerLocationApi(
-              lat: currentLat.toString(), lng: currentLng.toString());
+    await result.when(
+      ok: (data) async {
+        // A 2xx carrying no booking is a failure, not a success. Treating it
+        // as one is what left the overlay up with nothing behind it.
+        if (data.data == null) {
+          await _failBooking("server returned ok with a null booking");
+          return;
         }
+        socket.rideRequestSocket(
+          data: data,
+          startLatitude: currentLat,
+          startLongitude: currentLng,
+          startDestinationLat: destinationLat,
+          startDestinationLong: destinationLng,
+        );
+        updatePassengerLocationApi.updatePassengerLocationApi(
+            lat: currentLat.toString(), lng: currentLng.toString());
+        // The overlay deliberately stays up on success: the passenger is now
+        // waiting for a driver to accept. `BookingMapLogic` owns the screen
+        // from here, and cancelBooking() is the way out.
       },
-      err: (error) async {
-        toggleBookLoading();
-        EasyLoading.showError(AppLocale.pleaseTryAgain.tr);
-        await 1.delay();
-        EasyLoading.dismiss();
-        Logger().e("Exception ${error.message}");
-      },
+      err: (error) => _failBooking(error.message),
     );
+  }
+
+  /// The overlay's escape hatch. Clears the overlay first so a failing
+  /// cancel call cannot strand the passenger behind it.
+  Future<void> cancelBooking() async {
+    setBookingLoading(false);
+    await cancelBookingApi();
   }
 
   Future<void> cancelBookingApi() async {

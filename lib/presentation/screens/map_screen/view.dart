@@ -250,7 +250,9 @@ class MapScreen extends StatelessWidget {
                 ),
                 FBTNWidget(
                     onPressed: () async {
-                      logic.toggleBookLoading();
+                      // P-08: the loading flag is owned by MapLogic. The view
+                      // no longer pre-toggles it — doing so let a double-tap
+                      // clear the overlay and fire a second booking.
                       await logic.requestBooking();
                     },
                     color: AppColors.main,
@@ -414,16 +416,17 @@ class MapScreen extends StatelessWidget {
                   const SizedBox(
                     height: 24,
                   ),
-                  // SizedBox(
-                  //   width: Get.width / 2,
-                  //   child: FBTNWidget(
-                  //     label: AppLocale.cancel.tr,
-                  //     onPressed: () async {
-                  //       logic.toggleBookLoading();
-                  //       await logic.cancelBookingApi();
-                  //     },
-                  //   ),
-                  // )
+                  // P-08: restored. While this was commented out, every
+                  // stuck-overlay path was unrecoverable without killing the
+                  // app. cancelBooking() drops the overlay before calling the
+                  // API so a failing cancel cannot strand the passenger.
+                  SizedBox(
+                    width: Get.width / 2,
+                    child: FBTNWidget(
+                      label: AppLocale.cancel.tr,
+                      onPressed: () async => logic.cancelBooking(),
+                    ),
+                  )
                 ],
               ),
             ),

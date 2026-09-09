@@ -6,9 +6,15 @@ import 'package:com.tara.passenger/data/models/request_booking_model.dart';
 /// `Result<T>` (F-02) for consistency with the rest of the app.
 /// `MapLogic`'s map/marker/booking-request behavior is unchanged.
 class RequestBookingApi {
-  RequestBookingApi({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+  RequestBookingApi({ApiClient? apiClient}) : _injectedClient = apiClient;
 
-  final ApiClient _apiClient;
+  final ApiClient? _injectedClient;
+
+  /// Lazy so that constructing a `RequestBookingApi` — or a test subclass that
+  /// overrides every method on it — does not build a Dio-backed `ApiClient`
+  /// and hit `LateInitializationError: Field 'dio' has not been initialized`.
+  /// The public constructor signature is unchanged.
+  late final ApiClient _apiClient = _injectedClient ?? ApiClient();
 
   Future<Result<RequestBookingModel>> requestBookingApi({
     required double startLatitude,
@@ -16,7 +22,6 @@ class RequestBookingApi {
     double? destinationLatitude,
     double? destinationLongitude,
     String? address,
-    String? destinationAddress,
     int? typeVehicleId,
   }) {
     final body = <String, dynamic>{
