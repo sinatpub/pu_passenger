@@ -16,6 +16,7 @@ import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:com.tara.passenger/core/utils/app_version.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
@@ -32,8 +33,11 @@ class AppLogic extends GetxController with keyStoragePref {
   final _logger = Logger();
   RxString languageKeyCode = ''.obs;
 
-  String currentVersionIos = "1.0.15";
-  String currentVersionAndroid = "1.0.15";
+  /// P-16: the installed version is read at runtime via
+  /// `installedAppVersion()`. Injectable so the update decision can be tested
+  /// without a platform channel.
+  Future<String> Function() appVersionReader = installedAppVersion;
+
   String releaseDateVersionIos = "2026-04-25";
   String releaseDateVersionAndroid = "2026-04-25";
 
@@ -135,16 +139,14 @@ class AppLogic extends GetxController with keyStoragePref {
   Future<void> getAppUpdate() async {
     var result = await appVersionRepoApi.getCurrentAppVersionApi();
     if (result?.data != null) {
-      checkForUpdate(result);
+      await checkForUpdate(result);
     }
   }
 
 // final String nowDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
-  void checkForUpdate(AppVersionModel? appVersion) async {
+  Future<void> checkForUpdate(AppVersionModel? appVersion) async {
     var data = appVersion?.data;
-    // final packageInfo = await PackageInfo.fromPlatform();
-    final currentVersion =
-        GetPlatform.isIOS ? currentVersionIos : currentVersionAndroid;
+    final currentVersion = await appVersionReader();
     final String urlLink = GetPlatform.isIOS
         ? data?.appStoreLink ?? ""
         : data?.playStoreLink ?? "";
@@ -157,9 +159,12 @@ class AppLogic extends GetxController with keyStoragePref {
     final String version =
         GetPlatform.isIOS ? data?.versionIos ?? "" : data?.versionAndroid ?? "";
 
-    if (currentVersion == version || releaseDate == updateDate) return;
-
-    if (currentVersion != version && releaseDate != updateDate) {
+    if (shouldPromptUpdate(
+      currentVersion: currentVersion,
+      serverVersion: version,
+      releaseDate: releaseDate,
+      updateDate: updateDate,
+    )) {
       showBeautifulUpdateDialog(
           version: version, link: urlLink, features: data?.featuresRelease);
     } else {
