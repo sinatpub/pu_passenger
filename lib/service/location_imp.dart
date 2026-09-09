@@ -7,11 +7,11 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart';
-import 'package:http/http.dart' as http;
 import 'package:logger/logger.dart';
 import 'package:dio/dio.dart';
 
 import '../core/utils/app_constant.dart';
+import '../data/datasources/places_api.dart';
 import '../data/models/location_model.dart';
 
 abstract class LocationImpl {
@@ -29,7 +29,13 @@ abstract class LocationImpl {
 }
 
 class LocationRepo implements LocationImpl {
-  final String apiKey = AppConstant.placeApiKey;
+  LocationRepo({PlacesRepository? placesRepository})
+      : _injectedPlacesRepository = placesRepository;
+
+  final PlacesRepository? _injectedPlacesRepository;
+  late final PlacesRepository placesRepository =
+      _injectedPlacesRepository ?? PlacesRepository();
+
   @override
   Future<bool> checkPermission() async {
     LocationPermission permission = await Geolocator.checkPermission();
@@ -210,47 +216,24 @@ class LocationRepo implements LocationImpl {
     return '${hours}h ${minutes}m';
   }
 
+  /// P-04: delegates to `PlacesRepository`. Kept on this interface so the
+  /// existing callers in `MapDragLogic` are unaffected; the request building
+  /// and its encoding now live in one place.
   @override
   Future<LocationModel> searchPlaces(String query) async {
-    if (query.isEmpty) return LocationModel(predictions: []);
-
-    final url = Uri.parse(
-        "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$query&components=country:KH&key=$apiKey");
-
     try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-
-        if (data == null || !data.containsKey("predictions")) {
-          return LocationModel(
-              predictions: []); // Return an empty model instead of null
-        }
-
-        return LocationModel.fromJson(data);
-      } else {
-        throw Exception("Failed to fetch places: ${response.body}");
-      }
+      return await placesRepository.searchPlaces(query);
     } catch (e) {
       Logger().e("Error: $e");
       throw Exception("Failed to search places");
     }
   }
 
+  /// P-04: delegates to `PlacesRepository`, as `searchPlaces` does.
   @override
   Future<List<double>> getPlaceDetails(String placeId) async {
-    final url = Uri.parse(
-        "https://maps.googleapis.com/maps/api/place/details/json?place_id=$placeId&key=$apiKey");
-
     try {
-      final response = await http.get(url);
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final location = data['result']['geometry']['location'];
-        return [location['lat'], location['lng']];
-      } else {
-        throw Exception("Failed to fetch place details: ${response.body}");
-      }
+      return await placesRepository.getPlaceDetails(placeId);
     } catch (e) {
       Logger().e("Error: $e");
       throw Exception("Failed to get place details");
