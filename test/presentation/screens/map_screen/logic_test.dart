@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:com.tara.passenger/core/network/api_exception.dart';
 import 'package:com.tara.passenger/core/network/result.dart';
+import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/request_booking_api.dart';
 import 'package:com.tara.passenger/data/models/request_booking_model.dart';
 import 'package:com.tara.passenger/data/datasources/update_passenger_location_api.dart';
 import 'package:com.tara.passenger/data/models/passenger_location_model.dart'
     show UpdateLocationModel;
 import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
+import 'package:com.tara.passenger/services/booking_session.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
@@ -72,6 +74,16 @@ class _FakeUpdateLocationApi extends UpdatePassengerLocationApi {
   }
 }
 
+class _FakeCancelBookingApi extends CancelBookingApi {
+  int calls = 0;
+
+  @override
+  Future<Result<bool>> cancelBookingApi() async {
+    calls++;
+    return Result.ok(true);
+  }
+}
+
 /// A booking the server accepted. `data` non-null is the success signal
 /// `requestBooking()` keys off.
 RequestBookingModel _booking() => RequestBookingModel(data: Data(id: 1));
@@ -91,11 +103,26 @@ void main() {
   late _FakeSocket socket;
   late _FakeUpdateLocationApi updateLocation;
   late List<String> shownErrors;
+  late BookingSession session;
+
+  /// Builds a controller over an *existing* session, to simulate the route
+  /// being disposed and re-entered.
+  MapLogic buildLogicWith(BookingSession existing,
+      {_FakeRequestBookingApi? api}) {
+    return MapLogic(
+      requestBookingApi: api ?? _FakeRequestBookingApi(),
+      socket: _FakeSocket(),
+      updatePassengerLocationApi: _FakeUpdateLocationApi(),
+      errorPresenter: (message) async => shownErrors.add(message),
+      bookingSession: existing,
+    );
+  }
 
   MapLogic buildLogic(_FakeRequestBookingApi api) {
     socket = _FakeSocket();
     updateLocation = _FakeUpdateLocationApi();
     shownErrors = <String>[];
+    session = BookingSession();
     // Only the collaborators `requestBooking()` actually reaches are supplied.
     // The rest stay unresolved — which is the point of the lazy fields.
     return MapLogic(
@@ -103,6 +130,8 @@ void main() {
       socket: socket,
       updatePassengerLocationApi: updateLocation,
       errorPresenter: (message) async => shownErrors.add(message),
+      bookingSession: session,
+      cancelBookingRepo: _FakeCancelBookingApi(),
     );
   }
 
@@ -256,6 +285,96 @@ void main() {
       expect(api.callCount, 2, reason: 'retry after failure must be allowed');
       api.completers[1].complete(Result.ok(_booking()));
       await second;
+    });
+  });
+
+  group('BookingSession survives the route (P-08 structural half)', () {
+    test('the attempt is recorded before the call goes out, so a failure '
+        'leaves something to retry from', () async {
+      final api = _FakeRequestBookingApi();
+      final logic = buildLogic(api);
+      logic.state.currentLatLng = const LatLng(11.55, 104.91);
+      logic.state.currentAddress = 'AEON Mall';
+      logic.state.destinationLatLng = const LatLng(11.57, 104.90);
+      logic.state.destinationAddress = '12 St 271';
+
+      final call = logic.requestBooking();
+      // Still in flight — the draft must already be captured.
+      expect(session.status, BookingRequestStatus.inFlight);
+      expect(session.pickupAddress, 'AEON Mall');
+      expect(session.destinationAddress, '12 St 271');
+
+      api.completers[0].complete(
+        Result.err(const ApiException(
+            type: ApiErrorType.connection, message: 'network down')),
+      );
+      await call;
+
+      expect(session.status, BookingRequestStatus.failed);
+      expect(session.hasRecoverableAttempt, isTrue,
+          reason: 'the passenger must not have to re-enter the trip');
+      expect(session.pickupAddress, 'AEON Mall');
+      expect(session.destinationAddress, '12 St 271');
+    });
+
+    test('a success leaves the session awaiting a driver', () async {
+      final api = _FakeRequestBookingApi();
+      final logic = buildLogic(api);
+      logic.state.currentLatLng = const LatLng(11.55, 104.91);
+
+      final call = logic.requestBooking();
+      api.completers[0].complete(Result.ok(_booking()));
+      await call;
+
+      expect(session.status, BookingRequestStatus.awaitingDriver);
+      expect(session.isBusy, isTrue);
+    });
+
+    test('a rebuilt controller restores the overlay from the session', () {
+      // Simulates the route being disposed and re-entered while a booking
+      // is still running: a brand new MapLogic over the same session.
+      session.beginRequest(pickup: const LatLng(11.55, 104.91));
+      session.markAwaitingDriver();
+
+      final rebuilt = buildLogicWith(session);
+      expect(rebuilt.state.isBookingLoading, isFalse,
+          reason: 'a fresh controller starts idle');
+
+      rebuilt.restoreFromSession();
+      expect(rebuilt.state.isBookingLoading, isTrue,
+          reason: 'the live booking must reappear, not vanish');
+    });
+
+    test('a rebuilt controller cannot start a second booking over a live one',
+        () async {
+      session.beginRequest(pickup: const LatLng(11.55, 104.91));
+      session.markAwaitingDriver();
+
+      final api = _FakeRequestBookingApi();
+      final rebuilt = buildLogicWith(session, api: api);
+      rebuilt.state.currentLatLng = const LatLng(11.55, 104.91);
+
+      await rebuilt.requestBooking();
+
+      expect(api.callCount, 0,
+          reason: 'the session, not local state, is the source of truth');
+    });
+
+    test('cancelling clears the draft so it cannot resurrect later', () async {
+      final api = _FakeRequestBookingApi();
+      final logic = buildLogic(api);
+      logic.state.currentLatLng = const LatLng(11.55, 104.91);
+
+      final call = logic.requestBooking();
+      api.completers[0].complete(Result.ok(_booking()));
+      await call;
+      expect(session.status, BookingRequestStatus.awaitingDriver);
+
+      await logic.cancelBooking();
+
+      expect(session.status, BookingRequestStatus.idle);
+      expect(session.pickup, isNull);
+      expect(session.hasRecoverableAttempt, isFalse);
     });
   });
 }

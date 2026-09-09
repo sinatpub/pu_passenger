@@ -4,9 +4,13 @@ import 'package:com.tara.passenger/core/network/result.dart';
 /// P-06 (docs/12) — ported off `BaseApiService` onto `ApiClient` +
 /// `Result<T>` (F-02).
 class CancelBookingApi {
-  CancelBookingApi({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+  CancelBookingApi({ApiClient? apiClient}) : _injectedClient = apiClient;
 
-  final ApiClient _apiClient;
+  final ApiClient? _injectedClient;
+
+  /// Lazy, as in `RequestBookingApi` — constructing this must not build a
+  /// Dio-backed client.
+  late final ApiClient _apiClient = _injectedClient ?? ApiClient();
 
   Future<Result<bool>> cancelBookingApi() {
     return _apiClient.request<bool>(

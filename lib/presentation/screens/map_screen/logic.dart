@@ -17,6 +17,7 @@ import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/driver_info_sheet.dart';
 import 'package:com.tara.passenger/service/location_imp.dart';
+import 'package:com.tara.passenger/services/booking_session.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter/material.dart';
@@ -56,7 +57,9 @@ class MapLogic extends GetxController {
     PassengerSocketService? socket,
     UpdatePassengerLocationApi? updatePassengerLocationApi,
     BookingErrorPresenter? errorPresenter,
+    BookingSession? bookingSession,
   })  : _presentError = errorPresenter ?? _defaultBookingErrorPresenter,
+        _injectedBookingSession = bookingSession,
         _homeLogic = homeLogic,
         _requestBookingApi = requestBookingApi,
         _cancelBookingRepo = cancelBookingRepo,
@@ -94,6 +97,13 @@ class MapLogic extends GetxController {
       _updatePassengerLocationApi ?? Get.find<UpdatePassengerLocationApi>();
 
   final BookingErrorPresenter _presentError;
+
+  final BookingSession? _injectedBookingSession;
+
+  /// P-08: the booking attempt lives here, not in `state`, so it survives
+  /// this controller being disposed with its route.
+  late final BookingSession session =
+      _injectedBookingSession ?? Get.find<BookingSession>();
 
   final MapState state = MapState();
 
@@ -454,14 +464,23 @@ class MapLogic extends GetxController {
   /// Terminal failure: drop the overlay and surface the reason.
   Future<void> _failBooking(String logMessage) async {
     setBookingLoading(false);
+    session.markFailed(logMessage);
     xPrettyLog(message: "requestBooking failed: $logMessage");
     await _presentError(AppLocale.pleaseTryAgain.tr);
   }
 
+  /// P-08: restores the overlay from the session when this controller is
+  /// rebuilt. Without this, returning to the map after the route was disposed
+  /// showed an idle screen while a booking was still running.
+  void restoreFromSession() {
+    setBookingLoading(session.isBusy);
+  }
+
   Future<void> requestBooking() async {
     // Re-entrancy guard. A second tap while a request is in flight is a
-    // no-op, not a second booking.
-    if (state.isBookingLoading) return;
+    // no-op, not a second booking. Asks the session, not local state, so a
+    // rebuilt controller cannot start a second booking over a live one.
+    if (session.isBusy || state.isBookingLoading) return;
 
     if (state.currentLatLng == null) {
       await _failBooking("no current location");
@@ -481,6 +500,16 @@ class MapLogic extends GetxController {
     // Vehicle Type
     int vehicleId = state.vehicleTypeSelection?.id ?? 0;
 
+    // Recorded before the call goes out, so a failure — or this route being
+    // disposed mid-flight — still leaves something to retry from.
+    session.beginRequest(
+      pickup: state.currentLatLng!,
+      pickupAddress: currentAddress,
+      destination: state.destinationLatLng,
+      destinationAddress: state.destinationAddress,
+      vehicleTypeId: vehicleId,
+    );
+
     final result = await requestBookingApi.requestBookingApi(
       startLatitude: currentLat,
       startLongitude: currentLng,
@@ -498,6 +527,7 @@ class MapLogic extends GetxController {
           await _failBooking("server returned ok with a null booking");
           return;
         }
+        session.markAwaitingDriver();
         socket.rideRequestSocket(
           data: data,
           startLatitude: currentLat,
@@ -519,6 +549,7 @@ class MapLogic extends GetxController {
   /// cancel call cannot strand the passenger behind it.
   Future<void> cancelBooking() async {
     setBookingLoading(false);
+    session.reset();
     await cancelBookingApi();
   }
 
