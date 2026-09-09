@@ -32,6 +32,7 @@ import '../presentation/screens/history_detail/binding.dart';
 import '../presentation/screens/register/view.dart';
 import '../presentation/screens/term_condition/binding.dart';
 import '../presentation/screens/term_condition/view.dart';
+import '../presentation/shared/map_drag/binding.dart';
 import '../presentation/shared/map_drag/view.dart';
 
 abstract class AppRoutes {
@@ -109,7 +110,11 @@ class AppPages {
     GetPage(
       name: AppRoutes.DRAGMAP,
       page: () => MapDragPage(),
-      binding: MapBinding(),
+      // P-05: MapDragBinding existed but was wired to nothing, so the page
+      // called Get.put(MapDragLogic()) in a field initializer instead — which
+      // rebuilt and re-registered the controller on every construction of the
+      // widget. MapBinding stays for MapLogic, which this page also reads.
+      bindings: [MapBinding(), MapDragBinding()],
     ),
     GetPage(
       name: AppRoutes.TERMCONDITION,

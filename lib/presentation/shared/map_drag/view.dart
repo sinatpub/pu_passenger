@@ -19,7 +19,10 @@ import 'state.dart';
 class MapDragPage extends StatelessWidget {
   MapDragPage({super.key});
 
-  final MapDragLogic logic = Get.put(MapDragLogic());
+  // P-05: resolved from MapDragBinding, which the DRAGMAP route now wires.
+  // `Get.put` here ran on every construction of this widget, replacing the
+  // registered controller each time.
+  final MapDragLogic logic = Get.find<MapDragLogic>();
   final MapDragState state = Get.find<MapDragLogic>().state;
   final MapLogic _mapLogic = Get.find<MapLogic>();
 
