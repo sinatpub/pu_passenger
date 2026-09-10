@@ -276,7 +276,9 @@ class MapLogic extends GetxController {
   }
 
   Future<void> calculateDistance() async {
-    if (state.destinationLatLng == null) return;
+    // Both ends are needed. The guard used to check only the destination and
+    // then force-unwrap `currentLatLng!` two lines later.
+    if (state.destinationLatLng == null || state.currentLatLng == null) return;
 
     var vehicle = state.vehicleTypeSelection;
     double distanceInKm = await _locationRepo.getDistance(
@@ -285,10 +287,7 @@ class MapLogic extends GetxController {
       destination: state.destinationLatLng!,
     );
 
-    int km = distanceInKm.floor();
-    int meters = ((distanceInKm - km) * 1000).round();
-
-    state.distance = "$km km $meters m";
+    state.distance = formatDistance(distanceInKm);
 
     // Calculate price
     state.totalFare = estimateFare(
@@ -303,10 +302,7 @@ class MapLogic extends GetxController {
   Future<void> drawPolyline() async {
     if (state.currentLatLng == null || state.destinationLatLng == null) return;
 
-    PolylinePoints polylinePoints = PolylinePoints();
-
-    // 1. Fetch points from Google Directions API
-    PolylineResult result = await polylinePoints.getRouteBetweenCoordinates(
+    final result = await PolylinePoints().getRouteBetweenCoordinates(
       googleApiKey: AppConstant.googleKeyApi,
       request: PolylineRequest(
         origin: PointLatLng(
@@ -317,34 +313,17 @@ class MapLogic extends GetxController {
       ),
     );
 
-    if (result.points.isNotEmpty) {
-      List<LatLng> polylineCoordinates = [];
-      for (var point in result.points) {
-        polylineCoordinates.add(LatLng(point.latitude, point.longitude));
-      }
+    if (result.points.isEmpty) return;
 
-      // 2. Create the Polyline object
-      Polyline polyline = Polyline(
-        polylineId: const PolylineId("route"),
-        color: AppColors.main, // Your theme color
-        points: polylineCoordinates,
-        width: 5, // Thickness of the line
-        jointType: JointType.round,
-        startCap: Cap.roundCap,
-        endCap: Cap.roundCap,
-      );
+    state.polylines =
+        buildRoutePolyline(points: result.points, color: AppColors.main);
 
-      // 3. Update state and UI
-      state.polylines = {polyline};
+    // Zoom to fit the whole trip once the polyline has been laid down.
+    Future.delayed(const Duration(milliseconds: 300), _fitBounds);
 
-      // 4. Zoom the camera to fit the entire trip
-      Future.delayed(const Duration(milliseconds: 300), () => _fitBounds());
-
-      update([MapUpdate.mapID]);
-    }
+    update([MapUpdate.mapID]);
   }
 
-  // Helper to zoom the map so both markers are visible
   void _fitBounds() {
     if (state.mapController == null) return;
 

@@ -1,5 +1,8 @@
 import 'package:com.tara.passenger/presentation/screens/map_screen/map_presentation.dart';
+import 'dart:ui' show Color;
+
 import 'package:com.tara.passenger/data/models/driver_around_model.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -177,6 +180,76 @@ void main() {
 
       expect(state.mapMarkers, hasLength(1));
       expect(state.mapMarkers.first.markerId, const MarkerId('driver_7'));
+    });
+  });
+
+  group('formatDistance', () {
+    test('a whole number of kilometres has no stray metres', () {
+      expect(formatDistance(3.0), '3 km 0 m');
+    });
+
+    test('kilometres and metres are both reported', () {
+      expect(formatDistance(2.5), '2 km 500 m');
+      expect(formatDistance(0.25), '0 km 250 m');
+    });
+
+    test('a value just under a kilometre boundary does not render as '
+        '"1000 m"', () {
+      // The original floored the km and rounded the remainder independently,
+      // so 2.9996 became "2 km 1000 m" on the passenger's screen.
+      expect(formatDistance(2.9996), '3 km 0 m');
+      expect(formatDistance(0.9999), '1 km 0 m');
+    });
+
+    test('metres never reach 1000 for any value', () {
+      for (var i = 0; i < 2000; i++) {
+        final rendered = formatDistance(i / 997);
+        final metres = int.parse(
+            RegExp(r'(\d+) m').firstMatch(rendered)!.group(1)!);
+        expect(metres, lessThan(1000), reason: 'rendered as "$rendered"');
+      }
+    });
+
+    test('zero distance renders cleanly', () {
+      expect(formatDistance(0), '0 km 0 m');
+    });
+  });
+
+  group('buildRoutePolyline', () {
+    const routeColor = Color(0xFFBA401F);
+
+    test('no points means no polyline rather than an empty one', () {
+      expect(buildRoutePolyline(points: [], color: routeColor), isEmpty);
+    });
+
+    test('the route becomes a single polyline carrying every point', () {
+      final polylines = buildRoutePolyline(
+        points: [
+          const PointLatLng(11.55, 104.91),
+          const PointLatLng(11.56, 104.90),
+          const PointLatLng(11.57, 104.89),
+        ],
+        color: routeColor,
+      );
+
+      expect(polylines, hasLength(1));
+      expect(polylines.first.points, hasLength(3));
+      expect(polylines.first.polylineId, const PolylineId('route'));
+      expect(polylines.first.color, routeColor);
+    });
+
+    test('point order is preserved — a reversed route is a different line',
+        () {
+      final forward = buildRoutePolyline(
+        points: [
+          const PointLatLng(11.55, 104.91),
+          const PointLatLng(11.57, 104.89),
+        ],
+        color: routeColor,
+      ).first;
+
+      expect(forward.points.first.latitude, 11.55);
+      expect(forward.points.last.latitude, 11.57);
     });
   });
 }

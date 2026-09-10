@@ -1,7 +1,8 @@
 import 'dart:math' as math;
-import 'dart:ui' show Offset;
+import 'dart:ui' show Color, Offset;
 
 import 'package:com.tara.passenger/data/models/driver_around_model.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// P-06 (docs/12, docs/08 Problem 15 / docs/09 L-10) — the presentation half
@@ -135,4 +136,47 @@ Set<Marker> buildDriverMarkers({
     );
   }
   return markers;
+}
+
+/// The driving route as a single map polyline.
+Set<Polyline> buildRoutePolyline({
+  required List<PointLatLng> points,
+  required Color color,
+}) {
+  if (points.isEmpty) return {};
+
+  return {
+    Polyline(
+      polylineId: const PolylineId("route"),
+      color: color,
+      points: [
+        for (final p in points) LatLng(p.latitude, p.longitude),
+      ],
+      width: 5,
+      jointType: JointType.round,
+      startCap: Cap.roundCap,
+      endCap: Cap.roundCap,
+    ),
+  };
+}
+
+/// Renders a distance in kilometres as `"<km> km <m> m"`.
+///
+/// The original did this inline as:
+///
+/// ```dart
+/// int km = distanceInKm.floor();
+/// int meters = ((distanceInKm - km) * 1000).round();
+/// ```
+///
+/// which reads correctly and is wrong at the boundary: the metres component
+/// is rounded independently of the kilometres it was derived from, so
+/// `2.9996` floors to `2 km` and then rounds the remainder to `1000 m` —
+/// the passenger is shown **"2 km 1000 m"**. Rounding to whole metres first
+/// and deriving both components from that result keeps them consistent.
+String formatDistance(double distanceInKm) {
+  final totalMetres = (distanceInKm * 1000).round();
+  final km = totalMetres ~/ 1000;
+  final metres = totalMetres % 1000;
+  return "$km km $metres m";
 }
