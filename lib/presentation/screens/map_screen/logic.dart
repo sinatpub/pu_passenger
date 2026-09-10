@@ -214,16 +214,35 @@ class MapLogic extends GetxController {
     }
   }
 
+  /// Reverse-geocodes the current pin into a human-readable address.
+  ///
+  /// Two defects fixed here (`docs/01` Problem 15 / `docs/08` L-10):
+  ///
+  /// 1. The `latLng == null` branch set the error string but did **not**
+  ///    return, so it fell straight through to `latLng!`, threw, and the
+  ///    empty catch swallowed it — which also meant `update()` never ran and
+  ///    the error message it had just set was never rendered. The null path
+  ///    was entirely broken, in a way nothing could surface.
+  /// 2. `catch (e) {}` discarded every failure — a dropped network call, a
+  ///    geocoder quota error — leaving the previous address on screen with no
+  ///    indication it was stale.
   Future<void> getCurrentAddress({LatLng? latlng}) async {
-    try {
-      var latLng = state.currentLatLng;
-      if (latLng == null) {
-        state.currentAddress = AppLocale.error.tr;
-      }
-      String address = await _locationRepo.getAddressLocation(latlng: latLng!);
-      state.currentAddress = address;
+    final latLng = state.currentLatLng;
+    if (latLng == null) {
+      state.currentAddress = AppLocale.error.tr;
       update([MapUpdate.mapID]);
-    } catch (e) {}
+      return;
+    }
+
+    try {
+      state.currentAddress =
+          await _locationRepo.getAddressLocation(latlng: latLng);
+    } catch (e) {
+      // Surface the failure rather than leaving a stale address on screen.
+      state.currentAddress = AppLocale.error.tr;
+      xPrettyLog(message: "getCurrentAddress failed: $e");
+    }
+    update([MapUpdate.mapID]);
   }
 
   /// Destination Location
