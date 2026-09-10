@@ -270,8 +270,27 @@ class PassengerSocketService extends BaseSocketService {
     }
   }
 
+  /// The `_socket?.emit(...)` on the first line re-emits the very event this
+  /// handler is *receiving*. `docs/04` §3.1 flagged it as "looks like
+  /// leftover/possibly-unintentional code"; the same shape is in
+  /// [_handleOnDriverCancel]. Investigated 2026-09-10, with what is now known:
+  ///
+  ///  * **Nothing listens for it.** `pu_driver` registers no handler for
+  ///    `driverAcceptPayment` or `onDriverCancelDrive` — grep both apps.
+  ///  * **It carries no payload.** No booking id, no driver id, no passenger
+  ///    id, so a server-side listener could not tell which trip it refers to
+  ///    even if one exists.
+  ///  * **It bypassed `emitEvent`**, so it produced no log line, which is
+  ///    most of why nobody has been able to say what it does.
+  ///
+  /// Routed through [emitEvent] rather than deleted. There is no backend
+  /// source to prove the server ignores these, and deleting an emit that a
+  /// server might act on is a guess in the more dangerous direction. Going
+  /// through `emitEvent` is behaviour-preserving — it calls `socket.emit` —
+  /// and makes both emits visible in the device log, which is what will
+  /// actually settle whether they can go.
   void _handleDriverAcceptedPayment(BuildContext context, dynamic data) {
-    _socket?.emit(SocketEvent.driverAcceptPayment.eventName);
+    emitEvent(SocketEvent.driverAcceptPayment, null);
     if (Get.isRegistered<CalculateFeeLogic>()) {
       Get.lazyPut(() => CalculateFeeLogic());
     }
@@ -366,8 +385,11 @@ class PassengerSocketService extends BaseSocketService {
     );
   }
 
+  /// See [_handleDriverAcceptedPayment] for the investigation behind the
+  /// self-emit on the first line and why it is routed through [emitEvent]
+  /// rather than removed.
   void _handleOnDriverCancel(BuildContext context, dynamic data) {
-    _socket?.emit(SocketEvent.onDriverCancel.eventName);
+    emitEvent(SocketEvent.onDriverCancel, null);
     if (data != null) {
       EasyLoading.showInfo("", duration: const Duration(seconds: 8));
       Get.offAllNamed(AppRoutes.BOTTOMNAV);
