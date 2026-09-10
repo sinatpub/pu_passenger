@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:com.tara.passenger/presentation/shared/map_drag/search_state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:com.tara.passenger/data/models/location_model.dart';
@@ -75,14 +76,35 @@ void main() {
         ..debounceDuration = const Duration(milliseconds: 30);
 
       // Two keystrokes in quick succession, well inside the debounce window.
-      await logic.fetchPlaceSuggestions('p');
+      // Both clear kMinQueryLengthForNetwork — this test is about the
+      // debounce, and shorter queries now short-circuit before reaching it
+      // (P-04, spec Screen 2).
+      await logic.fetchPlaceSuggestions('pho');
       await tester.pump(const Duration(milliseconds: 5));
-      await logic.fetchPlaceSuggestions('ph');
+      await logic.fetchPlaceSuggestions('phno');
       await tester.pump(const Duration(milliseconds: 60));
 
-      expect(fake.queries, ['ph'],
+      expect(fake.queries, ['phno'],
           reason: "the first keystroke's timer should have been cancelled");
-      expect(logic.state.suggestLocationData.predictions?.single.description, 'Result for ph');
+      expect(logic.state.suggestLocationData.predictions?.single.description,
+          'Result for phno');
+    });
+
+    testWidgets('a query below the threshold never reaches the network',
+        (tester) async {
+      await _pumpEasyLoadingHost(tester);
+      final fake = _FakeLocationRepo()..onSearch = (q) => _resultFor('x');
+      final logic = MapDragLogic(locationRepo: fake)
+        ..debounceDuration = const Duration(milliseconds: 10);
+
+      await logic.fetchPlaceSuggestions('a');
+      await logic.fetchPlaceSuggestions('ae');
+      await tester.pump(const Duration(milliseconds: 40));
+
+      // Places autocomplete is billed per request; this used to fire on the
+      // first keystroke.
+      expect(fake.queries, isEmpty);
+      expect(logic.searchStatus, DestinationSearchStatus.belowThreshold);
     });
 
     testWidgets('a failed search is caught, not an uncaught exception', (tester) async {
