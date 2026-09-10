@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:logger/logger.dart';
 import '../../../data/models/location_model.dart';
+import 'search_state.dart';
 import 'state.dart';
 
 class MapDragLogic extends GetxController {
@@ -77,6 +78,14 @@ class MapDragLogic extends GetxController {
   /// false and the confirm button stays disabled.
   bool get hasPin => state.latlng != null;
 
+  /// What the results area should be showing, per spec Screen 2's state table.
+  DestinationSearchStatus get searchStatus => destinationSearchStatus(
+        query: state.searchQuery,
+        isSearching: state.isSearching,
+        hasError: state.hasSearchError,
+        resultCount: state.suggestLocationData.predictions?.length ?? 0,
+      );
+
   // search address
   //
   // P-04 (docs/12) — the loading/error handling below used to wrap only the
@@ -90,17 +99,36 @@ class MapDragLogic extends GetxController {
   // mechanics (cancel-and-reschedule per keystroke) are unchanged.
   Future<void> fetchPlaceSuggestions(String query) async {
     state.debounceTimer?.cancel();
-    if (query.isEmpty) return;
+    state.searchQuery = query;
+
+    // P-04 / spec Screen 2: do not reach the network below the threshold.
+    // This used to fire on a single character — results too generic to
+    // disambiguate, and Places autocomplete is billed per request, so every
+    // passenger paid for two useless calls before the first useful one.
+    if (!shouldQueryNetwork(query)) {
+      state.isSearching = false;
+      state.hasSearchError = false;
+      update([MapDragUpdate.fetchLocation]);
+      return;
+    }
+
+    state.isSearching = true;
+    state.hasSearchError = false;
+    update([MapDragUpdate.fetchLocation]);
 
     EasyLoading.show();
     state.debounceTimer = Timer(debounceDuration, () async {
       try {
         var locationData = await _locationRepo.searchPlaces(query);
         state.suggestLocationData = locationData;
-        update([MapDragUpdate.fetchLocation]);
+        state.hasSearchError = false;
       } catch (e) {
+        // Spec: keep the typed query so the passenger can retry it.
+        state.hasSearchError = true;
         Logger().e("Exception e: $e");
       } finally {
+        state.isSearching = false;
+        update([MapDragUpdate.fetchLocation]);
         EasyLoading.dismiss();
       }
     });
