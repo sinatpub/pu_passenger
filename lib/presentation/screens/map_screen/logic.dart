@@ -11,7 +11,6 @@ import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/driver_around_api.dart';
 import 'package:com.tara.passenger/data/datasources/request_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/update_passenger_location_api.dart';
-import 'package:com.tara.passenger/data/models/driver_around_model.dart';
 import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/map_presentation.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
@@ -20,7 +19,6 @@ import 'package:com.tara.passenger/service/location_imp.dart';
 import 'package:com.tara.passenger/services/booking_session.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:get/get.dart';
@@ -143,7 +141,7 @@ class MapLogic extends GetxController {
   void refreshMarkers() {
     // P-06: marker construction is a pure function of the trip being
     // composed — see map_presentation.dart.
-    state.mapMarkers = buildTripMarkers(
+    state.tripMarkers = buildTripMarkers(
       currentLatLng: state.currentLatLng,
       destinationLatLng: state.destinationLatLng,
       sourceIcon: state.sourceIcon,
@@ -255,7 +253,8 @@ class MapLogic extends GetxController {
         state.distance = "";
         state.totalFare = 0.0;
         state.polylines = {};
-        state.mapMarkers = {};
+        // Only the trip layer resets — the nearby drivers are still there.
+        state.tripMarkers = {};
         update([MapUpdate.mapID]);
         moveToCurrentLocation();
         return;
@@ -371,7 +370,7 @@ class MapLogic extends GetxController {
         ok: (data) async {
           state.driverAroundData = data;
           // 2. Process markers
-          await displayDriverMarker();
+          displayDriverMarker();
         },
         err: (error) async => Logger().e("Exception ${error.message}"),
       );
@@ -380,43 +379,16 @@ class MapLogic extends GetxController {
     }
   }
 
-  displayDriverMarker() {
-    // 1. Safety check for data and location
-    final List<Driver>? allDrivers = state.driverAroundData?.data;
-    if (allDrivers == null || state.currentLatLng == null) {
-      return;
-    }
-
-    // 2. Clear only driver markers to avoid duplicating icons on update
-    state.mapMarkers.removeWhere((m) => m.markerId.value.startsWith("driver_"));
-
-    // 3. Filter and Add Markers
-    // We use for-in for better readability and performance in large lists
-    for (var driver in allDrivers) {
-      // Parse coordinates safely
-      double dLat = double.tryParse(driver.lastLocation?.latitude ?? '') ?? 0.0;
-      double dLng =
-          double.tryParse(driver.lastLocation?.longitude ?? '') ?? 0.0;
-
-      // Skip drivers with invalid coordinates (0,0)
-      if (dLat == 0.0 && dLng == 0.0) continue;
-
-      state.mapMarkers.add(
-        Marker(
-          markerId: MarkerId("driver_${driver.id}"),
-          position: LatLng(dLat, dLng),
-          icon: state.driverIcon ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-          anchor: const Offset(0.5, 0.5),
-          flat: true,
-          onTap: () => showDriverInfoSheet(Get.context!, driver: driver),
-        ),
-      );
-    }
-
-    // 5. Trigger partial update for the Map layer only
+  void displayDriverMarker() {
+    if (state.currentLatLng == null) return;
+    state.driverMarkers = buildDriverMarkers(
+      drivers: state.driverAroundData?.data,
+      driverIcon: state.driverIcon,
+      onTap: (driver) => showDriverInfoSheet(Get.context!, driver: driver),
+    );
     update([MapUpdate.mapID]);
   }
+
   // Tap on Marker
 
   String getVehicleSet() {

@@ -1,4 +1,6 @@
 import 'package:com.tara.passenger/presentation/screens/map_screen/map_presentation.dart';
+import 'package:com.tara.passenger/data/models/driver_around_model.dart';
+import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -86,6 +88,95 @@ void main() {
 
       expect(a.southwest, b.southwest);
       expect(a.northeast, b.northeast);
+    });
+  });
+
+  Driver driverAt(int id, String lat, String lng) => Driver(
+        id: id,
+        lastLocation: LastLocation(latitude: lat, longitude: lng),
+      );
+
+  group('buildDriverMarkers', () {
+    test('no driver data yields no markers', () {
+      expect(buildDriverMarkers(drivers: null), isEmpty);
+      expect(buildDriverMarkers(drivers: []), isEmpty);
+    });
+
+    test('each driver with a real position gets one marker, keyed by id', () {
+      final markers = buildDriverMarkers(drivers: [
+        driverAt(7, '11.55', '104.91'),
+        driverAt(9, '11.57', '104.90'),
+      ]);
+
+      expect(markers, hasLength(2));
+      expect(markers.map((m) => m.markerId).toSet(),
+          {const MarkerId('driver_7'), const MarkerId('driver_9')});
+    });
+
+    test('a driver at null island is skipped, not drawn off the coast of '
+        'Africa', () {
+      final markers = buildDriverMarkers(drivers: [
+        driverAt(1, '0.0', '0.0'),
+        driverAt(2, '11.55', '104.91'),
+      ]);
+
+      expect(markers, hasLength(1));
+      expect(markers.first.markerId, const MarkerId('driver_2'));
+    });
+
+    test('an unparseable position is skipped rather than crashing', () {
+      final markers = buildDriverMarkers(drivers: [
+        driverAt(1, 'not-a-number', ''),
+        driverAt(2, '11.55', '104.91'),
+      ]);
+
+      expect(markers, hasLength(1));
+      expect(markers.first.markerId, const MarkerId('driver_2'));
+    });
+  });
+
+  group('MapState marker layers (the bug this split fixes)', () {
+    test('the rendered set is both layers composed', () {
+      final state = MapState();
+      state.tripMarkers = buildTripMarkers(currentLatLng: phnomPenh);
+      state.driverMarkers =
+          buildDriverMarkers(drivers: [driverAt(7, '11.55', '104.91')]);
+
+      expect(state.mapMarkers, hasLength(2));
+    });
+
+    test('replacing the trip layer does NOT erase the drivers', () {
+      final state = MapState();
+      state.driverMarkers =
+          buildDriverMarkers(drivers: [driverAt(7, '11.55', '104.91')]);
+
+      // This is what refreshMarkers() does, and it runs when the passenger
+      // picks a destination. It used to replace the single shared set, so
+      // every nearby car vanished off the map at exactly that moment.
+      state.tripMarkers = buildTripMarkers(
+        currentLatLng: phnomPenh,
+        destinationLatLng: toulKork,
+      );
+
+      expect(state.driverMarkers, hasLength(1),
+          reason: 'the driver layer is untouched by a trip-layer write');
+      expect(state.mapMarkers, hasLength(3));
+      expect(
+        state.mapMarkers.map((m) => m.markerId.value),
+        contains('driver_7'),
+      );
+    });
+
+    test('clearing the trip layer on reset leaves the drivers alone', () {
+      final state = MapState();
+      state.driverMarkers =
+          buildDriverMarkers(drivers: [driverAt(7, '11.55', '104.91')]);
+      state.tripMarkers = buildTripMarkers(currentLatLng: phnomPenh);
+
+      state.tripMarkers = {}; // the `reset == true` path
+
+      expect(state.mapMarkers, hasLength(1));
+      expect(state.mapMarkers.first.markerId, const MarkerId('driver_7'));
     });
   });
 }

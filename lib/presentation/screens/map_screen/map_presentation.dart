@@ -1,5 +1,7 @@
 import 'dart:math' as math;
+import 'dart:ui' show Offset;
 
+import 'package:com.tara.passenger/data/models/driver_around_model.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// P-06 (docs/12, docs/08 Problem 15 / docs/09 L-10) — the presentation half
@@ -90,4 +92,47 @@ LatLngBounds? tripCameraBounds({
     southwest: LatLng(minLat, minLng),
     northeast: LatLng(maxLat, maxLng),
   );
+}
+
+/// Markers for the drivers currently available nearby.
+///
+/// Kept as its own layer rather than written into the same set as the trip
+/// markers. They used to share one mutable `state.mapMarkers`, with two
+/// writers racing over it: `refreshMarkers()` *replaced* the set wholesale,
+/// and it runs when the passenger picks a destination — so every nearby-driver
+/// marker disappeared off the map at that moment, and nothing put them back
+/// until the next `getAvailableDriver()`. Selecting a destination and watching
+/// the cars vanish is the bug that shape produces. Composing two layers means
+/// neither writer can erase the other.
+///
+/// Drivers whose last known position is unparseable, or the null-island
+/// `(0, 0)` the backend uses for "no fix", are skipped — the original code did
+/// this and it is load-bearing: a driver rendered off the coast of Africa is
+/// worse than one not rendered at all.
+Set<Marker> buildDriverMarkers({
+  required List<Driver>? drivers,
+  BitmapDescriptor? driverIcon,
+  void Function(Driver driver)? onTap,
+}) {
+  if (drivers == null) return {};
+
+  final markers = <Marker>{};
+  for (final driver in drivers) {
+    final lat = double.tryParse(driver.lastLocation?.latitude ?? '') ?? 0.0;
+    final lng = double.tryParse(driver.lastLocation?.longitude ?? '') ?? 0.0;
+    if (lat == 0.0 && lng == 0.0) continue;
+
+    markers.add(
+      Marker(
+        markerId: MarkerId("driver_${driver.id}"),
+        position: LatLng(lat, lng),
+        icon: driverIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+        anchor: const Offset(0.5, 0.5),
+        flat: true,
+        onTap: onTap == null ? null : () => onTap(driver),
+      ),
+    );
+  }
+  return markers;
 }
