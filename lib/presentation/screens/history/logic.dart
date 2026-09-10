@@ -8,9 +8,17 @@ import 'package:logger/logger.dart';
 
 class HistoryLogic extends GetxController
     with GetSingleTickerProviderStateMixin {
+  /// Collaborators arrive by constructor and resolve lazily — see the same
+  /// pass across the other passenger controllers (`.agent/TODO.md`
+  /// Discovered Tasks, `docs/10` §3.2).
+  HistoryLogic({HomeLogic? homeLogic}) : _injectedHomeLogic = homeLogic;
+
+  final HomeLogic? _injectedHomeLogic;
+
+  late final HomeLogic homeLogic = _injectedHomeLogic ?? Get.find<HomeLogic>();
+
   final HistoryState state = HistoryState();
   final HistroyBookingApi _repo = HistroyBookingApi();
-  final homeLogic = Get.find<HomeLogic>();
 
   late TabController tabController;
   @override

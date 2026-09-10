@@ -5,10 +5,26 @@ import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 
 class ProfileLogic extends GetxController {
-  final ProfileRepository _repository = Get.find<ProfileRepository>();
-  final ProfileState state = ProfileState();
-  final AppLogic appLogic = Get.find<AppLogic>();
+  /// Collaborators arrive by constructor and resolve lazily. A `Get.find`
+  /// in a field initializer runs at construction, so building this
+  /// controller demanded every collaborator already be registered — the
+  /// gap logged in `.agent/TODO.md` Discovered Tasks against
+  /// `docs/10` §3.2. Production behaviour is unchanged: bindings register
+  /// everything before first access.
+  ProfileLogic({
+    ProfileRepository? repository,
+    AppLogic? appLogic,
+  })  : _injectedRepository = repository,
+        _injectedAppLogic = appLogic;
 
+  final ProfileRepository? _injectedRepository;
+  final AppLogic? _injectedAppLogic;
+
+  late final ProfileRepository _repository =
+      _injectedRepository ?? Get.find<ProfileRepository>();
+  late final AppLogic appLogic =
+      _injectedAppLogic ?? Get.find<AppLogic>();
+  final ProfileState state = ProfileState();
   @override
   void onInit() {
     Logger().i("profile initialize");

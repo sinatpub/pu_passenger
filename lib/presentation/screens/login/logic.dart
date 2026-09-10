@@ -12,9 +12,22 @@ import '../../../translations/app_locale.dart';
 import '../../widgets/error_dialog_widget.dart';
 
 class LoginLogic extends GetxController {
+  /// Collaborators arrive by constructor and resolve lazily. A `Get.find`
+  /// in a field initializer runs at construction, so building this
+  /// controller demanded every collaborator already be registered — the
+  /// gap logged in `.agent/TODO.md` Discovered Tasks against
+  /// `docs/10` §3.2. Production behaviour is unchanged: bindings register
+  /// everything before first access.
+  LoginLogic({
+    AuthRepository? repository,
+  })  : _injectedRepository = repository;
+
+  final AuthRepository? _injectedRepository;
+
+  late final AuthRepository _repository =
+      _injectedRepository ?? Get.find<AuthRepository>();
   PhoneRepo phoneRepo = PhoneRepo();
   final AuthState state = AuthState();
-  final AuthRepository _repository = Get.find<AuthRepository>();
   // * TextEditingController
   TextEditingController? phoneTextController;
 

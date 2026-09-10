@@ -19,15 +19,31 @@ import '../../widgets/x_showmodal_bottom.dart';
 import 'state.dart';
 
 class RegisterLogic extends GetxController {
+  /// Collaborators arrive by constructor and resolve lazily. A `Get.find`
+  /// in a field initializer runs at construction, so building this
+  /// controller demanded every collaborator already be registered — the
+  /// gap logged in `.agent/TODO.md` Discovered Tasks against
+  /// `docs/10` §3.2. Production behaviour is unchanged: bindings register
+  /// everything before first access.
+  RegisterLogic({
+    AuthRepository? repository,
+    LoginLogic? loginLogic,
+  })  : _injectedRepository = repository,
+        _injectedLoginLogic = loginLogic;
+
+  final AuthRepository? _injectedRepository;
+  final LoginLogic? _injectedLoginLogic;
+
+  late final AuthRepository _repository =
+      _injectedRepository ?? Get.find<AuthRepository>();
+  late final LoginLogic loginLogic =
+      _injectedLoginLogic ?? Get.find<LoginLogic>();
   final RegisterState state = RegisterState();
-  final AuthRepository _repository = Get.find<AuthRepository>();
   final SaveStoragePref _savePref = SaveStoragePref();
   final RemoveStoragePref _removePref = RemoveStoragePref();
   final ImagePicker _picker = ImagePicker();
 
   TextEditingController controllerName = TextEditingController();
-  final LoginLogic loginLogic = Get.find<LoginLogic>();
-
   void passengerRegister() async {
     EasyLoading.show();
     try {

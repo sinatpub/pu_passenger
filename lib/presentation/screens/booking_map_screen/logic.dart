@@ -22,11 +22,28 @@ import 'package:com.tara.passenger/services/socket_service.dart';
 import 'poll_policy.dart';
 
 class BookingMapLogic extends GetxController {
+  /// Collaborators arrive by constructor and resolve lazily. A `Get.find`
+  /// in a field initializer runs at construction, so building this
+  /// controller demanded every collaborator already be registered — the
+  /// gap logged in `.agent/TODO.md` Discovered Tasks against
+  /// `docs/10` §3.2. Production behaviour is unchanged: bindings register
+  /// everything before first access.
   BookingMapLogic({
     CheckBookingApi? checkBookingApi,
     bool Function()? isSocketConnected,
+    LocationRepo? locationRepo,
+    AppLogic? appLogic,
   })  : checkBookingApi = checkBookingApi ?? CheckBookingApi(),
-        _isSocketConnected = isSocketConnected;
+        _isSocketConnected = isSocketConnected,
+        _injectedLocationRepo = locationRepo,
+        _injectedAppLogic = appLogic;
+
+  final LocationRepo? _injectedLocationRepo;
+  final AppLogic? _injectedAppLogic;
+
+  late final LocationRepo _locationRepo =
+      _injectedLocationRepo ?? Get.find<LocationRepo>();
+  late final AppLogic appLogic = _injectedAppLogic ?? Get.find<AppLogic>();
 
   /// P-09: reads F-03's connection-state signal. Injectable so the poll
   /// policy is testable without a live socket.
@@ -38,13 +55,8 @@ class BookingMapLogic extends GetxController {
   /// Timer ticks since the poll started, counting from 1. Incremented on
   /// every fire whether or not it polled.
   int _pollTick = 0;
-
-  final LocationRepo _locationRepo = Get.find<LocationRepo>();
   final CheckBookingApi checkBookingApi;
   final BookingMapState state = BookingMapState();
-
-  final AppLogic appLogic = Get.find<AppLogic>();
-
   Timer? _refreshTimer;
 
   // P-09 (docs/12, docs/09 §7/docs/08 M-2) — this screen is refreshed by two

@@ -16,10 +16,26 @@ import 'package:pinput/pinput.dart';
 import 'package:smart_auth/smart_auth.dart';
 
 class OtpLogic extends GetxController {
-  final AuthRepository _repository = Get.find<AuthRepository>();
-  final SaveStoragePref _savePref = SaveStoragePref();
-  LoginLogic loginLogic = Get.find<LoginLogic>();
+  /// Collaborators arrive by constructor and resolve lazily. A `Get.find`
+  /// in a field initializer runs at construction, so building this
+  /// controller demanded every collaborator already be registered — the
+  /// gap logged in `.agent/TODO.md` Discovered Tasks against
+  /// `docs/10` §3.2. Production behaviour is unchanged: bindings register
+  /// everything before first access.
+  OtpLogic({
+    AuthRepository? repository,
+    LoginLogic? loginLogic,
+  })  : _injectedRepository = repository,
+        _injectedLoginLogic = loginLogic;
 
+  final AuthRepository? _injectedRepository;
+  final LoginLogic? _injectedLoginLogic;
+
+  late final AuthRepository _repository =
+      _injectedRepository ?? Get.find<AuthRepository>();
+  late final LoginLogic loginLogic =
+      _injectedLoginLogic ?? Get.find<LoginLogic>();
+  final SaveStoragePref _savePref = SaveStoragePref();
   final phoneShake = GlobalKey<ShakeWidgetState>();
   final smartAuth = SmartAuth.instance;
   late final SmsRetriever smsRetriever;

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
-import 'package:com.tara.passenger/app/logic.dart';
 import 'package:com.tara.passenger/core/utils/status_util.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
 import 'package:com.tara.passenger/data/models/request_booking_model.dart';
@@ -41,8 +40,11 @@ void main() {
   setUp(() {
     Get.testMode = true;
     Get.reset();
-    Get.put<LocationRepo>(LocationRepo());
-    Get.put<AppLogic>(AppLogic());
+    // The Get.put<LocationRepo>/Get.put<AppLogic> calls that used to live
+    // here were a workaround: BookingMapLogic resolved both with Get.find in
+    // field initializers, so merely *constructing* it required them to be
+    // registered. They now resolve lazily and can be injected, so the
+    // workaround is gone — see the "constructor injection" group below.
   });
 
   tearDown(() => Get.reset());
@@ -157,6 +159,29 @@ void main() {
       logic.onPollTick();
       expect(fake.callCount, 1,
           reason: 'the fallback must take over without waiting for tick 6');
+    });
+  });
+
+  group('constructor injection (Discovered Tasks / docs/10 §3.2)', () {
+    test('the controller can be constructed with nothing registered in Get',
+        () {
+      // Previously this threw: `Get.find<LocationRepo>()` ran in a field
+      // initializer, so construction demanded a populated Get container.
+      expect(
+        () => BookingMapLogic(checkBookingApi: _FakeCheckBookingApi()),
+        returnsNormally,
+      );
+    });
+
+    test('an injected collaborator is used instead of the container', () {
+      final injected = LocationRepo();
+      final logic = BookingMapLogic(
+        checkBookingApi: _FakeCheckBookingApi(),
+        locationRepo: injected,
+      );
+
+      // Reaching the field must not consult Get at all.
+      expect(() => logic.socketConnected, returnsNormally);
     });
   });
 }
