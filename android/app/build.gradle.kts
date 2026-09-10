@@ -1,14 +1,29 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     // START: FlutterFire Configuration
     id("com.google.gms.google-services")
-//    id("com.google.firebase.crashlytics")
+    // F-09: firebase_crashlytics was a declared-but-unused dependency; the
+    // Dart side is wired in main.dart and this applies the Gradle plugin so
+    // native symbols actually upload.
+    id("com.google.firebase.crashlytics")
     // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Flutter forwards `--dart-define`/`--dart-define-from-file` values here as
+// base64-encoded "key=value" pairs, comma-separated.
+fun dartDefine(key: String): String {
+    val raw = project.findProperty("dart-defines") as String? ?: return ""
+    return raw.split(",")
+        .map { String(Base64.getDecoder().decode(it)) }
+        .map { it.split("=", limit = 2) }
+        .firstOrNull { it.getOrNull(0) == key }
+        ?.getOrNull(1) ?: ""
+}
 
 android {
     namespace = "com.tara.passenger.tara_passenger_mobile_application"
@@ -36,6 +51,7 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+        manifestPlaceholders["GOOGLE_MAPS_API_KEY"] = dartDefine("GOOGLE_MAPS_API_KEY")
     }
 
 

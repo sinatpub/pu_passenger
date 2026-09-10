@@ -118,6 +118,7 @@ get englishKey => {
       AppLocale.tarrif: AppLocale.tarrif,
       AppLocale.km: AppLocale.km,
       AppLocale.confirmDropOff: AppLocale.confirmDropOff,
+      AppLocale.confirmPickup: AppLocale.confirmPickup,
       AppLocale.myLocation: AppLocale.myLocation,
       AppLocale.fare: AppLocale.fare,
       AppLocale.enterAddress: AppLocale.enterAddress,

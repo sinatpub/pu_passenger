@@ -110,6 +110,7 @@ get khmerKey => {
       AppLocale.tarrif: "ពន្ធ",
       AppLocale.km: "គីឡូ",
       AppLocale.confirmDropOff: "ទទួលយកទីតាំង",
+      AppLocale.confirmPickup: "ទទួលយកទីតាំងទទួល",
       AppLocale.myLocation: "ទីតាំងបច្ចុប្បន្ន",
       AppLocale.fare: 'ចំណាយអស់',
       AppLocale.enterAddress: "បញ្ចូលឈ្មោះអាសយដ្ឋាន",

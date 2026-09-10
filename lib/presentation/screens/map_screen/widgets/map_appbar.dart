@@ -5,8 +5,6 @@ import '../../../../core/theme/colors.dart';
 import '../../../../core/theme/text_styles.dart';
 import '../../../../core/utils/app_ext.dart';
 import '../../../../translations/app_locale.dart';
-import '../logic.dart';
-import '../state.dart';
 
 class MapAppbar extends StatelessWidget {
   const MapAppbar({super.key});

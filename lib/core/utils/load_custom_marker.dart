@@ -1,7 +1,6 @@
 import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui' as ui;
-import 'package:flutter/services.dart';
 
 Future<Uint8List> loadImageFromAssets(String assetPath) async {
   try {

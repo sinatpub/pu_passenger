@@ -118,7 +118,15 @@ class MapScreen extends StatelessWidget {
                   if (logic.state.destinationAddress == null)
                     SearchWhereToGo(
                       onTap: () async {
-                        var result = await Get.toNamed(AppRoutes.DRAGMAP);
+                        // P-05 (docs/12) — backing out of the drag map pops
+                        // with no result, and `updateDestinationLocation`
+                        // takes a non-nullable `LatLng`, so the implicit
+                        // downcast of that `null` threw
+                        // "type 'Null' is not a subtype of type 'LatLng'".
+                        // Cancelling the picker is a normal exit, not a
+                        // destination change.
+                        final result = await Get.toNamed(AppRoutes.DRAGMAP);
+                        if (result is! LatLng) return;
                         logic.updateDestinationLocation(latLng: result);
                       },
                     )
@@ -242,7 +250,9 @@ class MapScreen extends StatelessWidget {
                 ),
                 FBTNWidget(
                     onPressed: () async {
-                      logic.toggleBookLoading();
+                      // P-08: the loading flag is owned by MapLogic. The view
+                      // no longer pre-toggles it — doing so let a double-tap
+                      // clear the overlay and fire a second booking.
                       await logic.requestBooking();
                     },
                     color: AppColors.main,
@@ -406,16 +416,17 @@ class MapScreen extends StatelessWidget {
                   const SizedBox(
                     height: 24,
                   ),
-                  // SizedBox(
-                  //   width: Get.width / 2,
-                  //   child: FBTNWidget(
-                  //     label: AppLocale.cancel.tr,
-                  //     onPressed: () async {
-                  //       logic.toggleBookLoading();
-                  //       await logic.cancelBookingApi();
-                  //     },
-                  //   ),
-                  // )
+                  // P-08: restored. While this was commented out, every
+                  // stuck-overlay path was unrecoverable without killing the
+                  // app. cancelBooking() drops the overlay before calling the
+                  // API so a failing cancel cannot strand the passenger.
+                  SizedBox(
+                    width: Get.width / 2,
+                    child: FBTNWidget(
+                      label: AppLocale.cancel.tr,
+                      onPressed: () async => logic.cancelBooking(),
+                    ),
+                  )
                 ],
               ),
             ),

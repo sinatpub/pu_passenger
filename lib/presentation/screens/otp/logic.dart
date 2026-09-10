@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'package:com.tara.passenger/core/utils/app_log.dart';
-import 'package:com.tara.passenger/data/datasources/otp_verify_api.dart';
+import 'package:com.tara.passenger/core/utils/debug_auth_bypass.dart';
+import 'package:com.tara.passenger/features/auth/data/repository/auth_repository.dart';
 import 'package:com.tara.passenger/presentation/screens/login/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/otp/view.dart';
 import 'package:com.tara.passenger/presentation/widgets/error_dialog_widget.dart';
@@ -16,10 +16,26 @@ import 'package:pinput/pinput.dart';
 import 'package:smart_auth/smart_auth.dart';
 
 class OtpLogic extends GetxController {
-  final OtpVerifyApi _repo = OtpVerifyApi();
-  final SaveStoragePref _savePref = SaveStoragePref();
-  LoginLogic loginLogic = Get.find<LoginLogic>();
+  /// Collaborators arrive by constructor and resolve lazily. A `Get.find`
+  /// in a field initializer runs at construction, so building this
+  /// controller demanded every collaborator already be registered — the
+  /// gap logged in `.agent/TODO.md` Discovered Tasks against
+  /// `docs/10` §3.2. Production behaviour is unchanged: bindings register
+  /// everything before first access.
+  OtpLogic({
+    AuthRepository? repository,
+    LoginLogic? loginLogic,
+  })  : _injectedRepository = repository,
+        _injectedLoginLogic = loginLogic;
 
+  final AuthRepository? _injectedRepository;
+  final LoginLogic? _injectedLoginLogic;
+
+  late final AuthRepository _repository =
+      _injectedRepository ?? Get.find<AuthRepository>();
+  late final LoginLogic loginLogic =
+      _injectedLoginLogic ?? Get.find<LoginLogic>();
+  final SaveStoragePref _savePref = SaveStoragePref();
   final phoneShake = GlobalKey<ShakeWidgetState>();
   final smartAuth = SmartAuth.instance;
   late final SmsRetriever smsRetriever;
@@ -68,31 +84,58 @@ class OtpLogic extends GetxController {
   }
 
   void verifyOtp(String otpCode) async {
-    try {
+    // Debug-only shortcut — see [DebugAuthBypass] for the three conditions
+    // that must all hold. Compiled out of release builds entirely.
+    if (DebugAuthBypass.accepts(otpCode)) {
       loading.value = true;
-      var data = await _repo.verifyOTPApi(
-          phoneNumer: phoneNumber.toString(), otpCode: otpCode.toString());
-      if (data.data?.user == null && data.data?.token == null) {
-        Get.toNamed(AppRoutes.REGISTER);
-        // _savePhoneNumber();
-      } else {
-        // save to local storage
+      try {
+        final ok = await DebugAuthBypass.seedSession();
+        if (!ok) {
+          forceErrorPinPut.value = true;
+          showErrorCustomDialog(
+            Get.context!,
+            AppLocale.pleaseTryAgain.tr,
+            'Debug bypass could not obtain a session — see the log.',
+            () {
+              Get.back();
+            },
+          );
+          return;
+        }
         forceErrorPinPut.value = false;
-        _savePref.saveJsonToken(authModel: json.encode(data));
-
         Get.offAllNamed(AppRoutes.BOTTOMNAV);
+      } finally {
+        loading.value = false;
       }
-    } catch (e) {
-      forceErrorPinPut.value = true;
-      HapticFeedback.heavyImpact();
-      phoneShake.currentState?.shake();
-      showErrorCustomDialog(
-        Get.context!,
-        AppLocale.pleaseTryAgain.tr,
-        AppLocale.desErrorOTP.tr,
-        () {
-          Get.back();
-          // resendCode();
+      return;
+    }
+
+    loading.value = true;
+    try {
+      final result = await _repository.verifyOtp(
+          phone: phoneNumber.toString(), otpCode: otpCode.toString());
+      result.when(
+        ok: (data) {
+          if (data.data?.user == null && data.data?.token == null) {
+            Get.toNamed(AppRoutes.REGISTER);
+          } else {
+            forceErrorPinPut.value = false;
+            _savePref.saveJsonToken(authModel: json.encode(data));
+            Get.offAllNamed(AppRoutes.BOTTOMNAV);
+          }
+        },
+        err: (_) {
+          forceErrorPinPut.value = true;
+          HapticFeedback.heavyImpact();
+          phoneShake.currentState?.shake();
+          showErrorCustomDialog(
+            Get.context!,
+            AppLocale.pleaseTryAgain.tr,
+            AppLocale.desErrorOTP.tr,
+            () {
+              Get.back();
+            },
+          );
         },
       );
     } finally {
@@ -105,11 +148,5 @@ class OtpLogic extends GetxController {
     loginLogic.phoneLogin(phoneNumber, Get.context);
     startTimer();
     isResendEnabled.value = false;
-  }
-
-  // why this => save phone number for save resource otp in case user reaching to register page
-  void _savePhoneNumber() async {
-    SaveStoragePref pref = SaveStoragePref();
-    pref.savePhoneNumber(phoneNum: phoneNumber);
   }
 }

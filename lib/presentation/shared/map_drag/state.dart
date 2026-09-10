@@ -5,8 +5,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../data/models/location_model.dart';
 
 class MapDragState {
-  String title = "";
-  LatLng? latlng = LatLng(0.0, 0.0);
+  /// Null until the map reports a position (P-05) — it used to be seeded with
+  /// `LatLng(0, 0)`, which confirm handed back as a real pickup point.
+  LatLng? latlng;
   bool isCameraMove = false;
   Timer? debounceTimer;
   LocationModel suggestLocationData = LocationModel();
@@ -15,7 +16,6 @@ class MapDragState {
   bool isTypingTextField = false;
   bool isShowMap = false;
 
-  String? selectedLocationId;
   Prediction? selectedPrediction;
 
   GoogleMapController? mapController;

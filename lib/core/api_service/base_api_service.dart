@@ -1,16 +1,11 @@
 import 'dart:io';
 import 'package:com.tara.passenger/core/api_service/client/dio_http_client.dart';
 import 'package:com.tara.passenger/core/api_service/client/http_exception.dart';
-import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/core/utils/errror_message.dart';
 import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
-import 'package:com.tara.passenger/presentation/widgets/custom_snackbar_widget.dart';
-import 'package:com.tara.passenger/storages/get_storage.dart';
+import 'package:com.tara.passenger/services/session_service.dart';
 import 'package:dio/dio.dart';
-import 'package:get/get.dart' as g;
 import 'package:logger/logger.dart';
-
-import '../../routes/app_pages.dart';
 
 class BaseApiService {
   late Dio dio;
@@ -35,18 +30,16 @@ class BaseApiService {
     bool autoRefreshToken = true,
   }) async {
     late Response response;
-    GetStoragePref storagePref = GetStoragePref();
 
-    // Await token retrieval
-    var driverData = await storagePref.getJsonToken;
-    String? accessToken = driverData.data?.token;
-    AppConstant.driverToken = accessToken;
+    // Token now sourced from SessionService's in-memory cache — no per-request
+    // SharedPreferences decode (docs/08 H-10).
+    final accessToken =
+        requiredToken ? await SessionService.instance.getToken() : null;
 
     try {
       final httpOption = Options(method: method, headers: {});
       if (requiredToken && accessToken != null) {
-        httpOption.headers!['Authorization'] =
-            "Bearer ${AppConstant.driverToken}";
+        httpOption.headers!['Authorization'] = "Bearer $accessToken";
       }
 
       if (customToken != null) {
@@ -132,8 +125,11 @@ DioErrorException _onDioError(DioException exception) {
     return DioErrorException(ErrorMessage.TIMEOUT_ERROR);
   } else if (exception.type == DioExceptionType.badResponse) {
     final status = exception.response?.statusCode;
-    if (status == 401 || status == 403) {
-      handleUnauthorized();
+    // 401 only: a 403 is a role/permission error on a still-valid session, and
+    // clearing the token there logs the user out mid-session. See
+    // `ApiErrorType.forbidden` in `core/network/api_exception.dart`.
+    if (status == 401) {
+      SessionService.instance.handleUnauthorized();
     }
     String serverMessage;
     if (exception.response?.data is Map) {
@@ -200,8 +196,4 @@ String handleExceptionError(dynamic error, [String path = ""]) {
   } else {
     return error.toString();
   }
-}
-
-void handleUnauthorized() {
-  g.Get.offAllNamed(AppRoutes.LOGIN);
 }

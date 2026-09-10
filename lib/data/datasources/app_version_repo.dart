@@ -1,7 +1,6 @@
 import 'package:com.tara.passenger/core/api_service/base_api_service.dart';
 import 'package:com.tara.passenger/data/datasources/api_endpoint.dart';
 import 'package:com.tara.passenger/data/models/app_version_model.dart';
-import 'package:com.tara.passenger/data/models/app_version_model.dart';
 
 class AppVersionRepoApi {
   Future<AppVersionModel?> getCurrentAppVersionApi() async {

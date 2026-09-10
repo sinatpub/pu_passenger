@@ -1,14 +1,9 @@
 import 'dart:convert';
-import 'dart:io';
-import 'package:com.tara.passenger/data/models/request_booking_model.dart';
-import 'package:com.tara.passenger/taxi_single_ton/init_socket.dart';
-import 'package:com.tara.passenger/taxi_single_ton/taxi_notification.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 
-import '../core/utils/app_constant.dart';
 import '../core/utils/app_log.dart';
 import '../firebase_options.dart';
 import '../routes/app_pages.dart';

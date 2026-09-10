@@ -1,14 +1,11 @@
-import 'dart:math' as _logger;
-
 import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
 import 'package:com.tara.passenger/presentation/screens/splash_screen/state.dart';
+import 'package:com.tara.passenger/services/session_service.dart';
 import 'package:get/get.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../routes/app_pages.dart';
-import '../../../storages/key_storage.dart';
 
-class SplashLogic extends GetxController with keyStoragePref {
+class SplashLogic extends GetxController {
   SplashState state = SplashState();
   @override
   void onInit() {
@@ -17,20 +14,25 @@ class SplashLogic extends GetxController with keyStoragePref {
     tlog("Initialize Login");
   }
 
-  // authorized
+  // P-01 (docs/12) — was a presence-only check reading the legacy `jsonToken`
+  // blob straight out of SharedPreferences, with an empty catch and its
+  // fallback route commented out (docs/08 M-14): any exception here
+  // stranded the user on the splash screen forever. Now goes through
+  // SessionService (F-04), which migrates that same blob into secure
+  // storage on first read, and any failure falls back to login instead of
+  // hanging.
   Future<void> _checkAuthorization() async {
+    String? token;
     try {
-      final SharedPreferences pref = await SharedPreferences.getInstance();
-      final String? token = pref.getString(jsonToken);
+      token = await SessionService.instance.getToken();
       await 1.delay();
-      if (token == null) {
-        Get.offAllNamed(AppRoutes.LOGIN);
-      } else {
-        Get.offAllNamed(AppRoutes.BOTTOMNAV);
-      }
     } catch (e) {
-      // _logger.e("Authorization check failed: $e");
-      // Get.offAllNamed(AppRoutes.LOGIN);
+      token = null;
+    }
+    if (token == null) {
+      Get.offAllNamed(AppRoutes.LOGIN);
+    } else {
+      Get.offAllNamed(AppRoutes.BOTTOMNAV);
     }
   }
 }

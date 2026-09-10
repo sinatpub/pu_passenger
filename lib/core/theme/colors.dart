@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Main Colors
-  static const Color mainBackground = Color(0xFFFFC5C4);
   static const Color main = Color(0xFFFF4500);
   static const Color red = Color(0xFFFF1100);
   static const Color darker = Color(0xFFCC3700);
@@ -11,7 +10,6 @@ class AppColors {
 
   // State Colors
   static const Color error = Color(0xFFD32F2F);
-  static const Color warning = Color(0xFFFFA000);
   static const Color info = Color(0xFF1976D2);
   static const Color success = Color(0xFF10CF7C);
 

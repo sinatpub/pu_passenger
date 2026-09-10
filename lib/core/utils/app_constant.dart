@@ -1,3 +1,4 @@
+import 'package:com.tara.passenger/core/config/app_config.dart';
 enum ClientMethod { POST, GET, PATCH, DELETE }
 
 class AppConstant {
@@ -9,14 +10,11 @@ class AppConstant {
 
   static const String titleApp = 'TAARRAA';
 
-  // Based Url
-  static const baseUrlApi = "https://api.tara-taxi.com";
-  //'http://206.189.38.88:3007/'; // Dev
-
-  // Socket IO Client
-  static const socketBasedUrl =
-      // "http://192.250.228.136:3009/";//
-      "https://socket.tara-taxi.com";
+  // F-07: these now delegate to AppConfig, which owns every environment
+  // value. Kept as AppConstant members so the existing call sites are
+  // unaffected — one source of truth, not a second one.
+  static const baseUrlApi = AppConfig.apiBaseUrl;
+  static const socketBasedUrl = AppConfig.socketBaseUrl;
 
   // Socket Event Client
 
@@ -26,8 +24,9 @@ class AppConstant {
   static const String userToken = '';
   static String? driverToken;
 
-  static const googleKeyApi = "AIzaSyAEZtLQKJGA-Phcfn339c2A5ppu9eh9lAY";
-  static const placeApiKey = "AIzaSyC0Esr9Gr0GctcVxfH6rth4Spa4IJWhxiY";
+  // Supplied via `--dart-define-from-file=dart_defines.json`
+  static const googleKeyApi = AppConfig.googleMapsApiKey;
+  static const placeApiKey = AppConfig.googlePlacesApiKey;
 
   // Marker
   static const passengerMarker = "PassengerMarker";

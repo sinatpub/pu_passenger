@@ -8,6 +8,7 @@ import 'package:com.tara.passenger/core/utils/load_custom_marker.dart';
 import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
 import 'package:com.tara.passenger/presentation/widgets/error_dialog_widget.dart';
 import 'package:com.tara.passenger/service/location_imp.dart';
+import 'package:com.tara.passenger/services/location_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
@@ -40,6 +41,7 @@ class GoogleMapLogic extends GetxController {
   @override
   void onClose() {
     _positionStream?.cancel();
+    LocationService.instance.stop();
     super.onClose();
   }
 
@@ -207,12 +209,9 @@ class GoogleMapLogic extends GetxController {
   }
 
   Future<void> updatePassengerMoveFromCurrentLocation() async {
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 10,
-      ),
-    ).listen((Position position) {
+    LocationService.instance.start();
+    _positionStream =
+        LocationService.instance.positionStream.listen((Position position) {
       parentState.latitude.value = position.latitude;
       parentState.longtitude.value = position.longitude;
       Logger().i(

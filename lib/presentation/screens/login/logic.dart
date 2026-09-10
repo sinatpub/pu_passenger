@@ -1,6 +1,5 @@
 import 'package:com.tara.passenger/core/helper/phone_validate_helper.dart';
-import 'package:com.tara.passenger/core/utils/app_log.dart';
-import 'package:com.tara.passenger/data/datasources/phone_num_remote_data_source.dart';
+import 'package:com.tara.passenger/features/auth/data/repository/auth_repository.dart';
 import 'package:com.tara.passenger/presentation/screens/login/state.dart';
 import 'package:com.tara.passenger/presentation/widgets/custom_snackbar_widget.dart';
 import 'package:com.tara.passenger/presentation/widgets/shake_widget.dart';
@@ -13,9 +12,22 @@ import '../../../translations/app_locale.dart';
 import '../../widgets/error_dialog_widget.dart';
 
 class LoginLogic extends GetxController {
+  /// Collaborators arrive by constructor and resolve lazily. A `Get.find`
+  /// in a field initializer runs at construction, so building this
+  /// controller demanded every collaborator already be registered — the
+  /// gap logged in `.agent/TODO.md` Discovered Tasks against
+  /// `docs/10` §3.2. Production behaviour is unchanged: bindings register
+  /// everything before first access.
+  LoginLogic({
+    AuthRepository? repository,
+  })  : _injectedRepository = repository;
+
+  final AuthRepository? _injectedRepository;
+
+  late final AuthRepository _repository =
+      _injectedRepository ?? Get.find<AuthRepository>();
   PhoneRepo phoneRepo = PhoneRepo();
   final AuthState state = AuthState();
-  final PhoneNumerRemoteDataSource loginApi = PhoneNumerRemoteDataSource();
   // * TextEditingController
   TextEditingController? phoneTextController;
 
@@ -33,22 +45,27 @@ class LoginLogic extends GetxController {
 
   Future<void> phoneLogin(String phone, context) async {
     if (phoneRepo.isValid(phone.removeAllWhitespace) == true) {
+      EasyLoading.show(dismissOnTap: false);
       try {
-        EasyLoading.show(dismissOnTap: false);
         String phoneNum = validatePhoneNumber(phone);
-        var data = await loginApi.postPhoneNumberApi(phoneNumer: phoneNum);
-        Get.toNamed(AppRoutes.OTP, arguments: {
-          "phoneNumber": phoneNum,
-          "resendTime": data.data.seconde
-        });
-      } catch (e) {
-        state.isLoading.value = false;
-        showErrorCustomDialog(
-          Get.context!,
-          AppLocale.pleaseTryAgain.tr,
-          AppLocale.desPleaseLoginAgain.tr,
-          () {
-            Get.back();
+        final result = await _repository.loginPhone(phoneNum);
+        result.when(
+          ok: (data) {
+            Get.toNamed(AppRoutes.OTP, arguments: {
+              "phoneNumber": phoneNum,
+              "resendTime": data.data.seconde
+            });
+          },
+          err: (_) {
+            state.isLoading.value = false;
+            showErrorCustomDialog(
+              Get.context!,
+              AppLocale.pleaseTryAgain.tr,
+              AppLocale.desPleaseLoginAgain.tr,
+              () {
+                Get.back();
+              },
+            );
           },
         );
       } finally {

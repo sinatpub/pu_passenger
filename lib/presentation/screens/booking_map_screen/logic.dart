@@ -18,15 +18,65 @@ import '../../../core/utils/load_custom_marker.dart';
 import '../../../core/utils/pretty_logger.dart';
 import '../../../core/utils/status_util.dart';
 import '../map_screen/logic.dart';
+import 'package:com.tara.passenger/services/socket_service.dart';
+import 'poll_policy.dart';
 
 class BookingMapLogic extends GetxController {
-  final LocationRepo _locationRepo = Get.find<LocationRepo>();
-  final CheckBookingApi checkBookingApi = CheckBookingApi();
+  /// Collaborators arrive by constructor and resolve lazily. A `Get.find`
+  /// in a field initializer runs at construction, so building this
+  /// controller demanded every collaborator already be registered — the
+  /// gap logged in `.agent/TODO.md` Discovered Tasks against
+  /// `docs/10` §3.2. Production behaviour is unchanged: bindings register
+  /// everything before first access.
+  BookingMapLogic({
+    CheckBookingApi? checkBookingApi,
+    bool Function()? isSocketConnected,
+    LocationRepo? locationRepo,
+    AppLogic? appLogic,
+  })  : checkBookingApi = checkBookingApi ?? CheckBookingApi(),
+        _isSocketConnected = isSocketConnected,
+        _injectedLocationRepo = locationRepo,
+        _injectedAppLogic = appLogic;
+
+  final LocationRepo? _injectedLocationRepo;
+  final AppLogic? _injectedAppLogic;
+
+  late final LocationRepo _locationRepo =
+      _injectedLocationRepo ?? Get.find<LocationRepo>();
+  late final AppLogic appLogic = _injectedAppLogic ?? Get.find<AppLogic>();
+
+  /// P-09: reads F-03's connection-state signal. Injectable so the poll
+  /// policy is testable without a live socket.
+  final bool Function()? _isSocketConnected;
+
+  bool get socketConnected =>
+      (_isSocketConnected ?? () => PassengerSocketService().isConnected)();
+
+  /// Timer ticks since the poll started, counting from 1. Incremented on
+  /// every fire whether or not it polled.
+  int _pollTick = 0;
+  final CheckBookingApi checkBookingApi;
   final BookingMapState state = BookingMapState();
-
-  final AppLogic appLogic = Get.find<AppLogic>();
-
   Timer? _refreshTimer;
+
+  // P-09 (docs/12, docs/09 §7/docs/08 M-2) — this screen is refreshed by two
+  // independent channels: the 10s poll below and socket events
+  // (`PassengerSocketService._handleBookingUpdate`), both calling
+  // `getBookingInfo`. Nothing stopped a slower, now-stale fetch from
+  // completing (and overwriting `state.bookingRequestData`) after a faster,
+  // more current one already had — "socket says onGoing" could be
+  // regressed by "the poll I kicked off 2s earlier still thinks accepted".
+  // This counter makes a response only apply if no newer request has
+  // started since — standard out-of-order-response guard, independent of
+  // which channel triggered which fetch.
+  //
+  // The other half — "socket primary, bounded poll fallback" — is now done
+  // too (2026-09-09), once F-03 exposed `BaseSocketService.isConnected`.
+  // While the socket is healthy the poll drops to one tick in six; it never
+  // stops entirely, because a transport-level connection can be up while the
+  // server has gone quiet. See `poll_policy.dart` for why bounded rather
+  // than off.
+  int _requestSeq = 0;
 
   @override
   Future<void> onInit() async {
@@ -50,9 +100,23 @@ class BookingMapLogic extends GetxController {
 
   void _startTimer() {
     _refreshTimer?.cancel();
+    _pollTick = 0;
     _refreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
-      getBookingInfo(isSilent: true);
+      onPollTick();
     });
+  }
+
+  /// One timer fire. Separated from the `Timer.periodic` callback so the
+  /// policy can be driven directly in a test without waiting on wall time.
+  void onPollTick() {
+    _pollTick++;
+    if (!shouldPollOnTick(
+      socketConnected: socketConnected,
+      tick: _pollTick,
+    )) {
+      return;
+    }
+    getBookingInfo(isSilent: true);
   }
 
   void _stopTimer() {
@@ -273,18 +337,19 @@ class BookingMapLogic extends GetxController {
   }
 
   Future<void> getBookingInfo({bool isSilent = false}) async {
+    final requestId = ++_requestSeq;
     try {
       // 1. Only show loading on manual entry or hard refresh
       if (!isSilent) EasyLoading.show();
 
       var response = await checkBookingApi.checkBookingApi();
 
-      if (response.data != null) {
-        // Determine state changes
-        bool firstLoad = state.bookingRequestData == null;
-        bool statusChanged =
-            state.bookingRequestData?.data?.status != response.data?.status;
+      // A newer call (poll or socket-triggered) has started since this one
+      // did — its response will supersede ours. Applying this one now would
+      // regress state with stale data. See the field comment on _requestSeq.
+      if (requestId != _requestSeq) return;
 
+      if (response.data != null) {
         // Update the local state
         state.bookingRequestData = response;
         _bookingInfo(); // Updates UI Text/Titles
@@ -293,16 +358,6 @@ class BookingMapLogic extends GetxController {
         await refreshMarkers();
         await drawPolyline(); // Re-calculates road path
         navigateMapPerspective();
-        // 3. Logic for Redrawing Polylines and Moving Camera
-        // We only do this on status changes or first load to save API costs and prevent flickering
-        // if (statusChanged || firstLoad || !isSilent) {
-        //   // Short delay ensures the Map widget processes the markers before camera moves
-        //   Future.delayed(const Duration(milliseconds: 400), () async {
-        //     if (state.mapController != null) {
-        //       navigateMapPerspective();
-        //     }
-        //   });
-        // }
       }
     } catch (e) {
       tlog("Booking Update Error: $e");
