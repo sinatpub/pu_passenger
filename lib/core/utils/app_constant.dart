@@ -1,3 +1,4 @@
+import 'package:com.tara.passenger/core/config/app_config.dart';
 enum ClientMethod { POST, GET, PATCH, DELETE }
 
 class AppConstant {
@@ -9,21 +10,11 @@ class AppConstant {
 
   static const String titleApp = 'TAARRAA';
 
-  // Based Url — overridable via `--dart-define=API_BASE_URL=...`
-  // (F-07, docs/12); default points at the current passenger backend.
-  static const baseUrlApi = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'https://taxi-api.simpledevelopertools.com',
-  );
-
-  // Socket IO Client — overridable via `--dart-define=SOCKET_BASE_URL=...`.
-  // Same host as the REST API on this backend: the Socket.IO server is
-  // mounted at `/socket.io/` on `baseUrlApi` rather than on a separate
-  // host as the old `socket.tara-taxi.com` deployment was (docs/04 §1.1).
-  static const socketBasedUrl = String.fromEnvironment(
-    'SOCKET_BASE_URL',
-    defaultValue: 'https://taxi-api.simpledevelopertools.com',
-  );
+  // F-07: these now delegate to AppConfig, which owns every environment
+  // value. Kept as AppConstant members so the existing call sites are
+  // unaffected — one source of truth, not a second one.
+  static const baseUrlApi = AppConfig.apiBaseUrl;
+  static const socketBasedUrl = AppConfig.socketBaseUrl;
 
   // Socket Event Client
 
@@ -34,8 +25,8 @@ class AppConstant {
   static String? driverToken;
 
   // Supplied via `--dart-define-from-file=dart_defines.json`
-  static const googleKeyApi = String.fromEnvironment('GOOGLE_MAPS_API_KEY');
-  static const placeApiKey = String.fromEnvironment('GOOGLE_PLACES_API_KEY');
+  static const googleKeyApi = AppConfig.googleMapsApiKey;
+  static const placeApiKey = AppConfig.googlePlacesApiKey;
 
   // Marker
   static const passengerMarker = "PassengerMarker";
