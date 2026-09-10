@@ -3,6 +3,7 @@
 //     final historyBookingModel = historyBookingModelFromJson(jsonString);
 
 import 'dart:convert';
+import 'package:com.tara.passenger/core/utils/json_list.dart';
 
 HistoryBookingModel historyBookingModelFromJson(String str) =>
     HistoryBookingModel.fromJson(json.decode(str));
@@ -29,7 +30,8 @@ class HistoryBookingModel {
 
   factory HistoryBookingModel.fromJson(Map<String, dynamic> json) =>
       HistoryBookingModel(
-        data: List<Datum>.from(json["data"].map((x) => Datum.fromJson(x))),
+        data: parseJsonList<Datum>(
+            json["data"], (x) => Datum.fromJson(x)),
         currentPage: json["current_page"],
         perPage: json["per_page"],
         total: json["total"],
@@ -273,8 +275,8 @@ class Vehicle {
         enginePower: json["engine_power"],
         maxPassenger: json["max_passenger"],
         status: json["status"],
-        vehicleImage: List<VehicleImage>.from(
-            json["vehicle_image"].map((x) => VehicleImage.fromJson(x))),
+        vehicleImage: parseJsonList<VehicleImage>(
+            json["vehicle_image"], (x) => VehicleImage.fromJson(x)),
       );
 
   Map<String, dynamic> toJson() => {

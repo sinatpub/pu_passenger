@@ -1,3 +1,5 @@
+import 'package:com.tara.passenger/core/utils/json_list.dart';
+
 class VehicalTypeEntities {
   List<SingleVehical> data;
   String message;
@@ -11,8 +13,8 @@ class VehicalTypeEntities {
 
   factory VehicalTypeEntities.fromJson(Map<String, dynamic> json) =>
       VehicalTypeEntities(
-        data: List<SingleVehical>.from(
-            json["data"].map((x) => SingleVehical.fromJson(x))),
+        data: parseJsonList<SingleVehical>(
+            json["data"], (x) => SingleVehical.fromJson(x)),
         message: json["message"],
         status: json["status"],
       );
