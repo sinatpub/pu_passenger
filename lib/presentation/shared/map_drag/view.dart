@@ -13,6 +13,7 @@ import '../../../core/theme/colors.dart';
 import '../../../translations/app_locale.dart';
 import '../../widgets/fbtn_widget.dart';
 import '../../widgets/x_text_field.dart';
+import 'args.dart';
 import 'logic.dart';
 import 'state.dart';
 
@@ -313,7 +314,9 @@ class MapDragPage extends StatelessWidget {
                   : null,
               color: AppColors.main,
               textColor: AppColors.light4,
-              label: AppLocale.confirmDropOff.tr,
+              // Follows the route argument; defaults to the drop-off flow,
+              // which is the only live caller today.
+              label: MapDragArgs.fromRoute(Get.arguments).purpose.confirmLabel,
             );
           },
         ),

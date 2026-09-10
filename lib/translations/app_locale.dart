@@ -135,6 +135,7 @@ class AppLocale {
   static var km = "Km";
 
   static var confirmDropOff = "Confirm Drop Off";
+  static var confirmPickup = "Confirm Pickup";
 
   static var myLocation = "My Location";
 
