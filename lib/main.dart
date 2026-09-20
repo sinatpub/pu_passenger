@@ -1,7 +1,8 @@
 import 'package:com.tara.passenger/app/root_main.dart';
 import 'package:com.tara.passenger/app/service.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
-import 'package:com.tara.passenger/service/notification_logic.dart';
+import 'package:com.tara.passenger/mock/mock_mode.dart';
+import 'package:com.tara.passenger/services/notification_logic.dart';
 import 'package:com.tara.passenger/taxi_single_ton/taxi_notification.dart';
 import 'package:com.tara.passenger/presentation/widgets/custom_animated_loading.dart';
 import 'package:com.tara.passenger/core/api_service/client/dio_http_client.dart';
@@ -21,6 +22,9 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 void main() async {
   BaseHttpClient.init();
   WidgetsFlutterBinding.ensureInitialized();
+  // QA mock backend — a no-op unless built with USE_MOCK_DATA=true in a
+  // non-release build. Must run before anything makes a request.
+  await MockMode.init();
   // init firebase notification — also initializes Firebase itself, which
   // Crashlytics below depends on
   await NotificationLogic().setupInteractedMessage();

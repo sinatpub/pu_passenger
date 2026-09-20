@@ -4,7 +4,7 @@ import 'package:com.tara.passenger/services/booking_session.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-import '../service/notification_logic.dart';
+import '../services/notification_logic.dart';
 
 initialService() async {
   Get.put(AppLogic(), permanent: true);

@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui';
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
+import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
+
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/state.dart';
-import 'package:com.tara.passenger/service/location_imp.dart';
+import 'package:com.tara.passenger/services/location_imp.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
@@ -12,7 +15,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../app/logic.dart';
 import '../../../core/resources/asset_resource.dart';
-import '../../../core/theme/colors.dart';
 import '../../../core/utils/app_ext.dart';
 import '../../../core/utils/load_custom_marker.dart';
 import '../../../core/utils/pretty_logger.dart';
@@ -33,17 +35,29 @@ class BookingMapLogic extends GetxController {
     bool Function()? isSocketConnected,
     LocationRepo? locationRepo,
     AppLogic? appLogic,
+    CancelBookingApi? cancelBookingRepo,
+    void Function()? onCancelRide,
   })  : checkBookingApi = checkBookingApi ?? CheckBookingApi(),
         _isSocketConnected = isSocketConnected,
         _injectedLocationRepo = locationRepo,
-        _injectedAppLogic = appLogic;
+        _injectedAppLogic = appLogic,
+        _cancelBookingRepo = cancelBookingRepo,
+        _cancelRide = onCancelRide;
 
   final LocationRepo? _injectedLocationRepo;
   final AppLogic? _injectedAppLogic;
+  final CancelBookingApi? _cancelBookingRepo;
+
+  /// Screen 9's cancel emit, injectable so `cancelBooking()` is unit-testable
+  /// without a live socket. Defaults to the pinned `passengerCancelDrive`
+  /// wire (see `socket_emit_contract_test.dart`).
+  final void Function()? _cancelRide;
 
   late final LocationRepo _locationRepo =
       _injectedLocationRepo ?? Get.find<LocationRepo>();
   late final AppLogic appLogic = _injectedAppLogic ?? Get.find<AppLogic>();
+  late final CancelBookingApi cancelBookingRepo =
+      _cancelBookingRepo ?? CancelBookingApi();
 
   /// P-09: reads F-03's connection-state signal. Injectable so the poll
   /// policy is testable without a live socket.
@@ -246,7 +260,7 @@ class BookingMapLogic extends GetxController {
         Polyline(
           polylineId: const PolylineId("trip_route"),
           points: points,
-          color: AppColors.main,
+          color: TaColors.primary,
           width: 5,
           jointType: JointType.round,
           startCap: Cap.roundCap,
@@ -420,5 +434,27 @@ class BookingMapLogic extends GetxController {
     } catch (e) {
       xLog(message: 'Error in makePhoneCall: $e');
     }
+  }
+
+  /// Screen 9's cancel: POST `cancel-request-booking-info` first, then — and
+  /// only then — emit `passengerCancelDrive` (`SocketEvent.rideCancel`).
+  /// Mirrors `MapLogic.cancelBooking` so the emit order and the pinned wire
+  /// cannot drift (see `test/taxi_single_ton/socket_emit_contract_test.dart`).
+  /// Returns whether the API confirmed the cancel; the view navigates only on
+  /// `true` and never skips the emit on failure.
+  Future<bool> cancelBooking() async {
+    final result = await cancelBookingRepo.cancelBookingApi();
+    return result.when(
+      ok: (ok) {
+        if (ok) {
+          (_cancelRide ?? () => PassengerSocketService().handleCancelRide())();
+        }
+        return ok;
+      },
+      err: (error) {
+        xPrettyLog(message: error.message);
+        return false;
+      },
+    );
   }
 }

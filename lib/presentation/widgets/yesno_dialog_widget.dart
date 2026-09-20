@@ -1,8 +1,12 @@
-import 'package:com.tara.passenger/core/theme/colors.dart';
+import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+/// Yes/No (or single "OK") confirmation dialog (roadmap F3 re-skin).
+///
+/// Behavior preserved: "No" pops the dialog; "Yes" pops then runs [onYes];
+/// `showOnlyOkay` hides the "No" action and turns the primary into "OK".
 Future<void> showYesNoCustomDialog(
   BuildContext context, {
   Function()? onYes,
@@ -10,58 +14,27 @@ Future<void> showYesNoCustomDialog(
   required String title,
   required String description,
 }) {
-  return showDialog<bool>(
-    context: context,
+  final onlyOkay = showOnlyOkay == true;
+  return TaDialog.show(
+    context,
+    title: title,
+    body: description,
     barrierDismissible: true,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: Text(title),
-        content: SingleChildScrollView(
-          child: ListBody(
-            children: <Widget>[
-              Text(description),
-            ],
-          ),
+    actions: [
+      if (!onlyOkay)
+        TaButton(
+          label: AppLocale.no.tr,
+          variant: TaButtonVariant.ghost,
+          onTap: Get.back,
         ),
-        actions: <Widget>[
-          showOnlyOkay == true
-              ? const SizedBox()
-              : ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                  ),
-                  child: Text(AppLocale.no.tr),
-                  onPressed: () {
-                    Get.back();
-                  },
-                ),
-          showOnlyOkay == true
-              ? ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.light1,
-                    foregroundColor: AppColors.dark1,
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                  ),
-                  onPressed: () {
-                    Get.back();
-                  },
-                  child: Text(AppLocale.ok.tr))
-              : ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                  ),
-                  onPressed: () {
-                    Get.back();
-                    if (onYes != null) {
-                      onYes();
-                    }
-                  },
-                  child: Text(AppLocale.yes.tr),
-                ),
-        ],
-      );
-    },
+      TaButton(
+        label: onlyOkay ? AppLocale.ok.tr : AppLocale.yes.tr,
+        variant: onlyOkay ? TaButtonVariant.ghost : TaButtonVariant.primary,
+        onTap: () {
+          Get.back();
+          onYes?.call();
+        },
+      ),
+    ],
   );
 }

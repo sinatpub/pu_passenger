@@ -70,3 +70,27 @@ DestinationSearchStatus destinationSearchStatus({
 bool keepsPreviousResults(DestinationSearchStatus status) =>
     status == DestinationSearchStatus.searching ||
     status == DestinationSearchStatus.results;
+
+/// Splits a Places `description` into its name and its disambiguating context.
+///
+/// Places autocomplete returns a single string per prediction —
+/// `"AEON Mall Sen Sok, Phnom Penh, Cambodia"` — which is precisely the
+/// "three identical rows" failure Screen 2's mandatory sub-line exists to
+/// prevent. There is no structured locality in the payload, so the sub-line is
+/// realised by splitting on the first comma: name first, the rest as context.
+/// Returns nulls (not empty strings) so the view can choose its own fallback.
+({String? primary, String? secondary}) splitPlaceDescription(
+    String? description) {
+  if (description == null) return (primary: null, secondary: null);
+  final parts = description.split(',');
+  final primary = parts.first.trim();
+  final secondary = parts
+      .skip(1)
+      .map((part) => part.trim())
+      .where((part) => part.isNotEmpty)
+      .join(', ');
+  return (
+    primary: primary.isEmpty ? null : primary,
+    secondary: secondary.isEmpty ? null : secondary,
+  );
+}

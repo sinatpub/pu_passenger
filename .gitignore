@@ -52,3 +52,6 @@ dart_defines.json
 
 # Android Gradle build output (was leaking into git status)
 android/build/
+
+# Knowledge-graph output (generated)
+graphify-out/

@@ -1,5 +1,5 @@
-import 'package:com.tara.passenger/core/theme/colors.dart';
-import 'package:com.tara.passenger/core/theme/text_styles.dart';
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
+import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
@@ -212,11 +212,11 @@ class AppLogic extends GetxController with keyStoragePref {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.main.withAlpha(20),
+                  color: TaColors.primary.withAlpha(20),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(Icons.system_update,
-                    size: 50, color: AppColors.main),
+                    size: 50, color: TaColors.primary),
               ),
               const SizedBox(height: 16),
 
@@ -226,7 +226,7 @@ class AppLogic extends GetxController with keyStoragePref {
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.main,
+                  color: TaColors.primary,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -248,7 +248,7 @@ class AppLogic extends GetxController with keyStoragePref {
                     "✨ ${AppLocale.whatNew.tr}",
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: AppColors.main,
+                      color: TaColors.primary,
                     ),
                   ),
                 ),
@@ -276,8 +276,10 @@ class AppLogic extends GetxController with keyStoragePref {
                       onPressed: () => Get.back(),
                       child: Text(
                         AppLocale.later.tr,
-                        style: ThemeConstands.font14Regular
-                            .copyWith(color: Colors.black45),
+                        style: TaTextStyles.labelLarge.copyWith(
+                          fontWeight: FontWeight.w400,
+                          color: TaColors.textSecondary,
+                        ),
                       ),
                     ),
                   ),
@@ -285,7 +287,7 @@ class AppLogic extends GetxController with keyStoragePref {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.main,
+                        backgroundColor: TaColors.primary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -301,8 +303,7 @@ class AppLogic extends GetxController with keyStoragePref {
                       },
                       child: Text(
                         AppLocale.updateNow.tr,
-                        style: ThemeConstands.font14SemiBold
-                            .copyWith(color: Colors.white),
+                        style: TaTextStyles.labelLarge.copyWith(color: Colors.white),
                       ),
                     ),
                   ),

@@ -1,44 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:get/get_utils/src/extensions/internacionalization.dart';
+import 'package:get/get.dart';
 
-import '../../../../core/theme/colors.dart';
-import '../../../../core/theme/text_styles.dart';
-import '../../../../core/utils/app_ext.dart';
-import '../../../../translations/app_locale.dart';
+import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
+import 'package:com.tara.passenger/translations/app_locale.dart';
 
+/// The "Where to go?" trigger on the map's bottom sheet (Screen 7 §Map).
+/// Thin wrapper over the shared [TaSearchCard] so the map keeps its named
+/// entry point while staying on the C2 component.
 class SearchWhereToGo extends StatelessWidget {
   const SearchWhereToGo({super.key, this.onTap});
-  final Function()? onTap;
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      alignment: Alignment.center,
-      padding: EdgeInsets.all(8.d),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(12.d),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search,
-              color: AppColors.dark1,
-              size: 24..d,
-            ),
-            SizedBox(
-              width: 8..d,
-            ),
-            Text(
-              AppLocale.whereToGo.tr,
-              style: ThemeConstands.font16SemiBold,
-            ),
-          ],
-        ),
-      ),
+    return TaSearchCard(
+      label: AppLocale.whereTo.tr,
+      onTap: onTap,
     );
   }
 }

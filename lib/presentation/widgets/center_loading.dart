@@ -1,4 +1,4 @@
-import 'package:com.tara.passenger/core/theme/colors.dart';
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:flutter/material.dart';
 
 class CenterLoading extends StatelessWidget {
@@ -8,7 +8,7 @@ class CenterLoading extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Center(
       child: CircularProgressIndicator(
-        color: AppColors.main,
+        color: TaColors.primary,
       ),
     );
   }

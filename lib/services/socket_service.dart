@@ -2,6 +2,9 @@ import 'dart:async';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
 import 'package:com.tara.passenger/data/models/request_booking_model.dart';
+import 'package:com.tara.passenger/mock/mock_backend.dart';
+import 'package:com.tara.passenger/mock/mock_models.dart';
+import 'package:com.tara.passenger/mock/mock_mode.dart';
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/calculate_fee/logic.dart';
 import 'package:flutter/material.dart';
@@ -168,6 +171,10 @@ abstract class BaseSocketService {
   /// A null socket is still unrecoverable — there is nothing to buffer into —
   /// so that case keeps its log line and stays the only real failure.
   void emitEvent(SocketEvent event, dynamic data) {
+    if (MockMode.isActive) {
+      tlog('[QA mock] socket emit (not sent): ${event.eventName}, data: $data');
+      return;
+    }
     final socket = _socket;
     if (socket == null) {
       tlog('Failed to emit event: ${event.eventName}, '
@@ -192,7 +199,11 @@ abstract class BaseSocketService {
 
 class PassengerSocketService extends BaseSocketService {
   static final PassengerSocketService _instance =
-      PassengerSocketService._internal();
+PassengerSocketService._internal();
+
+  /// QA mock mode: server pushes come from [MockBackend] instead of a
+  /// Socket.IO connection, into the same handlers. See `connectToSocket`.
+  StreamSubscription<MockSocketEvent>? _mockEvents;
 
   /// The singleton's own constructor is private, so nothing outside this
   /// library can build an instance to assert against. This exists purely so
@@ -216,6 +227,32 @@ class PassengerSocketService extends BaseSocketService {
   @override
   void connectToSocket(String url, String id, String role,
       {required BuildContext context}) {
+    // QA mock mode: server pushes come from [MockBackend] instead of a
+    // Socket.IO connection, into the same handlers. Attached once, with the
+    // first caller's context — as the real listeners are, since a second
+    // `connectToSocket` on a live socket returns early below.
+    if (MockMode.isActive) {
+      _mockEvents ??= MockBackend.instance.socketEvents.listen((event) {
+        switch (event.name) {
+          case 'rideAccepted':
+          case 'driverArrival':
+          case 'driverStartDrive':
+            _handleBookingUpdate();
+          case 'driverDropDrive':
+            Future<void>.delayed(const Duration(seconds: 1), () {
+              Get.offAllNamed(AppRoutes.CALCULATEFEE);
+            });
+          case 'driverAcceptPayment':
+            _handleDriverAcceptedPayment(context, event.data);
+          case 'onDriverCancelDrive':
+            _handleOnDriverCancel(context, event.data);
+          default:
+            tlog('[QA mock] unhandled socket push: ${event.name}');
+        }
+      });
+      _publishConnectionState(true);
+      return;
+    }
     if (_socket != null && _socket!.connected) {
       tlog('Socket already connected.');
       return;

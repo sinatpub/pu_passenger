@@ -1,282 +1,65 @@
-import 'package:com.tara.passenger/core/utils/app_ext.dart';
-import 'package:dotted_line/dotted_line.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../../core/resources/asset_resource.dart';
-import '../../../core/theme/colors.dart';
-import '../../../core/theme/text_styles.dart';
-import '../../../translations/app_locale.dart';
-import '../../widgets/x_network_image.dart';
-import 'logic.dart';
-import 'state.dart';
 
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
+import 'package:com.tara.passenger/core/theme/ta_radius.dart';
+import 'package:com.tara.passenger/core/theme/ta_shadow.dart';
+import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
+import 'package:com.tara.passenger/core/utils/history_cell_data.dart';
+import 'package:com.tara.passenger/data/models/history_booking_model.dart';
+import 'package:com.tara.passenger/presentation/screens/history_detail/logic.dart';
+import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
+import 'package:com.tara.passenger/translations/app_locale.dart';
+
+/// Screen 14 — History Detail.
+///
+/// Same arguments and same formatters as the list (roadmap S1 Done When): the
+/// `Datum` arrives through `Get.arguments` exactly as before, and every string
+/// comes from `history_cell_data.dart`, so a card and its detail screen cannot
+/// disagree. `HistoryDetailLogic` — the marker/polyline work — is untouched.
 class HistoryDetailPage extends StatelessWidget {
-  HistoryDetailPage({super.key});
-
-  final HistoryDetailLogic logic = Get.find<HistoryDetailLogic>();
-  final HistoryDetailState state = Get.find<HistoryDetailLogic>().state;
+  const HistoryDetailPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      bottom: true,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(AppLocale.historyDetail.tr),
-          centerTitle: true,
-        ),
-        body: GetBuilder<HistoryDetailLogic>(
+    return Scaffold(
+      backgroundColor: TaColors.background,
+      body: SafeArea(
+        child: GetBuilder<HistoryDetailLogic>(
           builder: (logic) {
-            var data = state.data;
-            return Container(
-              padding: const EdgeInsets.all(18),
-              margin: const EdgeInsets.only(left: 12, right: 12, top: 18),
-              decoration: BoxDecoration(
-                color: AppColors.light4,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: 1,
-                    blurStyle: BlurStyle.normal,
-                    color: Colors.grey.withAlpha(30),
-                    offset: const Offset(0, 0),
-                    // spreadRadius: 1,
-                  ),
-                ],
-              ),
+            final data = logic.state.data;
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
               child: Column(
-                spacing: 12.d,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 30.0,
-                        backgroundColor: Colors.transparent,
-                        child: XNetworkImage(
-                            src: data?.passenger?.profileImage ?? ""),
+                      TaIconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                    semanticLabel: AppLocale.back.tr,
+                        onTap: Get.back,
                       ),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: Container(
-                          alignment: Alignment.centerLeft,
-                          margin: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "${AppLocale.inVoiceNo.tr}: # ${data?.payment?.invoiceId}",
-                                    style: ThemeConstands.font14Regular
-                                        .copyWith(color: AppColors.dark2),
-                                    textAlign: TextAlign.start,
-                                  ),
-                                ],
-                              ),
-                              Text(
-                                data?.driver?.firstName ?? AppLocale.unKnown.tr,
-                                style: ThemeConstands.font20SemiBold
-                                    .copyWith(color: AppColors.dark1),
-                              ),
-                              Text(
-                                "${AppLocale.method.tr}: ${data?.payment?.paymentMethod ?? AppLocale.unKnown.tr}",
-                                style: ThemeConstands.font14Regular
-                                    .copyWith(color: AppColors.dark1),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Container(
-                        margin: const EdgeInsets.symmetric(vertical: 12),
                         child: Text(
-                          data?.status == 4
-                              ? AppLocale.completed.tr
-                              : AppLocale.cancel.tr,
-                          style: ThemeConstands.font14SemiBold.copyWith(
-                              color: data?.status == 4
-                                  ? AppColors.success
-                                  : AppColors.error),
-                          textAlign: TextAlign.end,
+                          historyInvoice(data?.payment?.invoiceId),
+                          style:
+                              TaTextStyles.titleLarge.copyWith(fontSize: 17),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          children: [
-                            SvgPicture.asset(
-                              ImageAssets.map_outline,
-                              width: 20,
-                              colorFilter: const ColorFilter.mode(
-                                  AppColors.red, BlendMode.srcIn),
-                            ),
-                            const SizedBox(
-                              width: 8,
-                            ),
-                            Text(
-                              data?.payment?.distance ?? AppLocale.unKnown.tr,
-                              style: ThemeConstands.font16SemiBold
-                                  .copyWith(color: AppColors.dark1),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SvgPicture.asset(
-                              ImageAssets.time_outline,
-                              width: 20,
-                              colorFilter: const ColorFilter.mode(
-                                  AppColors.red, BlendMode.srcIn),
-                            ),
-                            const SizedBox(
-                              width: 8,
-                            ),
-                            SizedBox(
-                              width: 90,
-                              child: Text(
-                                data?.payment?.duration?.toShortTimeFormat() ??
-                                    AppLocale.unKnown.tr,
-                                style: ThemeConstands.font14Regular
-                                    .copyWith(color: AppColors.dark1),
-                                maxLines: 2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Expanded(
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            SvgPicture.asset(
-                              ImageAssets.payment_outline,
-                              width: 20,
-                              colorFilter: const ColorFilter.mode(
-                                  AppColors.red, BlendMode.srcIn),
-                            ),
-                            const SizedBox(
-                              width: 8,
-                            ),
-                            Text(
-                              "${data?.payment?.amount ?? 0.0} ៛",
-                              style: ThemeConstands.font14Regular
-                                  .copyWith(color: AppColors.dark1),
-                            ),
-                          ],
-                        ),
-                      )
-                    ],
-                  ),
-                  const Divider(
-                    color: AppColors.light1,
-                    thickness: 1,
-                    height: 1,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        "${AppLocale.dateTime.tr} ${data?.createdAt?.formatDateString() ?? AppLocale.unKnown.tr}",
-                        style: ThemeConstands.font14Regular
-                            .copyWith(color: AppColors.dark1),
-                      ),
-                      const SizedBox(
-                        width: 8,
-                      ),
-                    ],
-                  ),
-                  const Divider(
-                    color: AppColors.light1,
-                    thickness: 1,
-                    height: 1,
-                  ),
-                  Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.start,
-                        children: [
-                          SvgPicture.asset(
-                            ImageAssets.current_location,
-                            width: 20,
-                            colorFilter: const ColorFilter.mode(
-                                AppColors.dark1, BlendMode.srcIn),
-                          ),
-                          const SizedBox(
-                            width: 8,
-                          ),
-                          Expanded(
-                            child: Text(
-                              data?.startAddress?.isNotEmpty == true &&
-                                      data?.startAddress != null
-                                  ? data!.startAddress!
-                                  : AppLocale.unKnown.tr,
-                              style: ThemeConstands.font16Regular
-                                  .copyWith(color: AppColors.dark1),
-                            ),
-                          ),
-                        ],
-                      ),
-                      data?.endAddress == null
-                          ? const SizedBox()
-                          : Column(
-                              children: [
-                                Container(
-                                  margin: const EdgeInsets.only(left: 9),
-                                  alignment: Alignment.centerLeft,
-                                  child: const DottedLine(
-                                    alignment: WrapAlignment.start,
-                                    lineLength: 30,
-                                    direction: Axis.vertical,
-                                    lineThickness: 1,
-                                    dashColor: AppColors.dark1,
-                                  ),
-                                ),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    SvgPicture.asset(
-                                      ImageAssets.book_outline,
-                                      width: 20,
-                                      colorFilter: const ColorFilter.mode(
-                                        AppColors.red,
-                                        BlendMode.srcIn,
-                                      ),
-                                    ),
-                                    const SizedBox(
-                                      width: 8,
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        data?.endAddress ??
-                                            AppLocale.unKnown.tr,
-                                        style: ThemeConstands.font16Regular
-                                            .copyWith(
-                                          color: AppColors.dark1,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                    ],
-                  ),
-                  Expanded(child: _mapPolyline()),
+                  const SizedBox(height: 12),
+                  const HistoryDetailMap(),
+                  const SizedBox(height: 12),
+                  HistoryDetailCard(data: data),
                 ],
               ),
             );
@@ -285,32 +68,150 @@ class HistoryDetailPage extends StatelessWidget {
       ),
     );
   }
+}
 
-  _mapPolyline() {
+/// The 200px route preview. Camera, markers and polyline stay
+/// `HistoryDetailLogic`'s — this only frames and clips them.
+class HistoryDetailMap extends StatelessWidget {
+  const HistoryDetailMap({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return GetBuilder<HistoryDetailLogic>(builder: (logic) {
-      double startLat = double.tryParse("${state.data?.startLatitude}") ?? 0.0;
-      double startLng = double.tryParse("${state.data?.startLongitude}") ?? 0.0;
+      final startLat =
+          double.tryParse('${logic.state.data?.startLatitude}') ?? 0.0;
+      final startLng =
+          double.tryParse('${logic.state.data?.startLongitude}') ?? 0.0;
 
-      return GoogleMap(
-        gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
-          Factory<OneSequenceGestureRecognizer>(
-            () => EagerGestureRecognizer(),
+      return Container(
+        height: 200,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(TaRadius.radiusLg),
+          boxShadow: TaShadows.shadowMd,
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: GoogleMap(
+          gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+            Factory<OneSequenceGestureRecognizer>(
+              () => EagerGestureRecognizer(),
+            ),
+          },
+          initialCameraPosition: CameraPosition(
+            target: LatLng(startLat, startLng),
+            zoom: 16,
           ),
-        },
-        initialCameraPosition:
-            CameraPosition(target: LatLng(startLat, startLng), zoom: 16),
-        myLocationEnabled: false,
-        myLocationButtonEnabled: false,
-        zoomControlsEnabled: false,
-        zoomGesturesEnabled: true,
-        indoorViewEnabled: false,
-        mapType: MapType.normal,
-        markers: logic.state.markers.toSet(),
-        polylines: logic.state.polyline.toSet(),
-        onMapCreated: (controller) {
-          logic.drawPolyline();
-        },
+          myLocationEnabled: false,
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled: false,
+          zoomGesturesEnabled: true,
+          indoorViewEnabled: false,
+          mapType: MapType.normal,
+          markers: logic.state.markers.toSet(),
+          polylines: logic.state.polyline.toSet(),
+          onMapCreated: (controller) => logic.drawPolyline(),
+        ),
       );
     });
+  }
+}
+
+/// Driver row, status badge and the trip's key/value rows.
+class HistoryDetailCard extends StatelessWidget {
+  const HistoryDetailCard({super.key, required this.data});
+
+  final Datum? data;
+
+  @override
+  Widget build(BuildContext context) {
+    final item = historyCellData(data);
+    final method = data?.payment?.paymentMethod?.toString().trim();
+
+    return TaCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              TaAvatar(
+                variant: TaAvatarVariant.history,
+                initials: item.initials,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.invoice,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: TaColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${item.driver} · ${item.date}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: TaColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                item.amount,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: TaColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TaBadge(
+              label: historyStatusLabel(data?.status),
+              variant: isCompletedHistory(data?.status)
+                  ? TaBadgeVariant.success
+                  : TaBadgeVariant.error,
+            ),
+          ),
+          const SizedBox(height: 6),
+          TaKVRow(label: AppLocale.distance.tr, value: item.distance),
+          TaKVRow(label: AppLocale.duration.tr, value: item.duration),
+          if (method != null && method.isNotEmpty && method != 'null')
+            TaKVRow(label: method, value: AppLocale.paid.tr),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: TaColors.border),
+          const SizedBox(height: 12),
+          TaAddressRow(
+            type: TaAddressType.pickup,
+            label: AppLocale.pickup.tr,
+            name: item.from,
+          ),
+
+          /// A cancelled trip often has no destination; the row is dropped
+          /// rather than printing "Unknown" as if one had been chosen
+          /// (roadmap S1 Risk).
+          if (item.to != null) ...[
+            const SizedBox(height: 10),
+            TaAddressRow(
+              type: TaAddressType.destination,
+              label: AppLocale.destination.tr,
+              name: item.to!,
+            ),
+          ],
+        ],
+      ),
+    );
   }
 }

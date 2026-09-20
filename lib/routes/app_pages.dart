@@ -16,6 +16,10 @@ import 'package:com.tara.passenger/presentation/screens/login/binding.dart';
 import 'package:com.tara.passenger/presentation/screens/login/view.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/binding.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/view.dart';
+import 'package:com.tara.passenger/presentation/screens/rating/binding.dart';
+import 'package:com.tara.passenger/presentation/screens/rating/view.dart';
+import 'package:com.tara.passenger/presentation/screens/receipt/binding.dart';
+import 'package:com.tara.passenger/presentation/screens/receipt/view.dart';
 import 'package:com.tara.passenger/presentation/screens/otp/binding.dart';
 import 'package:com.tara.passenger/presentation/screens/otp/view.dart';
 import 'package:com.tara.passenger/presentation/screens/profile/binding.dart';
@@ -46,6 +50,9 @@ abstract class AppRoutes {
   static const BOOKING = '/booking';
   static const MYBOOKING = '/my_booking';
   static const CALCULATEFEE = '/calculatefee';
+  // C7 — the only routes the redesign adds (new screens, 03 Screen 11/12).
+  static const RATING = '/rating';
+  static const RECEIPT = '/receipt';
   static const WHERETOGO = "/wheretogo";
   static const DRAGMAP = "/dragMap";
   static const TERMCONDITION = "/termcondition";
@@ -64,7 +71,7 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.REGISTER,
-      page: () => RegisterPage(),
+      page: () => const RegisterPage(),
       binding: RegisterBinding(),
     ),
     GetPage(
@@ -80,7 +87,7 @@ class AppPages {
     ),
     GetPage(
         name: AppRoutes.LOGIN,
-        page: () => LoginPage(),
+        page: () => const LoginPage(),
         binding: LoginBinding()),
     GetPage(
       name: AppRoutes.OTP,
@@ -99,13 +106,23 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.BOOKING,
-      page: () => BookingMapScreen(),
+      page: () => const BookingMapScreen(),
       binding: BookingMapBinding(),
     ),
     GetPage(
       name: AppRoutes.CALCULATEFEE,
       page: () => const CalculateFeeScreen(),
       binding: CalculateFeeBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.RATING,
+      page: () => const RatingScreen(),
+      binding: RatingBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.RECEIPT,
+      page: () => const ReceiptScreen(),
+      binding: ReceiptBinding(),
     ),
     GetPage(
       name: AppRoutes.DRAGMAP,
@@ -118,27 +135,27 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.TERMCONDITION,
-      page: () => TermConditionPage(),
+      page: () => const TermConditionPage(),
       binding: TermConditionBinding(),
     ),
     GetPage(
       name: AppRoutes.CONTACTUS,
-      page: () => ContactUsPage(),
+      page: () => const ContactUsPage(),
       binding: ContactUsBinding(),
     ),
     GetPage(
       name: AppRoutes.HISTORYDETAIL,
-      page: () => HistoryDetailPage(),
+      page: () => const HistoryDetailPage(),
       binding: HistoryDetailBinding(),
     ),
     GetPage(
       name: AppRoutes.ANNOUNCEMENT,
-      page: () => AnnouncementPage(),
+      page: () => const AnnouncementPage(),
       binding: AnnouncementBinding(),
     ),
     GetPage(
       name: AppRoutes.ANNOUNCEMENTDETAIL,
-      page: () => AnnouncementDetailPage(),
+      page: () => const AnnouncementDetailPage(),
       binding: AnnouncementDetailBinding(),
     ),
   ];

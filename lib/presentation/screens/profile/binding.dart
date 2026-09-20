@@ -1,5 +1,5 @@
-import 'package:com.tara.passenger/features/profile/data/datasource/profile_datasource.dart';
-import 'package:com.tara.passenger/features/profile/data/repository/profile_repository.dart';
+import 'package:com.tara.passenger/presentation/screens/profile/data/datasource/profile_datasource.dart';
+import 'package:com.tara.passenger/presentation/screens/profile/data/repository/profile_repository.dart';
 import 'package:com.tara.passenger/presentation/screens/profile/logic.dart';
 import 'package:get/get.dart';
 

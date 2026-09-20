@@ -1,3 +1,4 @@
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:toastification/toastification.dart';
@@ -18,8 +19,8 @@ showCustomSnackBar({
     builder: (BuildContext context, ToastificationItem holder) {
       return Container(
         decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.red, width: .1),
+          color: TaColors.surface,
+          border: Border.all(color: TaColors.error, width: .1),
           borderRadius: BorderRadius.circular(18),
         ),
 
@@ -44,7 +45,6 @@ showCustomSnackBar({
                         title,
                         overflow: TextOverflow.ellipsis,
                         maxLines: 2,
-                        // style: const TextStyle(color: Colors.red),
                       ),
                     ),
                     // const SizedBox(

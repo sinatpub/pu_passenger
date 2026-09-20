@@ -23,6 +23,19 @@ class AppLocale {
 
   // request booking
   static var whereToGo = 'Where to go';
+  static var whereTo = 'Where to?';
+  static var chooseYourRide = 'Choose your ride';
+  static var refreshed = 'Refreshed';
+  static var promoApplied = 'Promo applied: FLY20';
+  static var promoTag = 'PROMO';
+  static var promoTitle = '20% off airport rides';
+  static var promoSubtitle = 'Use code FLY20';
+  static var rideWithTrust = 'តារា · Ride with trust';
+  static var somethingWentWrong = 'Something went wrong';
+  static var selectDestinationToContinue = "Select a destination to continue";
+  static var contactingDrivers = "Contacting nearby drivers…";
+  static var kmAway = "km away";
+  static var destination = "Destination";
   static var searchLocation = 'Search Location';
   static var currentLocation = 'Current Location';
   static var destinationLocation = 'Destination Location';
@@ -49,12 +62,30 @@ class AppLocale {
   static var driverAcceptedBooking = "Driver Accepted your booking";
   // static var
 
+  // C5 — booking / active ride screen (Screen 9)
+  static var driverAccepted = "Driver accepted";
+  static var driverArriving = "Driver is arriving";
+  static var onTripEnjoy = "On trip · enjoy!";
+  // D6 — the 3-step ride timeline's own labels, kept separate from the
+  // status-pill copy above (the pill is a sentence, a step is a chip).
+  static var stepAccepted = "Accepted";
+  static var stepArriving = "Arriving";
+  static var stepOnTrip = "On trip";
+  static var callDriver = "Call";
+  static var safety = "Safety";
+  static var safetyComingSoon = "Safety coming soon";
+  static var titleCancelBooking = "Cancel booking?";
+  static var yesCancel = "Yes, cancel";
+  static var keepWaiting = "Keep waiting";
+  static var bookingCancelled = "Booking cancelled";
+
   // detail service in map booking
   static var driverInfo = "Driver Info";
   static var cancelBookingContent =
       "You are currently in the taxi with the driver. Are you sure you want to cancel your booking?";
   static var detailService = "Detail Service";
-  static var pricePerKM = "Price per Km";
+  static var pricePerKM =
+      "Price per km"; // P2: km is the SI unit, and 03 §D7 writes it lowercase
   static var minFee = "Minimum Fare";
   static var normal = "Normal";
   static var khmerCurrency = "៛";
@@ -88,6 +119,63 @@ class AppLocale {
 
   // Calculate Fee
   static var calculateFee = "Calculate Fee";
+  // C6 — fee / receipt screen (Screen 10)
+  static var tripFare = "Trip fare";
+  static var vehicle = "Vehicle";
+  static var pickup = "Pickup";
+  // Money fails loudly (payload policy): an unparseable fare says so
+  // rather than showing a zero the passenger might pay against.
+  static var fareUnavailable =
+      "Fare unavailable — please ask your driver for the amount.";
+
+  // C7 — rating (Screen 11) and receipt (Screen 12)
+  static var rateYourDriver = "Rate your driver";
+  static var howWasYourTrip = "How was your trip?";
+  static var howWasYourTripWith = "How was your trip with";
+  static var submit = "Submit";
+  // PDD-02 — no rating endpoint exists; the passenger is told plainly.
+  static var ratingPendingBackend =
+      "Your rating is saved and will be sent once ratings go live.";
+  // N-10 tags. All positive: the spec names no negative tags, and the
+  // wording of a complaint about a driver is not invented here.
+  static var tagClean = "Clean";
+  static var tagOnTime = "On time";
+  static var tagFriendly = "Friendly";
+  static var tagGoodRoute = "Good route";
+  static var thankYou = "Thank you!";
+  static var tripCompleteReceiptSent = "Your trip is complete. Receipt sent.";
+  static var backToHome = "Back to Home";
+  static var bookAgain = "Book again";
+  static var paid = "Paid";
+
+  // S1 — history (Screen 13) empty and error states
+  static var noCompletedTrips = "No completed trips yet";
+  static var noCancelledTrips = "No cancelled trips";
+  static var couldNotLoadHistory = "Couldn't load your history";
+
+  // S2 — profile (Screen 15)
+  static var savedPlaces = "Saved places";
+  static var savedPlacesComingSoon = "Saved places — coming soon";
+  static var version = "Version";
+  // S2 — contact us (Screen 17)
+  static var taarraaPhnomPenh = "Taarraa Taxi · Phnom Penh";
+
+  // S3 — announcements (Screen 18/19)
+  static var untitledAnnouncement = "Untitled announcement";
+  static var noAnnouncements = "No announcements yet";
+  static var couldNotLoadAnnouncements = "Couldn't load announcements";
+
+  // S4 — auth (Screen 1-4)
+  static var taarraaTaxiSubtitle = "តារា · Taxi";
+  static var tapToAddPhotoRequired = "Tap to add a photo (required)";
+  static var fullName = "Full name";
+  static var enterFullName = "Enter your full name";
+
+  // P2 — component copy that was hardcoded English
+  static var tariff = "Tariff";
+  static var minimumFee = "Min fee";
+  static var seats = "Seats";
+  static var gotIt = "Got it";
   static var unKnown = "Unknown";
   static var distance = "Distance";
   static var duration = "Duration";
@@ -144,6 +232,23 @@ class AppLocale {
   static var enterAddress = "Enter address name";
 
   static var emptyLocation = "Empty Location";
+
+  // P-04 (Screen 2) search states
+  static var noPlacesMatch = "No places match";
+  static var checkSpelling = "Check the spelling";
+  static var couldntSearch = "Couldn't search right now";
+  static var retry = "Retry";
+
+  // P-05 (Screen 3) pickup
+  static var pinnedLocation = "Pinned location";
+  static var setPickup = "Set pickup";
+  static var setDestination = "Set destination";
+  static var searchForPlace = "Search for a place";
+  static var addNoteForDriver = "Add a note for driver";
+  static var noteHint = "e.g. near the blue gate";
+  static var resolvingAddress = "Resolving address...";
+  static var weDontOperateHere = "We don't operate here yet";
+  static var driversCantStopHere = "Drivers can't stop here";
 
   static var setLocationMap = "Set location on the map";
 
@@ -217,4 +322,10 @@ class AppLocale {
   static var driverLocation = "Driver Location";
 
   static var back = "Back";
+
+  static var language = "Language";
+
+  static var refresh = "Refresh";
+
+  static var clearDestination = "Clear Destination";
 }

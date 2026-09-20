@@ -1,5 +1,5 @@
 import 'package:com.tara.passenger/core/helper/phone_validate_helper.dart';
-import 'package:com.tara.passenger/features/auth/data/repository/auth_repository.dart';
+import 'package:com.tara.passenger/presentation/screens/login/data/repository/auth_repository.dart';
 import 'package:com.tara.passenger/presentation/screens/login/state.dart';
 import 'package:com.tara.passenger/presentation/widgets/custom_snackbar_widget.dart';
 import 'package:com.tara.passenger/presentation/widgets/shake_widget.dart';

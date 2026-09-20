@@ -1,315 +1,152 @@
-import 'package:com.tara.passenger/core/utils/app_ext.dart';
-import 'package:com.tara.passenger/presentation/screens/calculate_fee/logic.dart';
-import 'package:com.tara.passenger/translations/app_locale.dart';
-import 'package:dotted_line/dotted_line.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:com.tara.passenger/core/resources/asset_resource.dart';
-import 'package:com.tara.passenger/core/theme/colors.dart';
-import 'package:com.tara.passenger/core/theme/text_styles.dart';
 import 'package:get/get.dart';
 
-class CalculateFeeScreen extends StatefulWidget {
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
+import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
+import 'package:com.tara.passenger/data/models/request_booking_model.dart';
+import 'package:com.tara.passenger/core/utils/fee_presentation.dart';
+import 'package:com.tara.passenger/presentation/screens/calculate_fee/logic.dart';
+import 'package:com.tara.passenger/presentation/screens/calculate_fee/widgets/fee_card.dart';
+import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
+import 'package:com.tara.passenger/translations/app_locale.dart';
+
+/// Screen 10 — Fee (CalculateFee).
+///
+/// The prototype's "Simulate: driver confirms payment" button and its 9s
+/// auto-pay are demo-only (`D14`) and are not built: the screen waits for the
+/// real `driverAcceptPayment` socket event, which `PassengerSocketService`
+/// already routes to `CalculateFeeLogic.syncNavigateBack()`. That handler, and
+/// the controller as a whole, are untouched by this task.
+class CalculateFeeScreen extends StatelessWidget {
   const CalculateFeeScreen({super.key});
 
   @override
-  State<CalculateFeeScreen> createState() => _CalculateFeeScreenState();
-}
-
-class _CalculateFeeScreenState extends State<CalculateFeeScreen> {
-  final CalculateFeeLogic logic =
-      Get.put<CalculateFeeLogic>(CalculateFeeLogic());
-
-  @override
   Widget build(BuildContext context) {
+    final logic = Get.find<CalculateFeeLogic>();
+
     return Scaffold(
-      backgroundColor: AppColors.light4,
+      backgroundColor: TaColors.background,
       body: SafeArea(
         bottom: false,
-        child: Column(
-          children: [
-            _buildHeader(),
-            const Divider(height: 1, color: AppColors.light1),
-            Obx(
-              () => logic.state.isLoading.value
-                  ? _buildLoadingIndicator()
-                  : Expanded(child: _buildContent()),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      alignment: Alignment.centerLeft,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Text(
-        AppLocale.calculateFee.tr,
-        style: ThemeConstands.font22SemiBold.copyWith(color: AppColors.dark1),
-      ),
-    );
-  }
-
-  Widget _buildLoadingIndicator() {
-    return const Center(
-      child: SizedBox(
-        width: 48,
-        height: 48,
-        child: CircularProgressIndicator(),
-      ),
-    );
-  }
-
-  Widget _buildContent() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildDriverInfoCard(),
-          const SizedBox(height: 18),
-          _buildPaymentInfo(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDriverInfoCard() {
-    return Container(
-      margin: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(width: 1, color: AppColors.light1),
-      ),
-      child: Column(
-        children: [
-          _buildDriverDetails(),
-          const SizedBox(height: 18),
-          _buildTotalPriceSection(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDriverDetails() {
-    var data = logic.state.data.value?.data;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        children: [
-          Row(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 26, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const CircleAvatar(
-                radius: 30.0,
-                backgroundImage:
-                    NetworkImage('https://via.placeholder.com/150'),
-                backgroundColor: Colors.transparent,
+              /// No back button: the trip is over and the passenger cannot
+              /// return to it (spec §Screen 10 Layout).
+              Text(
+                AppLocale.tripFare.tr,
+                textAlign: TextAlign.center,
+                style: TaTextStyles.titleLarge.copyWith(fontSize: 17),
               ),
+              const SizedBox(height: 18),
               Expanded(
-                child: Container(
-                  alignment: Alignment.centerLeft,
-                  margin:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        data?.driver?.name.toString() ?? AppLocale.unKnown.tr,
-                        style: ThemeConstands.font20SemiBold
-                            .copyWith(color: AppColors.dark1),
-                      ),
-                      Text(
-                        data?.payment?.paymentMethod ?? AppLocale.unKnown.tr,
-                        style: ThemeConstands.font14Regular
-                            .copyWith(color: AppColors.dark1),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              Container(
-                alignment: Alignment.centerRight,
-                width: 100,
-                child: Text(
-                  AppLocale.paymentCollection.tr,
-                  textAlign: TextAlign.left,
-                  style: ThemeConstands.font16SemiBold
-                      .copyWith(color: AppColors.red),
+                child: Obx(
+                  () => logic.state.isLoading.value
+                      ? const FeeLoadingView()
+                      : FeeContent(data: logic.state.data.value?.data),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          tRowCard(
-            title: AppLocale.distance.tr,
-            value: data?.payment?.distance.toString() ?? AppLocale.unKnown.tr,
-          ),
-          tRowCard(
-            title: AppLocale.duration.tr,
-            value: data?.payment?.duration.toString() ?? AppLocale.unKnown.tr,
-          ),
-          tRowCard(
-            title: AppLocale.dateTime.tr,
-            value: data?.startTime != null
-                ? formatDateTime(data?.startTime)
-                : AppLocale.unKnown.tr,
-          ),
-          _buildLocationDetails(),
-        ],
+        ),
       ),
     );
   }
+}
 
-  Widget _buildLocationDetails() {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            SvgPicture.asset(
-              ImageAssets.book_outline,
-              width: 20,
-              // ignore: deprecated_member_use
-              color: AppColors.dark1,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                // AppLocale.locationPassengerStand.tr,
-                logic.state.data.value?.data?.endAddress ??
-                    AppLocale.unKnown.tr,
-                style: ThemeConstands.font16Regular
-                    .copyWith(color: AppColors.dark1),
-              ),
-            ),
-          ],
-        ),
-        Container(
-          margin: const EdgeInsets.only(left: 9),
-          alignment: Alignment.centerLeft,
-          child: const DottedLine(
-            alignment: WrapAlignment.start,
-            lineLength: 30,
-            direction: Axis.vertical,
-            lineThickness: 1,
-            dashColor: AppColors.dark1,
-          ),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            SvgPicture.asset(
-              ImageAssets.book_outline,
-              width: 20,
-              color: AppColors.red,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                logic.state.data.value?.data?.endAddress ??
-                    AppLocale.unKnown.tr,
-                style: ThemeConstands.font16Regular
-                    .copyWith(color: AppColors.dark1),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
+/// The shimmer placeholder, shaped like the loaded receipt so the layout does
+/// not jump when the fare arrives.
+class FeeLoadingView extends StatelessWidget {
+  const FeeLoadingView({super.key});
 
-  Widget _buildTotalPriceSection() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: const BoxDecoration(
-        color: AppColors.red,
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(12),
-          bottomRight: Radius.circular(12),
-        ),
-      ),
-      child: Row(
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Column(
         children: [
-          Expanded(
-            child: Text(
-              AppLocale.totalPrice.tr,
-              style: ThemeConstands.font16SemiBold
-                  .copyWith(color: AppColors.light4),
-              textAlign: TextAlign.start,
+          TaSkeletonCard(
+            children: [
+              const TaSkeleton(height: 52, radius: 14),
+              const SizedBox(height: 14),
+              for (var i = 0; i < 4; i++) ...[
+                const TaSkeleton(height: 16),
+                const SizedBox(height: 10),
+              ],
+              const TaSkeleton(height: 40, radius: 12),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const TaSkeleton(height: 72, radius: 16),
+        ],
+      ),
+    );
+  }
+}
+
+/// The loaded receipt: fee card, total box and the payment-wait badge.
+class FeeContent extends StatelessWidget {
+  const FeeContent({super.key, required this.data});
+
+  final Data? data;
+
+  @override
+  Widget build(BuildContext context) {
+    final amount = feeAmount(data?.payment?.amount);
+
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FeeCard(data: data),
+          const SizedBox(height: 12),
+
+          /// Money fails loudly: an amount the backend did not send, or sent
+          /// unparseably, shows an explicit "fare unavailable" rather than a
+          /// zero or a raw string the passenger might pay against.
+          if (amount != null)
+            TaTotalBox(
+              amount: amount,
+              label: _totalLabel(),
+            )
+          else
+            TaCard(
+              color: TaColors.errorBg,
+              child: Text(
+                AppLocale.fareUnavailable.tr,
+                textAlign: TextAlign.center,
+                style: TaTextStyles.bodyMedium.copyWith(color: TaColors.error),
+              ),
+            ),
+          const SizedBox(height: 12),
+
+          /// Only the waiting state is rendered. In production this screen is
+          /// left the moment the driver confirms — `driverAcceptPayment`
+          /// navigates away — so a "paid" badge would need a `payment.status`
+          /// mapping the backend does not document and nothing else in the app
+          /// reads. Recorded rather than guessed.
+          TaCard(
+            child: Center(
+              child: TaBadge(
+                label: AppLocale.waitPaymentDriver.tr,
+                variant: TaBadgeVariant.warning,
+              ),
             ),
           ),
-          Expanded(
-            child: Text(
-              "${logic.state.data.value?.data?.payment?.amount ?? ""} ${AppLocale.khmerCurrency.tr}",
-              style: ThemeConstands.font18SemiBold
-                  .copyWith(color: AppColors.light4),
-              textAlign: TextAlign.end,
-            ),
-          ),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  Widget _buildPaymentInfo() {
-    return Column(
-      children: [
-        SizedBox(
-          width: Get.width * 0.9,
-          child: Text(
-            AppLocale.waitPaymentDriver.tr,
-            textAlign: TextAlign.center,
-            style: AppTextStyles.bodyDark.copyWith(
-              color: AppColors.dark1,
-              fontSize: 18,
-            ),
-          ),
-        ),
-        // Uncomment if needed:
-        // SizedBox(
-        //   width: Get.width / 2,
-        //   child: FBTNWidget(
-        //     onPressed: () {
-        //       Get.offAllNamed(AppRoutes.HOME);
-        //     },
-        //     color: AppColors.dark2,
-        //     textColor: AppColors.light4,
-        //     label: "Back to home",
-        //   ),
-        // ),
-      ],
-    );
-  }
-
-  Widget tRowCard({
-    required String title,
-    String? iconPath,
-    required String value,
-  }) {
-    return Column(
-      children: [
-        const Divider(color: AppColors.light1, thickness: 1, height: 1),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              title,
-              style:
-                  ThemeConstands.font14Regular.copyWith(color: AppColors.dark1),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              value,
-              style: ThemeConstands.font14SemiBold
-                  .copyWith(color: AppColors.dark1),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        const Divider(color: AppColors.light1, thickness: 1, height: 1),
-      ],
-    );
+  /// "Total · Cash" when the backend names a method, plain "Total" otherwise —
+  /// the label is not invented.
+  String _totalLabel() {
+    final method = data?.payment?.paymentMethod?.toString().trim();
+    if (method == null || method.isEmpty || method == 'null') {
+      return AppLocale.totalPrice.tr;
+    }
+    return '${AppLocale.totalPrice.tr} · $method';
   }
 }

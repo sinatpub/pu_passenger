@@ -2,6 +2,8 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 
+import 'package:com.tara.passenger/core/utils/motion.dart';
+
 abstract class AnimationControllerState<T extends StatefulWidget>
     extends State<T> with SingleTickerProviderStateMixin {
   AnimationControllerState(this.animationDuration);
@@ -22,7 +24,7 @@ class ShakeWidget extends StatefulWidget {
     required this.child,
     required this.shakeOffset,
     this.shakeCount = 3,
-    this.shakeDuration = const Duration(milliseconds: 400),
+    this.shakeDuration = Motion.base,
   });
   final Widget child;
   final double shakeOffset;
@@ -55,7 +57,13 @@ class ShakeWidgetState extends AnimationControllerState<ShakeWidget> {
     }
   }
 
+  /// P1 — a shake is error *feedback*, not decoration, so under reduced
+  /// motion it is skipped rather than played instantly: a 0ms shake is a
+  /// visual glitch. The signal still lands — callers fire
+  /// `HapticFeedback.heavyImpact()` and raise a dialog or snackbar alongside
+  /// it, neither of which this touches.
   void shake() {
+    if (prefersReducedMotion(context)) return;
     animationController.forward();
   }
 

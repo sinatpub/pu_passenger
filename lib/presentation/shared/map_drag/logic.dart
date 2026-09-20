@@ -1,11 +1,13 @@
 import 'dart:async';
-import 'package:com.tara.passenger/service/location_imp.dart';
+import 'package:com.tara.passenger/services/location_imp.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:logger/logger.dart';
 import '../../../data/models/location_model.dart';
+import '../../../translations/app_locale.dart';
+import 'pickup_label.dart';
 import 'search_state.dart';
 import 'state.dart';
 
@@ -18,16 +20,27 @@ class MapDragLogic extends GetxController {
   final LocationRepo _locationRepo;
   final TextEditingController searchController = TextEditingController();
 
+  /// P-05: whether this page instance is the pickup (Screen 3) flow.
+  ///
+  /// Defaults to false — the destination flow, the route's only live caller.
+  /// The view sets it from the route arguments so the logic stays free of
+  /// routing concerns (and the VM-testable imports stay VM-testable).
+  bool isPickupFlow = false;
+
+  /// P-05: the note-for-driver text. Gated to the spec's 60-char cap in the
+  /// view via `LengthLimitingTextInputFormatter(kDriverNoteMaxLength)`.
+  final TextEditingController noteController = TextEditingController();
+
   @override
   void onInit() {
     super.onInit();
     searchController.addListener(() {
       if (searchController.text.isEmpty) {
         state.isTypingTextField = false;
-        update([MapDragUpdate.search]);
+        update([MapDragUpdate.search, MapDragUpdate.confirm]);
       } else {
         state.isTypingTextField = true;
-        update([MapDragUpdate.search]);
+        update([MapDragUpdate.search, MapDragUpdate.confirm]);
       }
     });
   }
@@ -46,7 +59,11 @@ class MapDragLogic extends GetxController {
           CameraPosition(target: userLatLng, zoom: 15),
         ),
       );
-      update([MapDragUpdate.cameraMove]);
+      update([MapDragUpdate.cameraMove, MapDragUpdate.confirm]);
+      // Resolve the seeded pin too: `animateCamera` does not raise
+      // `isCameraMove`, so `onCameraIdle` would never fill the pickup label
+      // for the initial position — only for positions the user drags to.
+      schedulePickupResolution();
     }
     EasyLoading.dismiss();
   }
@@ -62,15 +79,79 @@ class MapDragLogic extends GetxController {
     state.latlng = latlng;
     if (state.isCameraMove) return;
     state.isCameraMove = true;
-    update([MapDragUpdate.cameraMove]);
+    update([MapDragUpdate.cameraMove, MapDragUpdate.confirm]);
   }
 
-  /// The map has stopped moving — drop the marker back onto the map. Driven by
+  /// The map has stopped moving — drop the marker back onto the map, and start
+  /// a debounced reverse-geocode for the point under the centre pin. Driven by
   /// `GoogleMap.onCameraIdle` instead of a timer that only approximated it.
   void onCameraIdle() {
     if (!state.isCameraMove) return;
     state.isCameraMove = false;
-    update([MapDragUpdate.cameraMove]);
+    update([MapDragUpdate.cameraMove, MapDragUpdate.confirm]);
+    schedulePickupResolution();
+  }
+
+  /// Whether the geocode-to-label pipeline applies at all. It follows the
+  /// route's purpose set by the view: Screen 3 (pickup) shows a resolved
+  /// label; the destination flow does not, so reverse-geocoding there would be
+  /// an invisible network call on every camera movement (behavior change on
+  /// the live caller).
+  bool get shouldResolvePickup => isPickupFlow && state.latlng != null;
+
+  /// The spec's 400 ms debounce for Screen 3's reverse-geocode. Kept as a
+  /// separate timer from the search debounce so the two never cross-cancel.
+  void schedulePickupResolution() {
+    state.geocodeDebounceTimer?.cancel();
+    if (!shouldResolvePickup) return;
+    state.geocodeDebounceTimer =
+        Timer(const Duration(milliseconds: 400), resolvePickupAddress);
+  }
+
+  /// Resolves the picked point to an address, updating the pickup label and
+  /// driving [pickupConfirm]. The spec's resolving state is a skeleton label
+  /// and a disabled Confirm — this sets `isResolving` and lets the view read
+  /// `pickupConfirm` rather than touching widgets itself.
+  Future<void> resolvePickupAddress() async {
+    final latlng = state.latlng;
+    if (latlng == null) return;
+    state.isResolving = true;
+    update([MapDragUpdate.pickupLabel, MapDragUpdate.confirm]);
+    try {
+      final address = await _locationRepo.getAddressLocation(latlng: latlng);
+      state.resolvedAddress = address;
+    } catch (e) {
+      Logger().e("Reverse geocode exception: $e");
+      state.resolvedAddress = null;
+    } finally {
+      state.isResolving = false;
+      update([MapDragUpdate.pickupLabel, MapDragUpdate.confirm]);
+    }
+  }
+
+  /// Which tier the resolved point reached (spec Screen 3).
+  PickupLabelTier get pickupTier => pickupLabelTier(
+        address: state.resolvedAddress,
+        venue: null,
+      );
+
+  /// The confirm button's state (spec Screen 3 state table).
+  PickupConfirmState get pickupConfirm => pickupConfirmState(
+        hasPin: hasPin,
+        isResolving: state.isResolving,
+        tier: pickupTier,
+      );
+
+  /// The label to show above the centre pin / in the sheet. `null` means the
+  /// spec's skeleton state.
+  String? get pickupLabelText {
+    if (state.isResolving) return null;
+    if (state.resolvedAddress != null &&
+        state.resolvedAddress!.trim().isNotEmpty) {
+      return state.resolvedAddress;
+    }
+    // No address resolved — the spec shows "Pinned location" here.
+    return AppLocale.pinnedLocation.tr;
   }
 
   /// Whether there is a real point to confirm. False until the map reports a
@@ -139,11 +220,19 @@ class MapDragLogic extends GetxController {
   /// `fetchPlaceSuggestions` only dismisses its loader from inside the timer
   /// callback, cancelling that timer without dismissing left the global
   /// `EasyLoading` overlay up over whatever screen came next.
+  /// P-05: captures the note under the same normalisation the rest of the app
+  /// uses, so the confirmed payload carries the trimmed, capped text.
+  void updateDriverNote(String? value) {
+    state.driverNote = normaliseDriverNote(value);
+  }
+
   @override
   void onClose() {
     state.debounceTimer?.cancel();
+    state.geocodeDebounceTimer?.cancel();
     EasyLoading.dismiss();
     searchController.dispose();
+    noteController.dispose();
     super.onClose();
   }
 
@@ -152,7 +241,7 @@ class MapDragLogic extends GetxController {
       EasyLoading.show();
       var data = await _locationRepo.getPlaceDetails(prediction!.placeId!);
       state.isTypingTextField = false;
-      update([MapDragUpdate.search]);
+      update([MapDragUpdate.search, MapDragUpdate.confirm]);
       state.latlng = LatLng(data[0], data[1]);
       Get.back(result: state.latlng);
     } catch (e) {

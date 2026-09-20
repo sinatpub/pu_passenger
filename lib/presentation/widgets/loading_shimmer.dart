@@ -1,8 +1,12 @@
-import 'package:com.tara.passenger/core/utils/get_decoration.dart';
+import 'package:com.tara.passenger/core/theme/ta_shadow.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shimmer/shimmer.dart';
 
+/// Shimmer loading placeholder (roadmap F3 re-skin).
+///
+/// Token-colored sheen (#EDEEF2 → #F7F7FA, 1.1s) on white cards with the
+/// `shadowSm` elevation, per the skeleton spec. Public API unchanged.
 class LoadingShimmer extends StatelessWidget {
   final bool isGridView;
   final int crossAxisCount;
@@ -14,7 +18,7 @@ class LoadingShimmer extends StatelessWidget {
   final Axis? scrollDirection;
 
   const LoadingShimmer({
-    Key? key,
+    super.key,
     this.isGridView = false,
     this.dataCount = 10,
     this.crossAxisCount = 2,
@@ -23,7 +27,7 @@ class LoadingShimmer extends StatelessWidget {
     this.width,
     this.scrollDirection,
     this.isNeedShowFullScreen = true,
-  }) : super(key: key);
+  });
 
   factory LoadingShimmer.list({
     int dataCount = 2,
@@ -76,19 +80,11 @@ class LoadingShimmer extends StatelessWidget {
       ),
       itemCount: ((Get.height / height!) * crossAxisCount).toInt(),
       itemBuilder: (context, index) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
-            child: Container(
-              width: width,
-              height: height,
-              decoration: getBoxDecoration(
-                  background: Colors.white,
-                  hasShadow: true,
-                  borderRadius: BorderRadius.circular(10)),
-            ),
+        return _card(
+          child: Container(
+            width: width,
+            height: height,
+            decoration: _cardDecoration,
           ),
         );
       },
@@ -100,7 +96,7 @@ class LoadingShimmer extends StatelessWidget {
       scrollDirection: scrollDirection ?? Axis.vertical,
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
-      padding: EdgeInsets.all(10),
+      padding: const EdgeInsets.all(10),
       itemCount: (Get.height / height!).toInt() - 1,
       separatorBuilder: (context, index) => scrollDirection == Axis.vertical
           ? const SizedBox(
@@ -110,22 +106,32 @@ class LoadingShimmer extends StatelessWidget {
               width: 8,
             ),
       itemBuilder: (context, index) {
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Shimmer.fromColors(
-            baseColor: Colors.grey.shade300,
-            highlightColor: Colors.grey.shade100,
-            child: Container(
-              width: width ?? double.infinity,
-              height: height ?? 100.0,
-              decoration: getBoxDecoration(
-                background: Colors.white,
-                hasShadow: true,
-              ),
-            ),
+        return _card(
+          child: Container(
+            width: width ?? double.infinity,
+            height: height ?? 100.0,
+            decoration: _cardDecoration,
           ),
         );
       },
     );
   }
+
+  Widget _card({required Widget child}) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Shimmer.fromColors(
+        baseColor: const Color(0xFFEDEEF2),
+        highlightColor: const Color(0xFFF7F7FA),
+        period: const Duration(milliseconds: 1100),
+        child: child,
+      ),
+    );
+  }
+
+  BoxDecoration get _cardDecoration => BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: TaShadows.shadowSm,
+      );
 }

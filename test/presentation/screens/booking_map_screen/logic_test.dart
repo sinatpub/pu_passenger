@@ -6,7 +6,7 @@ import 'package:com.tara.passenger/core/utils/status_util.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
 import 'package:com.tara.passenger/data/models/request_booking_model.dart';
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/logic.dart';
-import 'package:com.tara.passenger/service/location_imp.dart';
+import 'package:com.tara.passenger/services/location_imp.dart';
 
 /// P-09 (docs/12, docs/09 §7, docs/08 M-2) — `getBookingInfo` is triggered
 /// by two independent channels (a 10s poll and socket events), both racing

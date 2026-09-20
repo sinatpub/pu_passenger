@@ -28,4 +28,24 @@ void main() {
       expect(seatCapacityForVehicleId(null), 5);
     });
   });
+
+  group('etaMinutesForVehicleId (C2 home vehicle list)', () {
+    test('rickshaw ~2 min, classic ~3, mini van ~4, suv ~4', () {
+      expect(etaMinutesForVehicleId(1), 2);
+      expect(etaMinutesForVehicleId(2), 3);
+      expect(etaMinutesForVehicleId(3), 4);
+      expect(etaMinutesForVehicleId(4), 4);
+    });
+
+    test('unknown id and alphard/vip default to 5 min', () {
+      expect(etaMinutesForVehicleId(5), 5);
+      expect(etaMinutesForVehicleId(99), 5);
+      expect(etaMinutesForVehicleId(null), 5);
+    });
+
+    test('formatEtaMinutes renders the display string', () {
+      expect(formatEtaMinutes(1), '~2 min');
+      expect(formatEtaMinutes(null), '~5 min');
+    });
+  });
 }

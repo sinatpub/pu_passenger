@@ -1,4 +1,4 @@
-import 'package:com.tara.passenger/features/profile/data/models/profile_model.dart';
+import 'package:com.tara.passenger/presentation/screens/profile/data/models/profile_model.dart';
 import 'package:get/get.dart';
 
 class ProfileState {

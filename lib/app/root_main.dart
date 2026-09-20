@@ -1,6 +1,8 @@
-import 'package:com.tara.passenger/core/theme/app_theme.dart';
+import 'package:com.tara.passenger/core/theme/ta_theme.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/main.dart';
+import 'package:com.tara.passenger/mock/mock_dev_panel.dart';
+import 'package:com.tara.passenger/mock/mock_mode.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/translations/app_translation.dart';
 import 'package:flutter/material.dart';
@@ -29,7 +31,7 @@ class Root extends StatelessWidget {
         locale: const Locale(AppConstant.englishCode),
         fallbackLocale: const Locale(AppConstant.khmerCode),
         getPages: AppPages.pages,
-        theme: AppTheme.lightTheme,
+        theme: TaTheme.lightTheme,
         builder: (context, child) {
           final easyLoading = EasyLoading.init()(context, child);
           return MediaQuery(
@@ -47,7 +49,11 @@ class Root extends StatelessWidget {
               textScaler: MediaQuery.textScalerOf(context)
                   .clamp(minScaleFactor: 1.0, maxScaleFactor: 1.3),
             ),
-            child: easyLoading,
+            // QA mock build only: a "MOCK" tab over every screen, opening
+            // the developer controls. Never present in a release build.
+            child: MockMode.isActive
+                ? MockModeOverlay(child: easyLoading)
+                : easyLoading,
           );
         },
       ),

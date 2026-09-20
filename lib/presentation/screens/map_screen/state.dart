@@ -52,8 +52,13 @@ class MapState {
 
   Set<Polyline> polylines = {};
 
-  // Driver Around
+  /// Driver Around
   DriverAroundModel? driverAroundData;
+
+  /// Optional "Add a note for driver" text (C3). Presentational only — the
+  /// booking payload and `rideRequest` emit are unchanged (roadmap C3 Done
+  /// When), so this is held here for the session, not sent.
+  String note = "";
 
   // booking loading
   bool isBookingLoading = false;

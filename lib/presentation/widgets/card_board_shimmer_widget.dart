@@ -23,8 +23,9 @@ class ShimmerCardBoardWidget extends StatelessWidget {
         ),
       ),
       child: Shimmer.fromColors(
-        baseColor: Colors.grey[300]!,
-        highlightColor: Colors.grey[100]!,
+        // F3's shimmer pair, so every skeleton in the app shimmers the same.
+        baseColor: const Color(0xFFEDEEF2),
+        highlightColor: const Color(0xFFF7F7FA),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

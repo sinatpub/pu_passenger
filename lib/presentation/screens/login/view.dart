@@ -1,134 +1,109 @@
-import 'package:com.tara.passenger/core/resources/asset_resource.dart';
-import 'package:com.tara.passenger/core/theme/colors.dart';
-import 'package:com.tara.passenger/core/theme/text_styles.dart';
-import 'package:com.tara.passenger/core/utils/app_ext.dart';
-import 'package:com.tara.passenger/core/utils/phone_formatter.dart';
-import 'package:com.tara.passenger/presentation/screens/login/logic.dart';
-import 'package:com.tara.passenger/presentation/widgets/fbtn_widget.dart';
-import 'package:com.tara.passenger/presentation/widgets/shake_widget.dart';
-import 'package:com.tara.passenger/presentation/widgets/x_text_field.dart';
-import 'package:com.tara.passenger/translations/app_locale.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 
-import '../../../app/logic.dart';
-import '../../../core/utils/app_constant.dart';
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
+import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
+import 'package:com.tara.passenger/core/utils/phone_formatter.dart';
+import 'package:com.tara.passenger/presentation/screens/login/logic.dart';
+import 'package:com.tara.passenger/presentation/widgets/shake_widget.dart';
+import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
+import 'package:com.tara.passenger/translations/app_locale.dart';
 
+import 'auth_language_toggle.dart';
+
+/// Screen 2 — Login.
+///
+/// **Every validation rule is `LoginLogic`'s and is untouched** (roadmap S4
+/// Risk): the same `inputFormatters` chain produces the same spaced value,
+/// `state.phoneNumber` still holds that formatted string, and both the Next
+/// button and the keyboard's done action still call
+/// `phoneLogin(state.phoneNumber.value, context)`. The shake-on-invalid is
+/// still driven by `logic.phoneShake`.
+///
+/// `PDD-04` — the three-step indicator is built as specified.
 class LoginPage extends StatelessWidget {
-  LoginPage({super.key});
-  final LoginLogic logic = Get.find<LoginLogic>();
+  const LoginPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final logic = Get.find<LoginLogic>();
+
     return Scaffold(
-      backgroundColor: AppColors.light4,
+      backgroundColor: TaColors.background,
       body: SafeArea(
-        bottom: false,
-        child: Container(
-          margin: EdgeInsets.symmetric(horizontal: 16.0.d),
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 25),
-            child: Column(
-              children: [
-                const SizedBox(height: 28),
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Obx(
-                    () => IconButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () {
-                        Get.find<AppLogic>().toggleLanguage();
-                      },
-                      icon: Get.find<AppLogic>().languageKeyCode.value ==
-                              AppConstant.englishCode
-                          ? Image.asset(
-                              ImageAssets.flag_en,
-                              width: 30,
-                            )
-                          : SvgPicture.asset(
-                              ImageAssets.flag_km,
-                              width: 30,
-                            ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 26, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TaStepIndicator(steps: 3, current: 0),
+                  AuthLanguageToggle(),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(AppLocale.titleLogin.tr, style: TaTextStyles.displayLarge),
+              const SizedBox(height: 6),
+              Text(
+                AppLocale.desLogin.tr,
+                style: TaTextStyles.bodyMedium
+                    .copyWith(color: TaColors.textSecondary),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                AppLocale.phoneNumber.tr,
+                style: TaTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: TaColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Obx(
+                () => ShakeWidget(
+                  key: logic.phoneShake,
+                  shakeCount: 3,
+                  shakeOffset: 10,
+                  child: TaTextField(
+                    controller: logic.phoneTextController,
+                    hint: AppLocale.enterPhoneNumber.tr,
+                    enabled: !logic.state.isLoading.value,
+
+                    /// Display-only prefix, exactly as before — the country
+                    /// code is **not** part of the submitted value, which
+                    /// `validatePhoneNumber` normalizes by prepending "0".
+                    prefix: const Text('+855'),
+
+                    /// Unchanged chain: digits only, capped at 12, then the
+                    /// grouping formatter. `state.phoneNumber` therefore holds
+                    /// a spaced string, which `phoneLogin` strips.
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(12),
+                      CardNumberInputFormatter(),
+                    ],
+                    keyboardType: TextInputType.phone,
+                    textInputAction: TextInputAction.done,
+                    onChanged: (value) =>
+                        logic.state.phoneNumber.value = value,
+                    onSubmitted: (_) => logic.phoneLogin(
+                      logic.state.phoneNumber.value,
+                      context,
                     ),
                   ),
                 ),
-                const SizedBox(height: 28),
-                Text(
-                  AppLocale.titleLogin.tr,
-                  style: ThemeConstands.font20SemiBold,
-                  textAlign: TextAlign.center,
+              ),
+              const Spacer(),
+              TaButton(
+                label: AppLocale.next.tr,
+                onTap: () => logic.phoneLogin(
+                  logic.state.phoneNumber.value,
+                  context,
                 ),
-                const SizedBox(height: 18),
-                Text(
-                  AppLocale.desLogin.tr,
-                  style: ThemeConstands.font16Regular,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 48),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppLocale.phoneNumber.tr,
-                      style: ThemeConstands.font18Regular,
-                      textAlign: TextAlign.left,
-                    ),
-                    const SizedBox(height: 12),
-                    ShakeWidget(
-                      key: logic.phoneShake,
-                      shakeCount: 3,
-                      shakeOffset: 10,
-                      shakeDuration: const Duration(milliseconds: 500),
-                      child: Container(
-                        width: MediaQuery.of(context).size.width,
-                        padding: const EdgeInsets.symmetric(horizontal: 0),
-                        child: XTextField(
-                          textController: logic.phoneTextController,
-                          hintText: AppLocale.enterPhoneNumber.tr,
-                          enable: !logic.state.isLoading.value,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                            LengthLimitingTextInputFormatter(12),
-                            CardNumberInputFormatter(),
-                          ],
-                          prefixIcon: const Padding(
-                            padding: EdgeInsets.only(top: 2.0),
-                            child: Text(
-                              "+855",
-                              style: ThemeConstands.font16SemiBold,
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          hasShadow: false,
-                          borderColor: AppColors.dark1,
-                          maxLength: 25,
-                          onChanged: (value) =>
-                              logic.state.phoneNumber.value = value,
-                          onFieldSubmitted: (value) => logic.phoneLogin(
-                              logic.state.phoneNumber.value, context),
-                          keyboardType: TextInputType.phone,
-                          textInputAction: TextInputAction.done,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 38),
-                    FBTNWidget(
-                      onPressed: () async {
-                        logic.phoneLogin(
-                            logic.state.phoneNumber.value, context);
-                      },
-                      color: AppColors.red,
-                      textColor: AppColors.light4,
-                      label: AppLocale.next.tr,
-                      // enableWidth: true,
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

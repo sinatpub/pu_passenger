@@ -1,12 +1,14 @@
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'dart:async';
 import 'dart:typed_data';
-import 'package:com.tara.passenger/core/theme/colors.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/core/utils/fare_estimate.dart';
 import 'package:com.tara.passenger/core/utils/load_custom_marker.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_seat_capacity.dart';
+import 'package:com.tara.passenger/mock/mock_fixtures.dart';
+import 'package:com.tara.passenger/mock/mock_mode.dart';
 import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/driver_around_api.dart';
 import 'package:com.tara.passenger/data/datasources/request_booking_api.dart';
@@ -15,11 +17,12 @@ import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/map_presentation.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/driver_info_sheet.dart';
-import 'package:com.tara.passenger/service/location_imp.dart';
+import 'package:com.tara.passenger/services/location_imp.dart';
 import 'package:com.tara.passenger/services/booking_session.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -104,6 +107,18 @@ class MapLogic extends GetxController {
       _injectedBookingSession ?? Get.find<BookingSession>();
 
   final MapState state = MapState();
+
+  /// C3: the "Add a note for driver" field's controller. Presentational only —
+  /// the value hangs off `state.note` for the session and is never sent, so
+  /// the `requestBooking` payload and `rideRequest` emit stay unchanged
+  /// (roadmap C3 "Done When").
+  final TextEditingController noteController = TextEditingController();
+
+  @override
+  void onClose() {
+    noteController.dispose();
+    super.onClose();
+  }
 
   @override
   void onInit() {
@@ -302,21 +317,31 @@ class MapLogic extends GetxController {
   Future<void> drawPolyline() async {
     if (state.currentLatLng == null || state.destinationLatLng == null) return;
 
-    final result = await PolylinePoints().getRouteBetweenCoordinates(
-      googleApiKey: AppConstant.googleKeyApi,
-      request: PolylineRequest(
-        origin: PointLatLng(
-            state.currentLatLng!.latitude, state.currentLatLng!.longitude),
-        destination: PointLatLng(state.destinationLatLng!.latitude,
-            state.destinationLatLng!.longitude),
-        mode: TravelMode.driving,
-      ),
-    );
-
-    if (result.points.isEmpty) return;
+    // QA mock build: a synthetic route instead of the Directions API.
+    final List<PointLatLng> result;
+    if (MockMode.isActive) {
+      result = [
+        for (final p in mockRoute(
+            state.currentLatLng!, state.destinationLatLng!))
+          PointLatLng(p.latitude, p.longitude),
+      ];
+    } else {
+      final response = await PolylinePoints().getRouteBetweenCoordinates(
+        googleApiKey: AppConstant.googleKeyApi,
+        request: PolylineRequest(
+          origin: PointLatLng(
+              state.currentLatLng!.latitude, state.currentLatLng!.longitude),
+          destination: PointLatLng(state.destinationLatLng!.latitude,
+              state.destinationLatLng!.longitude),
+          mode: TravelMode.driving,
+        ),
+      );
+      if (response.points.isEmpty) return;
+      result = response.points;
+    }
 
     state.polylines =
-        buildRoutePolyline(points: result.points, color: AppColors.main);
+        buildRoutePolyline(points: result, color: TaColors.primary);
 
     // Zoom to fit the whole trip once the polyline has been laid down.
     Future.delayed(const Duration(milliseconds: 300), _fitBounds);

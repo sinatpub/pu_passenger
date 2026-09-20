@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:com.tara.passenger/data/models/location_model.dart';
 import 'package:com.tara.passenger/presentation/shared/map_drag/logic.dart';
-import 'package:com.tara.passenger/service/location_imp.dart';
+import 'package:com.tara.passenger/services/location_imp.dart';
 
 /// P-04 (docs/12) — `fetchPlaceSuggestions`'s loading/error handling used to
 /// wrap only the synchronous work of scheduling the debounce timer, not the

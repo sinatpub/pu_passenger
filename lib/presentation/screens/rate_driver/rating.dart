@@ -12,6 +12,12 @@
 /// navigation, not state: a submitted rating "dismiss[es] and return[s] to
 /// Home. No thank-you screen", and a submission that fails is queued, so it
 /// dismisses the same way. The passenger never waits on the network here.
+///
+/// **Superseded 2026-09-19 (roadmap C7, confirmed by the user):** the
+/// "no thank-you screen" half no longer holds. The redesign's Screen 12
+/// (Receipt) *is* that screen, and the chain is now
+/// `Fee → Rating → Receipt → Home`. Only the navigation changed — every rule
+/// below still governs, and `screens/rating/` consumes them unmodified.
 library;
 
 const int kMinStars = 1;

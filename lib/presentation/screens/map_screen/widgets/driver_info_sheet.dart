@@ -1,19 +1,26 @@
-import 'package:com.tara.passenger/core/theme/colors.dart';
-import 'package:com.tara.passenger/core/theme/text_styles.dart';
-import 'package:com.tara.passenger/data/models/driver_around_model.dart';
-import 'package:com.tara.passenger/presentation/widgets/fbtn_widget.dart';
-import 'package:com.tara.passenger/presentation/widgets/g_showmodal_bottom.dart';
-import 'package:com.tara.passenger/presentation/widgets/x_network_image.dart';
-import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
+import 'package:com.tara.passenger/core/utils/initials.dart';
+import 'package:com.tara.passenger/data/models/driver_around_model.dart';
+import 'package:com.tara.passenger/presentation/widgets/g_showmodal_bottom.dart';
+import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
+import 'package:com.tara.passenger/translations/app_locale.dart';
 
 /// The driver-info bottom sheet shown when a driver marker on the map is
 /// tapped. Extracted from `MapLogic.displayDriverMarker()` (docs/01 Problem
 /// 6, `08` M-1) — the controller was building ~130 lines of widget tree
 /// directly, the "no widget-building code in a controller" violation
-/// (`.agent/skills/architecture.md`). Pure move; behavior unchanged.
+/// (`.agent/skills/architecture.md`).
+///
+/// **S5** moved it onto tokens and components: it was the last importer of
+/// `fbtn_widget.dart`, and the legacy button could not be deleted while it
+/// stood. `TaDriverCard` replaces the hand-rolled avatar + name + model row,
+/// so this sheet and the booking screen's driver card now look the same. The
+/// host sheet (`gShowModalBottomSheet`) was already re-skinned at F3, and the
+/// `tel:` launch and the commented-out `requestBooking` call are untouched.
 Future<void> showDriverInfoSheet(
   BuildContext context, {
   required Driver driver,
@@ -23,86 +30,44 @@ Future<void> showDriverInfoSheet(
     minChildSize: .2,
     context: context,
     body: (context, scrollController) {
+      final name = driver.name ?? AppLocale.unKnown.tr;
+      final phone = driver.phone;
+
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18),
+        padding: const EdgeInsets.symmetric(horizontal: 20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
               AppLocale.driverInfo.tr,
-              style: ThemeConstands.font14SemiBold,
+              style: TaTextStyles.titleMedium,
             ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Container(
-                  width: 65,
-                  height: 65,
-                  padding: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey.shade300, width: 1),
-                  ),
-                  child: ClipOval(
-                    child: XNetworkImage(
-                      src: driver.profileImage ?? '',
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(driver.name ?? AppLocale.unKnown.tr,
-                        style: ThemeConstands.font16SemiBold),
-                    Text(driver.vehicle?.model ?? "",
-                        style: ThemeConstands.font14SemiBold),
-                    InkWell(
-                      onTap: () {
-                        if (driver.phone != null && driver.phone!.isNotEmpty) {
-                          _makePhoneCall(driver.phone!);
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(4),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.phone,
-                                size: 16, color: Colors.blue),
-                            const SizedBox(width: 8),
-                            Text(
-                              driver.phone ?? "",
-                              style: ThemeConstands.font14SemiBold.copyWith(
-                                color: Colors.blue, // Visual cue that it's a link
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                )
-              ],
+            const SizedBox(height: 10),
+            TaDriverCard(
+              name: name,
+              initials: initialsFromName(driver.name),
+              vehicleInfo: driver.vehicle?.model ?? '---',
+              plateNumber: driver.vehicle?.plateNumber,
             ),
-            const SizedBox(height: 28),
-            Center(
-              child: FBTNWidget(
-                onPressed: () {
-                  Get.back();
-                  // requestBooking(
-                  //     isClickOnDriverMarker: true, driverID: driver.id);
-                },
-                color: AppColors.main,
-                textColor: AppColors.light4,
-                label: AppLocale.back.tr,
-                width: MediaQuery.of(context).size.width / 2,
+            if (phone != null && phone.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              TaProfileRow(
+                icon: const Icon(Icons.phone_outlined, size: 20),
+                label: phone,
+                onTap: () => _makePhoneCall(phone),
               ),
+            ],
+            const SizedBox(height: 18),
+            TaButton(
+              label: AppLocale.back.tr,
+              variant: TaButtonVariant.ghost,
+              onTap: () {
+                Get.back();
+                // requestBooking(
+                //     isClickOnDriverMarker: true, driverID: driver.id);
+              },
             ),
+            const SizedBox(height: 12),
           ],
         ),
       );

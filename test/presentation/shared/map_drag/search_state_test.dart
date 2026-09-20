@@ -82,4 +82,47 @@ void main() {
           keepsPreviousResults(DestinationSearchStatus.belowThreshold), isFalse);
     });
   });
+
+  group('splitPlaceDescription', () {
+    test('a null description yields nulls, leaving the fallback to the view',
+        () {
+      final split = splitPlaceDescription(null);
+      expect(split.primary, isNull);
+      expect(split.secondary, isNull);
+    });
+
+    test('the name is the first comma segment; the rest is the sub-line', () {
+      final split = splitPlaceDescription(
+          'AEON Mall Sen Sok, Phnom Penh, Cambodia');
+      expect(split.primary, 'AEON Mall Sen Sok');
+      expect(split.secondary, 'Phnom Penh, Cambodia');
+    });
+
+    test('a single-segment description has no sub-line', () {
+      final split = splitPlaceDescription('Central Market');
+      expect(split.primary, 'Central Market');
+      expect(split.secondary, isNull);
+    });
+
+    test('the sub-line is exactly what separates two same-named places', () {
+      // The spec's "three identical AEON Mall rows is a failed design" — the
+      // sub-line is the disambiguator when names collide.
+      final a = splitPlaceDescription('Wat Phnom, Phnom Penh');
+      final b = splitPlaceDescription('Wat Phnom, Sihanoukville');
+      expect(a.primary, b.primary);
+      expect(a.secondary, isNot(b.secondary));
+    });
+
+    test('empty segments collapse instead of producing comma noise', () {
+      final split = splitPlaceDescription('Riverfront, , Phnom Penh,');
+      expect(split.primary, 'Riverfront');
+      expect(split.secondary, 'Phnom Penh');
+    });
+
+    test('whitespace around the first comma is trimmed', () {
+      final split = splitPlaceDescription('  Wat Phnom  ,  Phnom Penh  ');
+      expect(split.primary, 'Wat Phnom');
+      expect(split.secondary, 'Phnom Penh');
+    });
+  });
 }

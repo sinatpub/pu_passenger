@@ -1,3 +1,5 @@
+import 'package:com.tara.passenger/translations/app_locale.dart';
+import 'package:get/get.dart';
 import 'dart:math' as math;
 import 'dart:ui' show Color, Offset;
 
@@ -42,7 +44,7 @@ Set<Marker> buildTripMarkers({
         position: currentLatLng,
         icon: sourceIcon ??
             BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        infoWindow: const InfoWindow(title: "My Location"),
+        infoWindow: InfoWindow(title: AppLocale.currentLocation.tr),
       ),
     );
   }
@@ -55,7 +57,10 @@ Set<Marker> buildTripMarkers({
         icon: destinationIcon ??
             BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
         infoWindow:
-            InfoWindow(title: "Destination", snippet: destinationAddress),
+            InfoWindow(
+          title: AppLocale.destination.tr,
+          snippet: destinationAddress,
+        ),
       ),
     );
   }
@@ -180,3 +185,43 @@ String formatDistance(double distanceInKm) {
   final metres = totalMetres % 1000;
   return "$km km $metres m";
 }
+
+/// Distance (km) from the pickup pin to the nearest driver with a parseable
+/// last known position, or null when there is no pickup or no usable driver.
+///
+/// Drives the booking overlay's status line (`<vehicle · 0.4 km away>`, `D14`
+/// / Screen 7). Pure presentation — haversine on the same `lastLocation`
+/// fields `buildDriverMarkers` already trusts, so it respects the same
+/// "only ever show a driver we can actually place" rule. Uses the mean Earth
+/// radius in metres; the result is floating-point kilometres, formatted by
+/// the caller.
+double? nearestDriverDistanceKm({
+  required LatLng? from,
+  required List<Driver>? drivers,
+}) {
+  if (from == null || drivers == null || drivers.isEmpty) return null;
+
+  double? nearest;
+  for (final driver in drivers) {
+    final lat = double.tryParse(driver.lastLocation?.latitude ?? '') ?? 0.0;
+    final lng = double.tryParse(driver.lastLocation?.longitude ?? '') ?? 0.0;
+    if (lat == 0.0 && lng == 0.0) continue;
+
+    final distance = _haversineKm(from.latitude, from.longitude, lat, lng);
+    if (nearest == null || distance < nearest) nearest = distance;
+  }
+  return nearest;
+}
+
+double _haversineKm(double lat1, double lon1, double lat2, double lon2) {
+  const radiusMetres = 6371000.0;
+  final dLat = _deg2rad(lat2 - lat1);
+  final dLon = _deg2rad(lon2 - lon1);
+  final a = math.pow(math.sin(dLat / 2), 2) +
+      math.cos(_deg2rad(lat1)) *
+          math.cos(_deg2rad(lat2)) *
+          math.pow(math.sin(dLon / 2), 2);
+  return 2 * radiusMetres * math.asin(math.sqrt(a)) / 1000;
+}
+
+double _deg2rad(double deg) => deg * math.pi / 180.0;

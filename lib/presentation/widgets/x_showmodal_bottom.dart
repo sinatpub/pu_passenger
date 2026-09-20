@@ -1,5 +1,12 @@
+import 'package:com.tara.passenger/core/utils/motion.dart';
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
+import 'package:com.tara.passenger/presentation/widgets/ta_bottom_sheet.dart';
 import 'package:flutter/material.dart';
 
+/// Draggable bottom sheet (roadmap F3 re-skin, configurable background).
+///
+/// Signature and drag/expand behavior unchanged — only the chrome is
+/// token-driven: 22px top radius, 44×5 grab handle, dark backdrop fade.
 Future xShowModalBottomSheet({
   required BuildContext context,
   bool useRootNavigator = true,
@@ -15,16 +22,18 @@ Future xShowModalBottomSheet({
     context: context,
     useRootNavigator: useRootNavigator,
     useSafeArea: true,
+    // P1 — the slide-up collapses to nothing once the viewer has asked for
+    // reduced motion; the barrier still fades, so the sheet does not appear
+    // out of nowhere.
     sheetAnimationStyle: AnimationStyle(
-      duration: const Duration(milliseconds: 300),
-      reverseDuration: const Duration(milliseconds: 300),
+      duration: motionDuration(context, Motion.base),
+      reverseDuration: motionDuration(context, Motion.base),
       curve: Curves.easeInOutCubic,
       reverseCurve: Curves.easeOut,
     ),
     isScrollControlled: isScrollControlled,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(0),
-    ),
+    barrierColor: TaColors.overlay,
+    shape: _sheetShape,
     backgroundColor: Colors.transparent,
     builder: (BuildContext context) {
       return DraggableScrollableSheet(
@@ -33,40 +42,29 @@ Future xShowModalBottomSheet({
         minChildSize: minChildSize,
         expand: expand,
         builder: (context, scrollController) {
-          return Stack(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                decoration: BoxDecoration(
-                  color: backgroundColor ?? Theme.of(context).cardColor,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(18),
-                    topRight: Radius.circular(18),
-                  ),
+          return Container(
+            decoration: BoxDecoration(
+              color: backgroundColor ?? TaColors.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+            ),
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 12, bottom: 14),
+                  child: TaGrabHandle(),
                 ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Container(
-                        height: 4,
-                        width: 32,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          color: Theme.of(context).dividerColor,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: body(context, scrollController),
-                    ),
-                  ],
+                Expanded(
+                  child: body(context, scrollController),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       );
     },
   );
 }
+
+const _sheetShape = RoundedRectangleBorder(
+  borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+);

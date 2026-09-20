@@ -27,6 +27,15 @@ injection via constructor rather than ad hoc `ClassName()` instantiation) is in 
 see `.agent/PROGRESS.md` in the parent repo for what's done, and
 `.agent/skills/architecture.md` for the target end-state.
 
+## UI redesign workflow docs
+
+The redesign plan lives entirely in `docs/` (the passenger counterpart of the Driver app's
+docs): `docs/roadmap.md` defines what to build and in what order, `docs/IMPLEMENTATION_PROGRESS.md`
+tracks current status, and `docs/implementation_rule.md` is the operating procedure for agents.
+Run a task per the rule file; start at the `G0` gate in the roadmap before writing any code.
+Note that `docs/ux-redesign/06-implementation-plan.md` uses stale file paths (`view/x_view.dart`);
+the live convention is `screens/<feature>/{binding,logic,state,view}.dart` and the roadmap uses it.
+
 ## Secrets
 
 Runtime secrets are compiled in via `--dart-define-from-file`, not hardcoded. Copy

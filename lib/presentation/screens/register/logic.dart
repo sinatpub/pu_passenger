@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:com.tara.passenger/features/auth/data/repository/auth_repository.dart';
+import 'package:com.tara.passenger/presentation/screens/login/data/repository/auth_repository.dart';
 import 'package:com.tara.passenger/presentation/screens/login/logic.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/storages/remove_storage.dart';
@@ -10,11 +10,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/theme/colors.dart';
-import '../../../core/theme/text_styles.dart';
+import '../../../core/theme/ta_colors.dart';
+import '../../../core/theme/ta_text_styles.dart';
 import '../../../translations/app_locale.dart';
 import '../../widgets/error_dialog_widget.dart';
-import '../../widgets/x_button.dart';
+import '../../widgets/ta_pressable.dart';
 import '../../widgets/x_showmodal_bottom.dart';
 import 'state.dart';
 
@@ -122,16 +122,14 @@ class RegisterLogic extends GetxController {
             crossAxisAlignment: CrossAxisAlignment.center,
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              XButton(
-                onPress: () {
-                  getImageGallery();
-                },
+              TaPressable(
+                onTap: getImageGallery,
                 child: Container(
                   width: 180,
                   height: 120,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    color: AppColors.light2,
+                    color: TaColors.border,
                   ),
                   child: const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -143,22 +141,20 @@ class RegisterLogic extends GetxController {
                       Text(
                         "Gallery\nរូបថត",
                         textAlign: TextAlign.center,
-                        style: ThemeConstands.font16SemiBold,
+                        style: TaTextStyles.titleMedium,
                       ),
                     ],
                   ),
                 ),
               ),
-              XButton(
-                onPress: () {
-                  getImageFromCamera();
-                },
+              TaPressable(
+                onTap: getImageFromCamera,
                 child: Container(
                   width: 180,
                   height: 120,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    color: AppColors.light2,
+                    color: TaColors.border,
                   ),
                   child: const Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -170,7 +166,7 @@ class RegisterLogic extends GetxController {
                       Text(
                         "Take a Photo\nថតរូប",
                         textAlign: TextAlign.center,
-                        style: ThemeConstands.font16SemiBold,
+                        style: TaTextStyles.titleMedium,
                       ),
                     ],
                   ),

@@ -1,14 +1,16 @@
 import 'dart:async';
 import 'dart:typed_data';
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/app/state.dart';
 import 'package:com.tara.passenger/core/resources/asset_resource.dart';
-import 'package:com.tara.passenger/core/theme/colors.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/core/utils/load_custom_marker.dart';
 import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
 import 'package:com.tara.passenger/presentation/widgets/error_dialog_widget.dart';
-import 'package:com.tara.passenger/service/location_imp.dart';
+import 'package:com.tara.passenger/services/location_imp.dart';
 import 'package:com.tara.passenger/services/location_service.dart';
+import 'package:com.tara.passenger/mock/mock_fixtures.dart';
+import 'package:com.tara.passenger/mock/mock_mode.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:geolocator/geolocator.dart';
@@ -138,30 +140,34 @@ class GoogleMapLogic extends GetxController {
       Color? polylineColor}) async {
     try {
       if (endLatLng.latitude != 0.0 && endLatLng.longitude != 0.0) {
-        final result = await polylinePoints.getRouteBetweenCoordinates(
-          googleApiKey: AppConstant.googleKeyApi,
-          request: PolylineRequest(
-            origin: PointLatLng(startLatLng.latitude, startLatLng.longitude),
-            destination: PointLatLng(endLatLng.latitude, endLatLng.longitude),
-            mode: TravelMode.driving,
-          ),
-        );
-
-        if (result.status == 'OK' && result.points.isNotEmpty) {
-          parentState.polylines.clear();
-          parentState.polylines.add(Polyline(
-            polylineId: const PolylineId("driverRoute"),
-            color: polylineColor ?? AppColors.main,
-            points: result.points
-                .map(
-                  (point) => LatLng(point.latitude, point.longitude),
-                )
-                .toList(),
-            width: 5,
-          ));
-          update();
-          Logger().i("Polylines: ${parentState.polylines.value.length}");
+        // QA mock build: a synthetic route instead of the Directions API.
+        final List<LatLng> points;
+        if (MockMode.isActive) {
+          points = mockRoute(startLatLng, endLatLng);
+        } else {
+          final result = await polylinePoints.getRouteBetweenCoordinates(
+            googleApiKey: AppConstant.googleKeyApi,
+            request: PolylineRequest(
+              origin: PointLatLng(startLatLng.latitude, startLatLng.longitude),
+              destination: PointLatLng(endLatLng.latitude, endLatLng.longitude),
+              mode: TravelMode.driving,
+            ),
+          );
+          if (result.status != 'OK' || result.points.isEmpty) return;
+          points = result.points
+              .map((point) => LatLng(point.latitude, point.longitude))
+              .toList();
         }
+
+        parentState.polylines.clear();
+        parentState.polylines.add(Polyline(
+          polylineId: const PolylineId("driverRoute"),
+          color: polylineColor ?? TaColors.primary,
+          points: points,
+          width: 5,
+        ));
+        update();
+        Logger().i("Polylines: ${parentState.polylines.value.length}");
       }
     } catch (e) {
       Logger().e("Error drawing polyline: $e");
@@ -268,35 +274,36 @@ class GoogleMapLogic extends GetxController {
     tlog("Drawing Polyline from $startLatLng to $endLatLng");
 
     try {
-      final result = await polylinePoints.getRouteBetweenCoordinates(
-        googleApiKey: AppConstant.googleKeyApi,
-        request: PolylineRequest(
-          origin: PointLatLng(startLatLng.latitude, startLatLng.longitude),
-          destination: PointLatLng(endLatLng.latitude, endLatLng.longitude),
-          mode: TravelMode.driving,
-        ),
-      );
-
-      if (result.status == 'OK' && result.points.isNotEmpty) {
-        final polylineId =
-            PolylineId("route-${DateTime.now().millisecondsSinceEpoch}");
-
-        final points = result.points
+      final List<LatLng> points;
+      if (MockMode.isActive) {
+        points = mockRoute(startLatLng, endLatLng);
+      } else {
+        final result = await polylinePoints.getRouteBetweenCoordinates(
+          googleApiKey: AppConstant.googleKeyApi,
+          request: PolylineRequest(
+            origin: PointLatLng(startLatLng.latitude, startLatLng.longitude),
+            destination: PointLatLng(endLatLng.latitude, endLatLng.longitude),
+            mode: TravelMode.driving,
+          ),
+        );
+        if (result.status != 'OK' || result.points.isEmpty) return null;
+        points = result.points
             .map((point) => LatLng(point.latitude, point.longitude))
             .toList();
-
-        final polyline = Polyline(
-          polylineId: polylineId,
-          color: polylineColor ?? Colors.blue,
-          points: points,
-          width: 5,
-        );
-
-        final Set<Polyline> polylineSet = {polyline};
-        return polylineSet;
       }
 
-      return null;
+      final polylineId =
+          PolylineId("route-${DateTime.now().millisecondsSinceEpoch}");
+
+      final polyline = Polyline(
+        polylineId: polylineId,
+        color: polylineColor ?? Colors.blue,
+        points: points,
+        width: 5,
+      );
+
+      final Set<Polyline> polylineSet = {polyline};
+      return polylineSet;
     } catch (e) {
       Logger().e("Error drawing polyline: $e");
       return null;

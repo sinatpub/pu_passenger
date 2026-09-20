@@ -7,9 +7,9 @@ import 'package:com.tara.passenger/data/datasources/check_request_book_source.da
 import 'package:com.tara.passenger/data/datasources/get_vehical_remote_data_source.dart';
 import 'package:com.tara.passenger/presentation/screens/home/booking_redirect.dart';
 import 'package:com.tara.passenger/presentation/screens/home/state.dart';
-import 'package:com.tara.passenger/service/location_imp.dart';
+import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
+import 'package:com.tara.passenger/services/location_imp.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:logger/logger.dart';
@@ -69,21 +69,21 @@ class HomeLogic extends GetxController {
   /// 1. Get All Vehicle Type
   Future<void> getVehicleType() async {
     try {
-      EasyLoading.show();
+      // C2: busy/refresh uses the shared skeleton (state.isLoading), not an
+      // `EasyLoading` spike — roadmap F-pack "busy uses the shimmer".
       state.isLoading = RxStatus.loading();
       update();
       var data = await vehicleRepo.getAllVehicalApi();
-
-      if (data.data.isNotEmpty) {
-        state.vehicleAllType = data;
-        state.isLoading = RxStatus.success();
-        update();
-      }
+      state.vehicleAllType = data;
+      state.isLoading = RxStatus.success();
+      update();
     } catch (e) {
       state.isLoading = RxStatus.error();
       update();
-    } finally {
-      EasyLoading.dismiss();
+      final context = Get.context ?? Get.overlayContext;
+      if (context != null) {
+        TaToast.show(context, AppLocale.somethingWentWrong.tr);
+      }
     }
   }
 

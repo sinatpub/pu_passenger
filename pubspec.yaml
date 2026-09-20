@@ -120,8 +120,22 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  # Pinned by flutter_test; imported directly for `fakeAsync` — the mock
+  # flow tests drive the backend's Timers with controlled time instead of
+  # waiting out trip-length delays.
+  fake_async: ^1.3.1
 
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.3
+
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/launcher/launcher_passenger_1024.png"
+  adaptive_icon_background: "#FF4500"
+  adaptive_icon_foreground: "assets/launcher/adaptive_foreground_passenger_1024.png"
+  min_sdk_android: 21
 
 
 flutter:

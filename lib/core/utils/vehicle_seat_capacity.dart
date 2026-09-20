@@ -14,3 +14,22 @@ const Map<int, int> _seatCapacityByVehicleId = {
 int seatCapacityForVehicleId(int? vehicleId) {
   return _seatCapacityByVehicleId[vehicleId] ?? 5; // 5 = default (alphard/vip and unknown)
 }
+
+/// C2 (docs/roadmap) — Display ETA per vehicle class (minutes) used by the
+/// home vehicle list. The backend provides no ETA per vehicle type, so this
+/// follows the same deterministic-lookup pattern as [seatCapacityForVehicleId]:
+/// a practical placeholder until the API exposes a real ETA.
+const Map<int, int> _etaByVehicleId = {
+  1: 2,  // rickshaw
+  2: 3,  // classic car
+  3: 4,  // mini van
+  4: 4,  // suv
+};
+
+int etaMinutesForVehicleId(int? vehicleId) {
+  return _etaByVehicleId[vehicleId] ?? 5; // default (alphard/vip)
+}
+
+String formatEtaMinutes(int? vehicleId) {
+  return '~${etaMinutesForVehicleId(vehicleId)} min';
+}

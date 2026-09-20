@@ -1,5 +1,5 @@
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:com.tara.passenger/core/theme/colors.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/core/utils/get_decoration.dart';
 import 'package:flutter/material.dart';
@@ -58,7 +58,7 @@ class XNetworkImage extends StatelessWidget {
             Container(
               height: height,
               width: width,
-              decoration: getBoxDecoration(background: Colors.red),
+              decoration: getBoxDecoration(background: TaColors.border),
             ).toShimmer,
             if (progressValue != null)
               Positioned.fill(
@@ -68,9 +68,9 @@ class XNetworkImage extends StatelessWidget {
                     alignment: Alignment.bottomCenter,
                     child: LinearProgressIndicator(
                       value: progressValue,
-                      color: AppColors.main,
+                      color: TaColors.primary,
                       borderRadius: BorderRadius.circular(10),
-                      backgroundColor: Colors.grey.withOpacity(0.3),
+                      backgroundColor: TaColors.border,
                       minHeight: 4,
                     ),
                   ),

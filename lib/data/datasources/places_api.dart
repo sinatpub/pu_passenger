@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/data/models/location_model.dart';
+import 'package:com.tara.passenger/mock/mock_fixtures.dart';
+import 'package:com.tara.passenger/mock/mock_mode.dart';
 import 'package:http/http.dart' as http;
 
 /// P-04 (docs/12) — Google Places, extracted out of `LocationRepo`.
@@ -57,6 +59,24 @@ class PlacesRepository {
   Future<LocationModel> searchPlaces(String query) async {
     if (query.isEmpty) return LocationModel(predictions: []);
 
+    // QA mock build: autocomplete over the small mock scenery instead of the
+    // network. `place_id` is the place name, because `getPlaceDetails`
+    // resolves it back into coordinates below. Text without a match in the
+    // scenery returns nothing, like the real API would for gibberish.
+    if (MockMode.isActive) {
+      final q = query.trim().toLowerCase();
+      final predictions = [
+        for (final place in MockPlaces.all)
+          if (place.name.toLowerCase().contains(q))
+            Prediction(
+              description: place.name,
+              placeId: place.name,
+              reference: place.name,
+            ),
+      ];
+      return LocationModel(predictions: predictions);
+    }
+
     final response = await _client.get(autocompleteUri(query));
     if (response.statusCode != 200) {
       throw Exception('Failed to fetch places: ${response.body}');
@@ -71,6 +91,14 @@ class PlacesRepository {
 
   /// Returns `[lat, lng]` for a prediction.
   Future<List<double>> getPlaceDetails(String placeId) async {
+    // QA mock build: `placeId` is a place name (see `searchPlaces`).
+    if (MockMode.isActive) {
+      for (final place in MockPlaces.all) {
+        if (place.name == placeId) return [place.latitude, place.longitude];
+      }
+      throw Exception('Unknown mock place: $placeId');
+    }
+
     final response = await _client.get(placeDetailsUri(placeId));
     if (response.statusCode != 200) {
       throw Exception('Failed to fetch place details: ${response.body}');

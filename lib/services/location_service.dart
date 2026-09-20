@@ -2,6 +2,45 @@ import 'dart:async';
 
 import 'package:geolocator/geolocator.dart';
 
+/// Where positions come from. [GeolocatorPositionSource] in every normal
+/// build; the QA mock build swaps in a simulated one (`lib/mock/`).
+abstract class PositionSource {
+  Future<bool> requestPermission();
+  Future<Position?> getCurrentPosition();
+  Stream<Position> positionStream();
+}
+
+class GeolocatorPositionSource implements PositionSource {
+  const GeolocatorPositionSource();
+
+  @override
+  Future<bool> requestPermission() async {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    return permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
+  }
+
+  @override
+  Future<Position?> getCurrentPosition() async {
+    return await Geolocator.getLastKnownPosition() ??
+        await Geolocator.getCurrentPosition(
+          timeLimit: const Duration(seconds: 10),
+          desiredAccuracy: LocationAccuracy.medium,
+        );
+  }
+
+  @override
+  Stream<Position> positionStream() => Geolocator.getPositionStream(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+        ),
+      );
+}
+
 /// The single owner of the app's live GPS subscription (F-05, docs/12).
 ///
 /// Previously `GoogleMapLogic.updatePassengerMoveFromCurrentLocation()` opened
@@ -21,6 +60,9 @@ class LocationService {
 
   static final LocationService instance = LocationService._();
 
+  /// Replaced by `MockMode.init` in a QA mock build.
+  PositionSource source = const GeolocatorPositionSource();
+
   final StreamController<Position> _controller =
       StreamController<Position>.broadcast();
   StreamSubscription<Position>? _subscription;
@@ -32,12 +74,7 @@ class LocationService {
   /// Opens the single live GPS subscription if one isn't already running.
   void start() {
     if (_subscription != null) return;
-    _subscription = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 10,
-      ),
-    ).listen(_controller.add);
+    _subscription = source.positionStream().listen(_controller.add);
   }
 
   void stop() {
