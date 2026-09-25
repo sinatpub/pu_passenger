@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
+import 'package:com.tara.passenger/core/theme/ta_radius.dart';
 import 'package:com.tara.passenger/core/theme/ta_shadow.dart';
+import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/data/models/location_model.dart';
 import 'package:com.tara.passenger/presentation/shared/map_drag/logic.dart';
@@ -16,30 +18,31 @@ import 'package:com.tara.passenger/translations/app_locale.dart';
 ///
 /// Extracted from `MapDragPage` (C4) so the whole state table can be pumped
 /// in widget tests without the GoogleMap platform view. Sizes to its content
-/// (capped at half the screen) and returns to the caller via `logic` —
+/// (capped at [maxHeight], half the screen by default) and returns to the
+/// caller via `logic` —
 /// `selectPlace` (which pops `/map` with the pinned `LatLng`) and
 /// `fetchPlaceSuggestions` (retry) stay in the logic, so the pin-commit
 /// semantics P-05 pinned are untouched.
 class SearchPanel extends StatelessWidget {
-  const SearchPanel({super.key, required this.logic});
+  const SearchPanel({super.key, required this.logic, this.maxHeight});
 
   final MapDragLogic logic;
+
+  /// The tallest the panel may grow. The page passes the smaller of half the
+  /// screen and the map area left over by the keyboard.
+  final double? maxHeight;
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints: BoxConstraints(maxHeight: maxHeight ?? Get.height * 0.5),
       decoration: BoxDecoration(
         color: TaColors.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+        borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(TaRadius.radiusXxl)),
         boxShadow: TaShadows.shadowLg,
       ),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxHeight: Get.height * 0.5),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [_body(context)],
-        ),
-      ),
+      child: _body(context),
     );
   }
 
@@ -48,8 +51,6 @@ class SearchPanel extends StatelessWidget {
     final predictions = logic.state.suggestLocationData.predictions ?? const [];
     final hasPreviousResults = predictions.isNotEmpty;
 
-    // ignore: avoid_print
-    print('[QA] panel status=$status predictions=${predictions.length}');
     switch (status) {
       case DestinationSearchStatus.idle:
       case DestinationSearchStatus.belowThreshold:
@@ -79,7 +80,7 @@ class SearchPanel extends StatelessWidget {
         Flexible(
           child: ListView.builder(
             shrinkWrap: true,
-            padding: EdgeInsets.symmetric(horizontal: 16.d, vertical: 4),
+            padding: EdgeInsets.symmetric(horizontal: 16.d, vertical: 4.d),
             itemCount: logic.state.suggestLocationData.predictions?.length ?? 0,
             itemBuilder: (context, index) {
               final prediction =
@@ -123,27 +124,18 @@ class SearchPanel extends StatelessWidget {
           Text(
             '${AppLocale.noPlacesMatch.tr} "${query.isEmpty ? logic.searchController.text : query}"',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: TaColors.textPrimary,
-            ),
+            style:
+                TaTextStyles.titleLarge.copyWith(color: TaColors.textPrimary),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4.d),
           Text(
             AppLocale.checkSpelling.tr,
-            style: const TextStyle(fontSize: 14, color: TaColors.textMuted),
+            textAlign: TextAlign.center,
+            style: TaTextStyles.bodyMedium.copyWith(color: TaColors.textMuted),
           ),
-          SizedBox(height: 20.d),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 60.d),
-            child: Column(
-              children: [
-                const Divider(color: TaColors.border, height: 1),
-                _setOnMapRow(),
-              ],
-            ),
-          ),
+          SizedBox(height: 24.d),
+          const Divider(color: TaColors.border, height: 1),
+          _setOnMapRow(),
         ],
       ),
     );
@@ -161,11 +153,8 @@ class SearchPanel extends StatelessWidget {
           Text(
             AppLocale.couldntSearch.tr,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: TaColors.textPrimary,
-            ),
+            style:
+                TaTextStyles.titleLarge.copyWith(color: TaColors.textPrimary),
           ),
           SizedBox(height: 16.d),
           SizedBox(
@@ -184,41 +173,40 @@ class SearchPanel extends StatelessWidget {
 
   Widget _hintState(String message) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 28),
+      padding: EdgeInsets.symmetric(horizontal: 16.d, vertical: 24.d),
       child: Text(
         message,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: 14,
-          color: TaColors.textSecondary,
-        ),
+        style: TaTextStyles.bodyMedium.copyWith(color: TaColors.textSecondary),
       ),
     );
   }
 
   /// The pinned "Set location on the map" row at the foot of Screen 8's list.
   Widget _setOnMapRow() {
-    return GestureDetector(
-      onTap: () {
-        logic.state.isShowMap = true;
-        logic.update([MapDragUpdate.search, MapDragUpdate.confirm]);
-      },
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 8.d, vertical: 10.d),
-        child: Row(
-          children: [
-            SizedBox(width: 14.d),
-            const Icon(Icons.map_outlined, color: TaColors.primary, size: 20),
-            SizedBox(width: 10.d),
-            Text(
-              AppLocale.setLocationMap.tr,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: TaColors.textPrimary,
+    return Semantics(
+      button: true,
+      child: TaPressable(
+        onTap: () {
+          logic.state.isShowMap = true;
+          logic.update([MapDragUpdate.search, MapDragUpdate.confirm]);
+        },
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.d, vertical: 12.d),
+          child: Row(
+            children: [
+              const Icon(Icons.map_outlined,
+                  color: TaColors.primary, size: 20),
+              SizedBox(width: 12.d),
+              Expanded(
+                child: Text(
+                  AppLocale.setLocationMap.tr,
+                  style: TaTextStyles.labelMedium
+                      .copyWith(color: TaColors.textPrimary),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -235,47 +223,26 @@ class _SkeletonResults extends StatelessWidget {
     return ListView.builder(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
-      padding: EdgeInsets.symmetric(horizontal: 16.d, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16.d, vertical: 8.d),
       itemCount: 3,
       itemBuilder: (context, index) => Padding(
         padding: EdgeInsets.symmetric(vertical: 10.d),
         child: Row(
           children: [
-            Container(
-              width: 40.d,
-              height: 40.d,
-              decoration: BoxDecoration(
-                color: TaColors.disabledBg,
-                borderRadius: BorderRadius.circular(20.d),
-              ),
-            ),
+            TaSkeleton(width: 40.d, height: 40.d, circle: true),
             SizedBox(width: 12.d),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    height: 14.d,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: TaColors.disabledBg,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
+                  TaSkeleton(height: 14.d, radius: 4),
                   SizedBox(height: 8.d),
-                  Container(
-                    height: 12.d,
-                    width: 140.d,
-                    decoration: BoxDecoration(
-                      color: TaColors.disabledBg,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  ),
+                  TaSkeleton(width: 140.d, height: 12.d, radius: 4),
                 ],
               ),
             ),
           ],
-        ).toShimmer,
+        ),
       ),
     );
   }

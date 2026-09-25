@@ -182,4 +182,44 @@ void main() {
       expect(logic.retryCalls, 1);
     });
   });
+
+  group('SearchPanel height cap', () {
+    // With the keyboard up the map area can be shorter than half the screen;
+    // the page passes that smaller height and every state must fit in it.
+    for (final entry in {
+      'results': () => logic.state.suggestLocationData = LocationModel(
+            predictions: List.generate(
+              20,
+              (i) => Prediction(description: 'Place $i, Phnom Penh'),
+            ),
+          ),
+      'empty': () {
+        logic.state.searchQuery = 'xyz';
+        logic.state.suggestLocationData = LocationModel(predictions: []);
+      },
+      'error': () {
+        logic.state.searchQuery = 'will fail';
+        logic.state.hasSearchError = true;
+      },
+    }.entries) {
+      testWidgets('${entry.key} fits a 150px cap without overflow',
+          (tester) async {
+        entry.value();
+        // Loose constraints, as the page's bottom `Align` gives the panel.
+        await tester.pumpWidget(GetMaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.bottomCenter,
+              child: SearchPanel(logic: logic, maxHeight: 150),
+            ),
+          ),
+        ));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(tester.getSize(find.byType(SearchPanel)).height,
+            lessThanOrEqualTo(150));
+      });
+    }
+  });
 }

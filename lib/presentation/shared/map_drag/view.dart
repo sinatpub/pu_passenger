@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +9,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import 'package:com.tara.passenger/core/resources/asset_resource.dart';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
+import 'package:com.tara.passenger/core/theme/ta_radius.dart';
 import 'package:com.tara.passenger/core/theme/ta_shadow.dart';
+import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
 import 'package:com.tara.passenger/presentation/shared/map_drag/args.dart';
@@ -51,74 +55,76 @@ class MapDragPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Stack(
-          clipBehavior: Clip.none,
+        child: Column(
           children: [
-            Column(
-              children: [
-                // D18: minimal appbar — icon-button back + screen title.
-                Padding(
-                  padding: EdgeInsets.fromLTRB(16.d, 10.d, 16.d, 0),
-                  child: Row(
-                    children: [
-                      TaIconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new),
-                        semanticLabel: AppLocale.back.tr,
-                        onTap: Get.back,
-                      ),
-                      SizedBox(width: 12.d),
-                      Expanded(
-                        child: Text(
-                          _title,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w700,
-                            color: TaColors.textPrimary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                GetBuilder<MapDragLogic>(
-                  id: MapDragUpdate.search,
-                  builder: (logic) {
-                    if (logic.state.isShowMap) return const SizedBox.shrink();
-                    return Padding(
-                      padding: EdgeInsets.fromLTRB(16.d, 12.d, 16.d, 8.d),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.search,
-                              size: 20, color: TaColors.textMuted),
-                          SizedBox(width: 10.d),
-                          Expanded(
-                            child: TaTextField(
-                              textInputAction: TextInputAction.done,
-                              controller: logic.searchController,
-                              onChanged: (value) =>
-                                  logic.fetchPlaceSuggestions(value),
-                              hint: AppLocale.searchForPlace.tr,
-                              autofocus: true,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-                Expanded(child: mapWidget()),
-              ],
-            ),
-            _confirmButton(),
+            _appBar(),
+            _searchField(),
+            Expanded(child: _mapLayer(context)),
           ],
         ),
       ),
     );
   }
 
-  Widget mapWidget() {
+  /// D18: minimal appbar — icon-button back + screen title.
+  Widget _appBar() {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16.d, 12.d, 16.d, 0),
+      child: Row(
+        children: [
+          TaIconButton(
+            icon: const Icon(Icons.arrow_back_ios_new),
+            semanticLabel: AppLocale.back.tr,
+            onTap: Get.back,
+          ),
+          SizedBox(width: 12.d),
+          Expanded(
+            child: Text(
+              _title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TaTextStyles.headlineMedium
+                  .copyWith(color: TaColors.textPrimary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _searchField() {
     return GetBuilder<MapDragLogic>(
+      id: MapDragUpdate.search,
       builder: (logic) {
+        if (logic.state.isShowMap) return const SizedBox.shrink();
+        return Padding(
+          padding: EdgeInsets.fromLTRB(16.d, 12.d, 16.d, 8.d),
+          child: TaTextField(
+            prefix: const Icon(Icons.search,
+                size: 20, color: TaColors.textMuted),
+            textInputAction: TextInputAction.done,
+            controller: logic.searchController,
+            onChanged: (value) => logic.fetchPlaceSuggestions(value),
+            hint: AppLocale.searchForPlace.tr,
+            autofocus: true,
+          ),
+        );
+      },
+    );
+  }
+
+  /// The map and everything that genuinely floats over it: the fixed centre
+  /// pin, and the bottom slot that holds either the search results (search
+  /// mode) or the confirm CTA (map mode).
+  Widget _mapLayer(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Spec caps the results at half the screen; with the keyboard up the
+        // map area can be shorter than that, and the panel must not outgrow it.
+        final panelMaxHeight = math.min(
+          MediaQuery.sizeOf(context).height * 0.5,
+          constraints.maxHeight,
+        );
         return Stack(
           children: [
             GoogleMap(
@@ -146,57 +152,77 @@ class MapDragPage extends StatelessWidget {
               },
               onCameraIdle: () => logic.onCameraIdle(),
             ),
-            Positioned.fill(
+            IgnorePointer(
               child: RepaintBoundary(
-                child: IgnorePointer(
-                  child: Center(
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: [
-                        if (_purpose == MapDragPurpose.pickup)
-                          _pickupCallout(),
-                        GetBuilder<MapDragLogic>(
-                          id: MapDragUpdate.cameraMove,
-                          builder: (logic) {
-                            return AnimatedSlide(
-                              offset: state.isCameraMove
-                                  ? const Offset(0, -0.4)
-                                  : Offset.zero,
-                              duration: const Duration(milliseconds: 200),
-                              curve: Curves.easeOut,
-                              child: SvgPicture.asset(
-                                ImageAssets.currentMarker,
-                                width: 60.d,
-                                height: 60.d,
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                child: Center(child: _centerPin()),
               ),
             ),
-            // Screen 8's results panel: the whole `DestinationSearchStatus`
-            // table (idle/below-threshold hint, searching skeleton or dimmed
-            // prior results, results, empty, error+retry).
-            // The panel rebuilds on `MapDragUpdate.fetchLocation`, the id
-            // `fetchPlaceSuggestions` updates with. Without a builder for
-            // that id the search results never reached the screen: typing
-            // fetched predictions, and the panel stayed on its idle hint.
-            if (!logic.state.isShowMap)
-              Align(
-                alignment: Alignment.bottomCenter,
-                child: GetBuilder<MapDragLogic>(
-                  id: MapDragUpdate.fetchLocation,
-                  builder: (logic) => SearchPanel(logic: logic),
-                ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              // `search` is the id every `isShowMap` switch sends. The slot
+              // used to hang off an id-less builder that the switch never
+              // notified, so the results panel outlived search mode.
+              child: GetBuilder<MapDragLogic>(
+                id: MapDragUpdate.search,
+                builder: (logic) {
+                  if (logic.state.isShowMap) return _confirmSection();
+                  // Screen 8's results panel: the whole
+                  // `DestinationSearchStatus` table. It rebuilds on
+                  // `fetchLocation`, the id `fetchPlaceSuggestions` updates.
+                  return GetBuilder<MapDragLogic>(
+                    id: MapDragUpdate.fetchLocation,
+                    builder: (logic) => SearchPanel(
+                      logic: logic,
+                      maxHeight: panelMaxHeight,
+                    ),
+                  );
+                },
               ),
+            ),
           ],
         );
       },
+    );
+  }
+
+  /// The fixed centre pin, with the pickup callout floating above it.
+  ///
+  /// The pin is shifted up so its *tip* — not the centre of its box — sits on
+  /// the map centre, which is the camera target committed as the pin.
+  Widget _centerPin() {
+    final pinSize = 60.d;
+    // `current_marker.svg` is 39×52 with its tip at y≈46; `contain` in a
+    // square box fills the height, so the tip sits at 46/52 of [pinSize].
+    final tipBelowCentre = pinSize * (46 / 52 - 0.5);
+    return Transform.translate(
+      offset: Offset(0, -tipBelowCentre),
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          if (_purpose == MapDragPurpose.pickup)
+            Positioned(
+              bottom: pinSize + 12.d,
+              child: _pickupCallout(),
+            ),
+          GetBuilder<MapDragLogic>(
+            id: MapDragUpdate.cameraMove,
+            builder: (logic) {
+              return AnimatedSlide(
+                offset:
+                    state.isCameraMove ? const Offset(0, -0.4) : Offset.zero,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                child: SvgPicture.asset(
+                  ImageAssets.currentMarker,
+                  width: pinSize,
+                  height: pinSize,
+                ),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 
@@ -204,86 +230,71 @@ class MapDragPage extends StatelessWidget {
   /// address, `Pinned location` when only coordinates matched, or a skeleton
   /// bar while the reverse-geocode is in flight.
   Widget _pickupCallout() {
-    return Positioned(
-      bottom: 72.d,
-      child: GetBuilder<MapDragLogic>(
-        id: MapDragUpdate.pickupLabel,
-        builder: (logic) {
-          final text = logic.pickupLabelText;
-          return Container(
-            constraints: BoxConstraints(maxWidth: Get.width * 0.7),
-            padding: EdgeInsets.symmetric(horizontal: 14.d, vertical: 8.d),
-            decoration: BoxDecoration(
-              color: TaColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: TaShadows.shadowSm,
-            ),
-            child: text == null
-                ? Container(
-                    width: 140.d,
-                    height: 14.d,
-                    decoration: BoxDecoration(
-                      color: TaColors.disabledBg,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  )
-                : Text(
-                    text,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: TaColors.textPrimary,
-                    ),
-                  ),
-          );
-        },
-      ),
+    return GetBuilder<MapDragLogic>(
+      id: MapDragUpdate.pickupLabel,
+      builder: (logic) {
+        final text = logic.pickupLabelText;
+        return Container(
+          constraints: BoxConstraints(maxWidth: Get.width * 0.7),
+          padding: EdgeInsets.symmetric(horizontal: 16.d, vertical: 8.d),
+          decoration: BoxDecoration(
+            color: TaColors.surface,
+            borderRadius: BorderRadius.circular(TaRadius.radiusMd),
+            boxShadow: TaShadows.shadowSm,
+          ),
+          child: text == null
+              ? TaSkeleton(width: 140.d, height: 14.d, radius: 4)
+              : Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TaTextStyles.labelLarge
+                      .copyWith(color: TaColors.textPrimary),
+                ),
+        );
+      },
     );
   }
 
-  /// The confirm affordance. For the destination flow this is unchanged from
-  /// P-05 (gated purely on `hasPin`). For the pickup flow it follows Screen 3's
-  /// state machine in `pickup_label.dart`: disabled while resolving, and it
-  /// carries the note-for-driver field above it.
-  Widget _confirmButton() {
-    return Positioned(
-      bottom: 10.d,
-      left: 0,
-      right: 0,
-      child: Container(
-        margin: EdgeInsets.symmetric(
-          horizontal: _purpose == MapDragPurpose.pickup ? 14.d : 100.d,
-        ),
-        child: GetBuilder<MapDragLogic>(
-          id: MapDragUpdate.confirm,
-          builder: (logic) {
-            // Search mode gives the bottom of the screen to `SearchPanel`;
-            // the CTA belongs to the map-pin mode the panel's "set location
-            // on the map" row switches into. It used to sit on top of the
-            // results, covering the last row of the list.
-            if (!logic.state.isShowMap) return const SizedBox.shrink();
-            final isPickup = _purpose == MapDragPurpose.pickup;
-            final canConfirm = isPickup
-                ? canConfirmPickup(logic.pickupConfirm)
-                : logic.hasPin;
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isPickup && state.isShowMap) _driverNoteField(logic),
-                SizedBox(height: 8.d),
-                TaButton(
-                  label: _purpose.confirmLabel,
-                  width: double.infinity,
-                  isEnabled: canConfirm,
-                  onTap: () => Get.back(result: logic.state.latlng),
-                ),
-              ],
+  /// The confirm affordance, shown in map mode only. For the destination
+  /// flow this is unchanged from P-05 (gated purely on `hasPin`). For the
+  /// pickup flow it follows Screen 3's state machine in `pickup_label.dart`:
+  /// disabled while resolving, and it carries the note-for-driver field above
+  /// it.
+  Widget _confirmSection() {
+    final isPickup = _purpose == MapDragPurpose.pickup;
+    return Padding(
+      padding: EdgeInsets.all(16.d),
+      child: GetBuilder<MapDragLogic>(
+        id: MapDragUpdate.confirm,
+        builder: (logic) {
+          final canConfirm = isPickup
+              ? canConfirmPickup(logic.pickupConfirm)
+              : logic.hasPin;
+          final button = TaButton(
+            label: _purpose.confirmLabel,
+            width: double.infinity,
+            isEnabled: canConfirm,
+            onTap: () => Get.back(result: logic.state.latlng),
+          );
+          if (!isPickup) {
+            // Destination keeps its compact centred CTA; the cap lets it
+            // shrink on narrow screens instead of relying on fixed margins.
+            return ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: 220.d),
+              child: button,
             );
-          },
-        ),
+          }
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _driverNoteField(logic),
+              SizedBox(height: 8.d),
+              button,
+            ],
+          );
+        },
       ),
     );
   }
@@ -292,11 +303,9 @@ class MapDragPage extends StatelessWidget {
   /// characters by `normaliseDriverNote` on the way into state (the display
   /// cap is cosmetic; the payload is what is validated).
   Widget _driverNoteField(MapDragLogic logic) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: TaColors.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(TaRadius.radiusMd),
         boxShadow: TaShadows.shadowSm,
       ),
       child: TaNoteField(
