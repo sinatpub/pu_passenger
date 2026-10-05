@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'dart:math' as math;
 import 'dart:ui' show Color, Offset;
 
+import 'package:com.tara.passenger/core/utils/trip_marker.dart';
 import 'package:com.tara.passenger/data/models/driver_around_model.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -25,9 +26,10 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// The pickup and destination markers for the trip being composed.
 ///
-/// Preserves the original behaviour exactly, including that a null icon falls
-/// back to a default hue rather than dropping the marker, and that the
-/// destination marker carries the address as its info-window snippet.
+/// A null icon falls back to a default hue rather than dropping the marker,
+/// and the destination marker carries the address as its info-window
+/// snippet. Both sit on their point (D34) and draw above the nearby drivers,
+/// which used to cover the pickup.
 Set<Marker> buildTripMarkers({
   LatLng? currentLatLng,
   LatLng? destinationLatLng,
@@ -44,6 +46,8 @@ Set<Marker> buildTripMarkers({
         position: currentLatLng,
         icon: sourceIcon ??
             BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        anchor: tripMarkerAnchor(sourceIcon),
+        zIndex: 1,
         infoWindow: InfoWindow(title: AppLocale.currentLocation.tr),
       ),
     );
@@ -56,6 +60,8 @@ Set<Marker> buildTripMarkers({
         position: destinationLatLng,
         icon: destinationIcon ??
             BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        anchor: tripMarkerAnchor(destinationIcon),
+        zIndex: 1,
         infoWindow:
             InfoWindow(
           title: AppLocale.destination.tr,

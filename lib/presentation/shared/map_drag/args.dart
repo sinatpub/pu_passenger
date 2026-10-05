@@ -1,5 +1,6 @@
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:get/get.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// Which end of the trip the shared pick-a-point page is being used for.
 ///
@@ -36,9 +37,13 @@ enum MapDragPurpose {
 
 /// Arguments for the `DRAGMAP` route.
 class MapDragArgs {
-  const MapDragArgs({this.purpose = MapDragPurpose.destination});
+  const MapDragArgs({this.purpose = MapDragPurpose.destination, this.start});
 
   final MapDragPurpose purpose;
+
+  /// Where the pin opens: the place being changed. Null opens on the
+  /// passenger's own position, which is where a first pick starts.
+  final LatLng? start;
 
   /// Reads the arguments off the route, falling back to the destination
   /// flow. The fallback is what keeps the existing `Get.toNamed(DRAGMAP)`

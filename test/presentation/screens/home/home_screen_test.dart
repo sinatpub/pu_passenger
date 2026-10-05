@@ -117,7 +117,11 @@ void main() {
 
       expect(find.text('PU TAXI'), findsOneWidget);
       expect(find.textContaining('TAARRAA'), findsNothing);
+      // The PU Taxi mark leads the bar (D36).
+      expect(find.byType(Image), findsOneWidget);
       // English: the tagline alone.
+      expect(find.text(AppLocale.rideWithTrust.tr, findRichText: true),
+          findsOneWidget);
       expect(find.textContaining('ពូ តាក់ស៊ី', findRichText: true),
           findsNothing);
 
@@ -125,6 +129,42 @@ void main() {
       await tester.pump();
       expect(find.textContaining('ពូ តាក់ស៊ី', findRichText: true),
           findsOneWidget);
+    });
+
+    testWidgets('the "Where to?" card is gone from Home (D35)',
+        (tester) async {
+      homeLogic.state.isLoading = RxStatus.success();
+      homeLogic.update();
+      await tester.pumpWidget(GetMaterialApp(home: HomeScreen()));
+      await tester.pump();
+
+      expect(find.byType(TaSearchCard), findsNothing);
+      expect(find.text(AppLocale.whereTo.tr), findsNothing);
+    });
+
+    testWidgets('the header fits a 320px screen at text scale 1.3, in both '
+        'languages', (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      homeLogic.state.isLoading = RxStatus.success();
+      homeLogic.update();
+      await tester.pumpWidget(GetMaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: const TextScaler.linear(1.3)),
+          child: child!,
+        ),
+        home: HomeScreen(),
+      ));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+
+      Get.find<AppLogic>().languageKeyCode.value = AppConstant.khmerCode;
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      // The language segment stays on screen.
+      expect(tester.getRect(find.text('ខ្មែរ')).right, lessThanOrEqualTo(320));
     });
 
     testWidgets('error → skeleton rows (toast fired separately by logic)',

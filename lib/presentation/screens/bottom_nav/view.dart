@@ -46,9 +46,12 @@ class BottomNav extends StatelessWidget {
       asset,
       width: 22,
       height: 22,
-      colorFilter: active
-          ? const ColorFilter.mode(TaColors.primary, BlendMode.srcIn)
-          : null,
+      // The outline icons are drawn in two different greys; tinting them
+      // makes every inactive tab match its label.
+      colorFilter: ColorFilter.mode(
+        active ? TaColors.primary : TaColors.textSecondary,
+        BlendMode.srcIn,
+      ),
     );
   }
 }

@@ -1,5 +1,5 @@
 import 'package:com.tara.passenger/presentation/screens/map_screen/map_presentation.dart';
-import 'dart:ui' show Color;
+import 'dart:ui' show Color, Offset;
 
 import 'package:com.tara.passenger/data/models/driver_around_model.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -49,6 +49,37 @@ void main() {
 
       // Icons load asynchronously; markers must render before they arrive.
       expect(markers, hasLength(2));
+    });
+
+    test('drawn icons sit on their point; the default pin stands on its tip',
+        () {
+      final drawn = buildTripMarkers(
+        currentLatLng: phnomPenh,
+        destinationLatLng: toulKork,
+        sourceIcon: BitmapDescriptor.defaultMarker,
+        destinationIcon: BitmapDescriptor.defaultMarker,
+      );
+      expect(drawn.map((m) => m.anchor).toSet(), {const Offset(0.5, 0.5)});
+
+      final standIn = buildTripMarkers(
+        currentLatLng: phnomPenh,
+        destinationLatLng: toulKork,
+      );
+      expect(standIn.map((m) => m.anchor).toSet(), {const Offset(0.5, 1.0)});
+    });
+
+    test('the trip\'s ends draw above the nearby drivers', () {
+      final trip = buildTripMarkers(
+        currentLatLng: phnomPenh,
+        destinationLatLng: toulKork,
+      );
+      final drivers = buildDriverMarkers(drivers: [
+        Driver(id: 1, lastLocation: LastLocation(latitude: '11.56', longitude: '104.92')),
+      ]);
+      expect(drivers, hasLength(1));
+      for (final marker in trip) {
+        expect(marker.zIndex, greaterThan(drivers.first.zIndex));
+      }
     });
 
     test('the destination address rides along as the info-window snippet', () {

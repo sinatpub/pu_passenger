@@ -522,8 +522,8 @@ void main() {
       return _MapLogicHarness(homeLogic: home);
     }
 
-    // "Where to?" on Home and "Book again" open the map with no vehicle. The
-    // sheet then had none, no chips to choose one, and a dead Book button.
+    // "Book again" opens the map with no vehicle. The sheet then had none,
+    // no chips to choose one, and a dead Book button.
     test('with no vehicle chosen, the first one on offer is selected', () {
       final logic = logicWith([2, 3, 5]);
 

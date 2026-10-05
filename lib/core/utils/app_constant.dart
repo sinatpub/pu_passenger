@@ -5,6 +5,9 @@ class AppConstant {
   static const String khmerCode = "km";
   static const String englishCode = 'en';
 
+  /// The language the app opens in until the passenger picks one.
+  static const String defaultLanguageCode = khmerCode;
+
   static const timeoutBooking = 60;
   static const double initZoomLevel = 17.0;
 

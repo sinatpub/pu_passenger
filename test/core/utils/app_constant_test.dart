@@ -12,6 +12,10 @@ import 'package:flutter_test/flutter_test.dart';
 /// previous deployment used. They stay two separate constants so a future
 /// split-host deployment needs no code change.
 void main() {
+  test('a fresh install opens in Khmer (D37)', () {
+    expect(AppConstant.defaultLanguageCode, AppConstant.khmerCode);
+  });
+
   test(
     'baseUrlApi/socketBasedUrl defaults when no --dart-define is passed (F-07)',
     () {

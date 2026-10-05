@@ -30,7 +30,7 @@ class AppLocale {
   static var promoTag = 'PROMO';
   static var promoTitle = '20% off airport rides';
   static var promoSubtitle = 'Use code FLY20';
-  static var rideWithTrust = 'ពូ តាក់ស៊ី · Ride with trust';
+  static var rideWithTrust = 'Ride with trust';
   static var somethingWentWrong = 'Something went wrong';
   static var selectDestinationToContinue = "Select a destination to continue";
   static var contactingDrivers = "Contacting nearby drivers…";

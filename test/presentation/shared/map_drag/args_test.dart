@@ -2,6 +2,7 @@ import 'package:com.tara.passenger/presentation/shared/map_drag/args.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// `.agent/TODO.md` Discovered Tasks: the shared pick-a-point page's confirm
 /// button was hardcoded to "Confirm Drop Off", accurate only because the
@@ -30,6 +31,18 @@ void main() {
             .purpose,
         MapDragPurpose.pickup,
       );
+    });
+
+    test('no start point by default — the picker opens on the passenger', () {
+      expect(MapDragArgs.fromRoute(null).start, isNull);
+      expect(const MapDragArgs().start, isNull);
+    });
+
+    test('a start point is carried through — changing a drop-off opens the '
+        'picker on it', () {
+      const dropOff = LatLng(11.5449, 104.8922);
+      expect(MapDragArgs.fromRoute(const MapDragArgs(start: dropOff)).start,
+          dropOff);
     });
   });
 

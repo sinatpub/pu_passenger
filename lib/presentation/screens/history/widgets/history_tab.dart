@@ -41,7 +41,7 @@ class HistoryTab extends StatelessWidget {
           logic.state.propertyPagingController.value.refresh();
         },
         child: PagedListView<int, Datum>(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 96),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
           pagingController: logic.state.propertyPagingController.value,
           builderDelegate: XPagedChildBuilderDelegate.list(
             /// Roadmap S1 Done When — both tabs get real empty and error

@@ -7,6 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:logger/logger.dart';
 import '../../../data/models/location_model.dart';
 import '../../../translations/app_locale.dart';
+import 'args.dart';
 import 'pickup_label.dart';
 import 'search_state.dart';
 import 'state.dart';
@@ -41,15 +42,18 @@ class MapDragLogic extends GetxController {
   void onMapCreated(GoogleMapController controller) async {
     EasyLoading.show();
     state.mapController = controller;
-    // 1. Get real location immediately
-    var pos = await _locationRepo.getCurrentLocation();
-    if (pos != null) {
-      LatLng userLatLng = LatLng(pos.latitude, pos.longitude);
-
-      state.latlng = userLatLng;
+    // A place being changed opens on that place; a first pick opens on the
+    // passenger's own position.
+    LatLng? start = MapDragArgs.fromRoute(Get.arguments).start;
+    if (start == null) {
+      final pos = await _locationRepo.getCurrentLocation();
+      if (pos != null) start = LatLng(pos.latitude, pos.longitude);
+    }
+    if (start != null) {
+      state.latlng = start;
       state.mapController?.animateCamera(
         CameraUpdate.newCameraPosition(
-          CameraPosition(target: userLatLng, zoom: 15),
+          CameraPosition(target: start, zoom: 15),
         ),
       );
       update([MapDragUpdate.cameraMove, MapDragUpdate.confirm]);

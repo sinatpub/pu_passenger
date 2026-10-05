@@ -6,6 +6,7 @@ import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/core/utils/fare_estimate.dart';
 import 'package:com.tara.passenger/core/utils/load_custom_marker.dart';
+import 'package:com.tara.passenger/core/utils/trip_marker.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_seat_capacity.dart';
 import 'package:com.tara.passenger/mock/mock_fixtures.dart';
 import 'package:com.tara.passenger/mock/mock_mode.dart';
@@ -149,15 +150,8 @@ class MapLogic extends GetxController {
   }
 
   Future<void> _loadMarkerIcons() async {
-    // Load and resize source icon
-    final Uint8List sourceBytes =
-        await getBytesFromAsset(ImageAssets.passengerMarker, 45);
-    state.sourceIcon = BitmapDescriptor.bytes(sourceBytes);
-
-    // Load and resize destination icon
-    final Uint8List destBytes =
-        await getBytesFromAsset(ImageAssets.destinationMarker, 45);
-    state.destinationIcon = BitmapDescriptor.bytes(destBytes);
+    state.sourceIcon = await tripMarkerIcon(TripMarker.pickup);
+    state.destinationIcon = await tripMarkerIcon(TripMarker.dropOff);
     final Uint8List driverBytes = await getBytesFromAsset(
         driverMarkerImage(id: state.vehicleTypeSelection?.id ?? 0), 25);
     state.driverIcon = BitmapDescriptor.bytes(driverBytes);
@@ -178,9 +172,9 @@ class MapLogic extends GetxController {
   }
 
   /// The vehicle the map opened for — or, when it was opened without one
-  /// ("Where to?" on Home, "Book again"), the first type on offer. Without a
-  /// default the sheet had no vehicle, no chips to pick one from, and a Book
-  /// button that could never be pressed.
+  /// ("Book again"), the first type on offer. Without a default the sheet
+  /// had no vehicle, no chips to pick one from, and a Book button that could
+  /// never be pressed.
   void getVehicleTypeSelection() {
     final vehicles = homeLogic.state.vehicleAllType?.data ?? const [];
     final vehicle =

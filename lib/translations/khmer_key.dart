@@ -110,7 +110,7 @@ get khmerKey => {
       AppLocale.price: "តម្លៃ",
       AppLocale.resolvingAddress: "កំពុងកំណត់អាសយដ្ឋាន...",
       AppLocale.retry: "ព្យាយាមម្ដងទៀត",
-      AppLocale.rideWithTrust: "ពូ តាក់ស៊ី · ធ្វើដំណើរដោយទុកចិត្ត",
+      AppLocale.rideWithTrust: "ជិះដោយទំនុកចិត្ត",
       AppLocale.searchLocation: "ស្វែងរកទីតាំង",
       AppLocale.startRide: "ចាប់ផ្ដើមដំណើរ",
       AppLocale.waitingDriverArrived: "កំពុងរង់ចាំអ្នកបើកបរមកដល់",

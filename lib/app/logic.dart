@@ -67,9 +67,10 @@ class AppLogic extends GetxController with keyStoragePref {
     try {
       final GetStoragePref getPref = GetStoragePref();
       String? languageKey = await getPref.languagePrefKey;
-      Get.updateLocale(Locale(languageKey ?? AppConstant.englishCode));
-      await setLocaleIdentifier(languageKey ?? AppConstant.englishCode);
-      languageKeyCode.value = languageKey ?? AppConstant.englishCode;
+      final languageCode = languageKey ?? AppConstant.defaultLanguageCode;
+      Get.updateLocale(Locale(languageCode));
+      await setLocaleIdentifier(languageCode);
+      languageKeyCode.value = languageCode;
     } catch (e) {
       _logger.e("Failed to load language locale: $e");
     }

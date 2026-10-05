@@ -28,7 +28,7 @@ class Root extends StatelessWidget {
         translations: AppTranslation(),
         defaultTransition: Transition.cupertino,
         transitionDuration: const Duration(milliseconds: 500),
-        locale: const Locale(AppConstant.englishCode),
+        locale: const Locale(AppConstant.defaultLanguageCode),
         fallbackLocale: const Locale(AppConstant.khmerCode),
         getPages: AppPages.pages,
         theme: TaTheme.lightTheme,

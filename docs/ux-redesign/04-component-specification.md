@@ -912,31 +912,30 @@ Cancel button: dangerGhost, maxWidth: 220
 
 ## 31. TaBottomNav (`.tabbar`)
 
-**Purpose:** Floating pill navigation
+**Purpose:** Docked tab bar (D33; was a floating pill, D4)
 
 ### Spec
 ```
 Container:
-  position: absolute, left: 12, right: 12, bottom: 12
+  left: 0, right: 0, bottom: 0
   bg: white
-  borderRadius: 22px
-  shadow: shadowLg
+  borderTop: 1px #EBEBF0
+  no radius, no shadow
+  padding: 0 8px, plus the system bottom inset below the tabs
   display: flex
-  padding: 8px
-  zIndex: 55
 
 Tab button:
   flex: 1
-  display: flex, flexDirection: column, align: center, gap: 3px
-  padding: 8px 0
-  fontSize: 11, fontWeight: 600
-  color: #9AA0B4
-  borderRadius: 14px
+  display: flex, flexDirection: column, align: center
+  indicator: 28×3, transparent, radius 0 0 3px 3px, at the top edge
+  padding: 7px 4px
+  icon: 22, gap 3px, then label
+  fontSize: 12, fontWeight: 600, one line, ellipsis
+  color: #6B7588 (icon and label)
 
 Active tab:
-  color: #FF4500
-  bg: #FFF4ED
-  borderRadius: 14px
+  color: #FF4500 (icon and label)
+  indicator: #FF4500
 ```
 
 ---
@@ -1000,7 +999,7 @@ lib/presentation/widgets/
 ├── ta_toast.dart            (navy, mint icon)
 ├── ta_skeleton.dart         (shimmer loading)
 ├── ta_loading_overlay.dart  (booking spinner + car)
-├── ta_bottom_nav.dart       (floating pill)
+├── ta_bottom_nav.dart       (docked bar)
 ├── ta_minimax_sheet.dart    (tariff detail)
 └── widgets.dart             (barrel export)
 ```

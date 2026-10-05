@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
-import 'package:com.tara.passenger/core/theme/ta_shadow.dart';
 
-/// Floating pill bottom navigation (`.tabbar`) — component spec §31.
+/// Docked bottom navigation (`.tabbar`) — component spec §31, D33.
 ///
-/// Inset 12px from the edges, radius 22, shadowLg. Active tab gets the
-/// brand-50 pill.
+/// Flush to the screen edges under a top hairline. The white runs down
+/// behind the system gesture area while the tabs stay above it, so the
+/// gesture handle never sits on a tab. The active tab is the brand colour
+/// under a short indicator bar.
 class TaBottomNav extends StatelessWidget {
   const TaBottomNav({
     super.key,
@@ -21,27 +22,28 @@ class TaBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsetsDirectional.only(start: 12, end: 12, bottom: 12),
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
+    return DecoratedBox(
+      decoration: const BoxDecoration(
         color: TaColors.surface,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: TaShadows.shadowLg,
+        border: Border(top: BorderSide(color: TaColors.border)),
       ),
-      child: Row(
-        children: [
-          for (var i = 0; i < items.length; i++) ...[
-            if (i > 0) const SizedBox(width: 2),
-            Expanded(
-              child: _TaNavButton(
-                item: items[i],
-                isActive: i == currentIndex,
-                onTap: onChanged == null ? null : () => onChanged!(i),
-              ),
-            ),
-          ],
-        ],
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              for (var i = 0; i < items.length; i++)
+                Expanded(
+                  child: _TaNavButton(
+                    item: items[i],
+                    isActive: i == currentIndex,
+                    onTap: onChanged == null ? null : () => onChanged!(i),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -67,52 +69,64 @@ class _TaNavButtonState extends State<_TaNavButton> {
 
   @override
   Widget build(BuildContext context) {
+    final color = widget.isActive ? TaColors.primary : TaColors.textSecondary;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTapDown: (_) => setState(() => _pressed = true),
       onTapUp: (_) => setState(() => _pressed = false),
       onTapCancel: () => setState(() => _pressed = false),
       onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _pressed ? 0.97 : 1.0,
-        duration: const Duration(milliseconds: 100),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: widget.isActive ? TaColors.primaryBg : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Hangs from the hairline, so it stays put while the tab below
+          // it scales on press.
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 28,
+            height: 3,
+            decoration: BoxDecoration(
+              color: widget.isActive ? TaColors.primary : Colors.transparent,
+              borderRadius:
+                  const BorderRadius.vertical(bottom: Radius.circular(3)),
+            ),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildIcon(widget.isActive),
-              const SizedBox(height: 3),
-              Text(
-                widget.item.label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: widget.isActive ? TaColors.primary : TaColors.textMuted,
-                ),
+          AnimatedScale(
+            scale: _pressed ? 0.97 : 1.0,
+            duration: const Duration(milliseconds: 100),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 7, 4, 7),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildIcon(color),
+                  const SizedBox(height: 3),
+                  Text(
+                    widget.item.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildIcon(bool isActive) {
+  Widget _buildIcon(Color color) {
     final item = widget.item;
     if (item.activeIcon != null || item.inactiveIcon != null) {
-      return (isActive ? item.activeIcon : item.inactiveIcon) ?? const SizedBox.shrink();
+      return (widget.isActive ? item.activeIcon : item.inactiveIcon) ??
+          const SizedBox.shrink();
     }
-    return Icon(
-      item.icon,
-      size: 22,
-      color: isActive ? TaColors.primary : TaColors.textMuted,
-    );
+    return Icon(item.icon, size: 22, color: color);
   }
 }
 

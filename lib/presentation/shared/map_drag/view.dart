@@ -39,7 +39,9 @@ class MapDragPage extends StatelessWidget {
   final MapDragLogic logic = Get.find<MapDragLogic>();
   final MapLogic _mapLogic = Get.find<MapLogic>();
 
-  MapDragPurpose get _purpose => MapDragArgs.fromRoute(Get.arguments).purpose;
+  MapDragArgs get _args => MapDragArgs.fromRoute(Get.arguments);
+
+  MapDragPurpose get _purpose => _args.purpose;
 
   @override
   Widget build(BuildContext context) {
@@ -96,7 +98,8 @@ class MapDragPage extends StatelessWidget {
           mapToolbarEnabled: false,
           compassEnabled: false,
           initialCameraPosition: CameraPosition(
-            target: _mapLogic.state.currentLatLng ??
+            target: _args.start ??
+                _mapLogic.state.currentLatLng ??
                 const LatLng(11.5564, 104.9282),
             zoom: 15,
           ),

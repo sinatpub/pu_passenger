@@ -1,4 +1,5 @@
 import 'package:com.tara.passenger/app/logic.dart';
+import 'package:com.tara.passenger/core/resources/asset_resource.dart';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
@@ -14,10 +15,9 @@ import 'package:get/get.dart';
 
 /// Home tab (C2) — Screen 6 of `03-screen-redesign.md`.
 ///
-/// Header + PROMO banner + "Where to?" search card + vertical vehicle list
-/// (replacing the old 2×2 grid with VIP circle). Routing stays identical to
-/// the baseline: a vehicle row (and the search card) lands on `/map` with the
-/// same arguments.
+/// Header + PROMO banner + vertical vehicle list (replacing the old 2×2 grid
+/// with VIP circle). A vehicle row lands on `/map` with that vehicle; the
+/// "Where to?" search card that opened the map without one is gone (D35).
 class HomeScreen extends StatelessWidget {
   HomeScreen({super.key});
 
@@ -34,7 +34,7 @@ class HomeScreen extends StatelessWidget {
           onRefresh: logic.getVehicleType,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 46, 20, 96),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -45,11 +45,6 @@ class HomeScreen extends StatelessWidget {
                   title: AppLocale.promoTitle.tr,
                   subtitle: AppLocale.promoSubtitle.tr,
                   onTap: () => TaToast.show(context, AppLocale.promoApplied.tr),
-                ),
-                const SizedBox(height: 14),
-                TaSearchCard(
-                  label: AppLocale.whereTo.tr,
-                  onTap: () => Get.toNamed(AppRoutes.MAP),
                 ),
                 const SizedBox(height: 18),
                 _buildSectionHeader(context),
@@ -84,49 +79,77 @@ for (final vehicle in vehicles)
     );
   }
 
+  /// Brand bar (D36): the PU Taxi mark, the name over its tagline, and the
+  /// language segment, on one centre line.
   Widget _buildHeader(BuildContext context) {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              AppConstant.titleApp,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                color: TaColors.textPrimary,
-              ),
-            ),
-            Obx(() {
-              final isEn =
-                  appLogic.languageKeyCode.value == AppConstant.englishCode;
-              const kmWord = TextSpan(
-                text: AppConstant.titleAppKhmer,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: TaColors.primary,
-                ),
-              );
-              final rest = '${isEn ? '' : ' · '}Ride with trust';
-              return Text.rich(
-                TextSpan(
-                  children: [
-                    if (!isEn) kmWord,
-                    TextSpan(text: rest),
-                  ],
-                ),
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: TaColors.textSecondary,
-                ),
-              );
-            }),
-          ],
+        Container(
+          width: 40,
+          height: 40,
+          clipBehavior: Clip.antiAlias,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          // The launcher icon, as on the splash. It is 1024px, so it is
+          // decoded at the size it is shown.
+          child: Image.asset(
+            ImageAssets.brandMark,
+            fit: BoxFit.cover,
+            cacheWidth: 160,
+          ),
         ),
-        const Spacer(),
+        const SizedBox(width: 10),
+        // The name and tagline shrink to fit a narrow screen rather than
+        // wrap or push the language segment off the edge.
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  AppConstant.titleApp,
+                  style: TextStyle(
+                    fontSize: 22,
+                    height: 1.2,
+                    fontWeight: FontWeight.w800,
+                    color: TaColors.textPrimary,
+                  ),
+                ),
+              ),
+              Obx(() {
+                final isEn =
+                    appLogic.languageKeyCode.value == AppConstant.englishCode;
+                const kmWord = TextSpan(
+                  text: AppConstant.titleAppKhmer,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
+                    color: TaColors.primary,
+                  ),
+                );
+                final tagline = AppLocale.rideWithTrust.tr;
+                return FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        if (!isEn) kmWord,
+                        TextSpan(text: isEn ? tagline : ' · $tagline'),
+                      ],
+                    ),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: TaColors.textSecondary,
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
         const Row(
           children: [
             // Bell entry (PDD-03): stays commented out until explicit
@@ -148,15 +171,16 @@ for (final vehicle in vehicles)
   Widget _buildSectionHeader(BuildContext context) {
     return Row(
       children: [
-        Text(
-          AppLocale.chooseYourRide.tr,
-          style: TaTextStyles.headlineMedium.copyWith(
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            color: TaColors.textPrimary,
+        Expanded(
+          child: Text(
+            AppLocale.chooseYourRide.tr,
+            style: TaTextStyles.headlineMedium.copyWith(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
+              color: TaColors.textPrimary,
+            ),
           ),
         ),
-        const Spacer(),
         TaIconButton(
           size: 36,
           semanticLabel: AppLocale.refresh.tr,

@@ -31,7 +31,7 @@ class ProfileScreen extends StatelessWidget {
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 26, 20, 96),
+          padding: const EdgeInsets.fromLTRB(20, 26, 20, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

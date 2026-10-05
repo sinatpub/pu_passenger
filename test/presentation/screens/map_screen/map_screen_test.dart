@@ -12,7 +12,9 @@ import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/booking_loading_overlay.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/map_appbar.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/map_bottom_sheet.dart';
+import 'package:com.tara.passenger/presentation/shared/map_drag/args.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
+import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -159,6 +161,39 @@ void main() {
       expect(find.textContaining('6,250'), findsNWidgets(2));
       expect(find.textContaining('2.5 km'), findsOneWidget); // caption
       expect(find.text(AppLocale.fareByMeterHint.tr), findsNothing);
+    });
+
+    testWidgets('tapping the drop-off opens the picker on it, so it can be '
+        'changed without being cleared first', (tester) async {
+      const dropOff = LatLng(11.5449, 104.8922);
+      mapLogic.state.destinationAddress = 'Koh Pich';
+      mapLogic.state.destinationLatLng = dropOff;
+      mapLogic.state.vehicleTypeSelection = _vehicle;
+      Object? received;
+      await tester.pumpWidget(GetMaterialApp(
+        home: const Scaffold(
+          body: SizedBox(height: 400, child: MapBottomSheet()),
+        ),
+        getPages: [
+          GetPage(
+            name: AppRoutes.DRAGMAP,
+            page: () {
+              received = Get.arguments;
+              return const Scaffold(body: Text('picker'));
+            },
+          ),
+        ],
+      ));
+      await tester.pump();
+
+      await tester.tap(find.text('Koh Pich'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('picker'), findsOneWidget);
+      expect(received,
+          isA<MapDragArgs>().having((a) => a.start, 'start', dropOff));
+      // Clearing is still its own control, and still clears.
+      expect(mapLogic.state.destinationAddress, 'Koh Pich');
     });
 
     testWidgets('tapping another chip selects that vehicle', (tester) async {

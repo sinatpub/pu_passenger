@@ -20,6 +20,7 @@ import '../../../core/utils/app_ext.dart';
 import '../../../core/utils/load_custom_marker.dart';
 import '../../../core/utils/pretty_logger.dart';
 import '../../../core/utils/status_util.dart';
+import '../../../core/utils/trip_marker.dart';
 import '../map_screen/logic.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
 import 'poll_policy.dart';
@@ -164,9 +165,7 @@ class BookingMapLogic extends GetxController {
     state.passengerIcon = BitmapDescriptor.bytes(sourceBytes);
 
     // Destination
-    final Uint8List destBytes =
-        await getBytesFromAsset(ImageAssets.destinationMarker, 45);
-    state.destinationIcon = BitmapDescriptor.bytes(destBytes);
+    state.destinationIcon = await tripMarkerIcon(TripMarker.dropOff);
 
     // Driver
     final Uint8List driverBytes = await getBytesFromAsset(
@@ -220,6 +219,7 @@ class BookingMapLogic extends GetxController {
           markerId: const MarkerId("destination"),
           position: LatLng(destLat, destLng),
           icon: state.destinationIcon ?? BitmapDescriptor.defaultMarker,
+          anchor: tripMarkerAnchor(state.destinationIcon),
         ));
       }
     }

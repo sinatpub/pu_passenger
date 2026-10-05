@@ -14,6 +14,7 @@ import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/detail_service_dialog.dart';
+import 'package:com.tara.passenger/presentation/shared/map_drag/args.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
@@ -157,8 +158,8 @@ class MapBottomSheet extends StatelessWidget {
 }
 
 /// Pickup and drop-off in one bordered card. The drop-off row is a button
-/// that opens the picker until a destination exists, then shows it with a
-/// clear control.
+/// that opens the picker: to add a destination, or to change the one shown,
+/// which also carries a clear control.
 class _RouteCard extends StatelessWidget {
   const _RouteCard({required this.logic});
 
@@ -225,52 +226,69 @@ class _RouteCard extends StatelessWidget {
     return TaPressable(onTap: logic.getCurrentAddress, child: row);
   }
 
+  /// The address is a button that reopens the picker on the drop-off, so it
+  /// can be changed without being cleared first.
   Widget _destinationRow() {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 10.d),
-      child: Row(
-        children: [
-          const _RouteMarker(color: TaColors.primary, round: false),
-          SizedBox(width: 12.d),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(AppLocale.destination.tr, style: _labelStyle),
-                SizedBox(height: 1.d),
-                Text(
-                  logic.state.destinationAddress ?? '',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: _nameStyle,
-                ),
-              ],
+    return Row(
+      children: [
+        Expanded(
+          child: TaPressable(
+            onTap: () =>
+                _pickDestination(start: logic.state.destinationLatLng),
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 10.d),
+              child: Row(
+                children: [
+                  const _RouteMarker(color: TaColors.primary, round: false),
+                  SizedBox(width: 12.d),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(AppLocale.destination.tr, style: _labelStyle),
+                        SizedBox(height: 1.d),
+                        Text(
+                          logic.state.destinationAddress ?? '',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: _nameStyle,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          TaIconButton(
-            icon: const Icon(Icons.close),
-            semanticLabel: AppLocale.clearDestination.tr,
-            size: 32,
-            onTap: () => logic.updateDestinationLocation(
-                latLng: const LatLng(0.0, 0.0), reset: true),
-          ),
-        ],
-      ),
+        ),
+        TaIconButton(
+          icon: const Icon(Icons.close),
+          semanticLabel: AppLocale.clearDestination.tr,
+          size: 32,
+          onTap: () => logic.updateDestinationLocation(
+              latLng: const LatLng(0.0, 0.0), reset: true),
+        ),
+      ],
     );
+  }
+
+  /// Opens the picker — on [start] when a drop-off is being changed — and
+  /// applies the point it returns.
+  Future<void> _pickDestination({LatLng? start}) async {
+    // P-05 (docs/12) — backing out of the drag map pops with no result,
+    // and `updateDestinationLocation` takes a non-nullable `LatLng`, so
+    // the implicit downcast of that `null` threw "type 'Null' is not a
+    // subtype of type 'LatLng'". Cancelling the picker is a normal exit,
+    // not a destination change.
+    final result = await Get.toNamed(AppRoutes.DRAGMAP,
+        arguments: MapDragArgs(start: start));
+    if (result is! LatLng) return;
+    logic.updateDestinationLocation(latLng: result);
   }
 
   Widget _addDropOffRow() {
     return TaPressable(
-      onTap: () async {
-        // P-05 (docs/12) — backing out of the drag map pops with no result,
-        // and `updateDestinationLocation` takes a non-nullable `LatLng`, so
-        // the implicit downcast of that `null` threw "type 'Null' is not a
-        // subtype of type 'LatLng'". Cancelling the picker is a normal exit,
-        // not a destination change.
-        final result = await Get.toNamed(AppRoutes.DRAGMAP);
-        if (result is! LatLng) return;
-        logic.updateDestinationLocation(latLng: result);
-      },
+      onTap: _pickDestination,
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: 14.d),
         child: Row(

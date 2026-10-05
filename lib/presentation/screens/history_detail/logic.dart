@@ -8,8 +8,7 @@ import 'package:com.tara.passenger/presentation/shared/ride_dialogs.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../../core/resources/asset_resource.dart';
-import '../../../core/utils/load_custom_marker.dart';
+import '../../../core/utils/trip_marker.dart';
 import 'state.dart';
 
 class HistoryDetailLogic extends GetxController {
@@ -52,10 +51,8 @@ class HistoryDetailLogic extends GetxController {
 
   Future<void> _loadPins() async {
     try {
-      state.pickupIcon = BitmapDescriptor.bytes(
-          await getBytesFromAsset(ImageAssets.passengerMarker, 45));
-      state.dropOffIcon = BitmapDescriptor.bytes(
-          await getBytesFromAsset(ImageAssets.destinationMarker, 45));
+      state.pickupIcon = await tripMarkerIcon(TripMarker.pickup);
+      state.dropOffIcon = await tripMarkerIcon(TripMarker.dropOff);
     } catch (e) {
       // The map's default pins still mark the two ends.
       tlog('history detail pins failed to load: $e');
@@ -72,6 +69,7 @@ class HistoryDetailLogic extends GetxController {
           position: start,
           consumeTapEvents: true,
           icon: state.pickupIcon ?? BitmapDescriptor.defaultMarker,
+          anchor: tripMarkerAnchor(state.pickupIcon),
         ),
       if (end != null)
         Marker(
@@ -79,6 +77,7 @@ class HistoryDetailLogic extends GetxController {
           position: end,
           consumeTapEvents: true,
           icon: state.dropOffIcon ?? BitmapDescriptor.defaultMarker,
+          anchor: tripMarkerAnchor(state.dropOffIcon),
         ),
     };
   }

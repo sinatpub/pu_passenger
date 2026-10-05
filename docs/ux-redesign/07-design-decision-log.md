@@ -54,6 +54,8 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 - Slightly less touch target area than full-width
 - Must ensure sufficient padding (8px internal)
 
+**Superseded by D33:** the tab bar is docked to the screen edges again.
+
 ---
 
 ## D5: Vertical Vehicle List (Not Grid)
@@ -294,6 +296,8 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 - Chips scroll sideways, so not every vehicle is visible at once
 - The fare is still the app's own estimate, not the server's
 
+**Extended by D34:** the drop-off address is itself a button that reopens the picker on that place, so it can be changed without being cleared first.
+
 ---
 
 ## D23: Set Destination — Opens on the Map, Search Opens Over It
@@ -470,6 +474,93 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 
 ---
 
+## D33: Docked Tab Bar
+
+**Decision:** The tab bar is a white bar flush to the left, right and bottom edges under a 1px `border` hairline, with no shadow and no radius. Its white continues behind the system gesture area; the tabs sit above it. The active tab is the brand colour under a 28×3 indicator hanging from the hairline; inactive tabs are `textSecondary`, icon and label alike. Labels are 12/600. This replaces the floating pill of D4.
+
+**Rationale:**
+- The pill sat a fixed 12px from the bottom and ignored the system inset, so the gesture handle lay across its lower edge
+- The active tab was a brand-50 block a third of the bar wide: it read as a button, not as the tab you are on
+- 11px labels are small for Khmer script, and `textMuted` on white was faint
+- The three outline icons were drawn in two greys (`#292D32` and `#A2A2A2`), so inactive tabs did not match each other
+
+**Options the user chose:** the docked bar, over a refined pill (tint behind the active icon only) and a pill whose active tab expands to show its label.
+
+**Tradeoffs:**
+- The floating look of D4 is gone; D3's 22px radius now applies to sheets only
+- The tab screens' bottom padding drops from 96 to 24: the bar no longer needs clearance, as the page ends where the bar begins
+- The History tab keeps its book icon
+
+---
+
+## D34: Trip Markers Are the Route Card's Symbols
+
+**Decision:** On a map, the pickup is a dark circle and the drop-off a brand-orange rounded square, each with a white outline and a white centre: the two symbols of the booking sheet's route card. They are drawn in code (`core/utils/trip_marker.dart`) at the screen's own density, sit centred on their point, and draw above the nearby drivers. They are used on the booking map, the trip details map and, for the drop-off, the active ride map. The drop-off row of the route card is a button: tapping the address reopens the picker on that place; the cross still clears it.
+
+**Rationale:**
+- Both ends were red, the colour of the route line too: a teardrop pin for the pickup and a ring on a stick for the drop-off, with nothing to say which was which
+- The route card already had a legend — dark circle, orange square — that the map did not use
+- The pins were 42×42 images scaled up, so they were soft on dense screens
+- A nearby driver's icon could cover the pickup
+- A drop-off could only be changed by clearing it and adding it again, and the picker always opened on the passenger's own position rather than on the place being changed
+
+**Options the user chose:** the route card's shapes, over the same shapes with "Pickup" / "Drop-off" labels and over classic pins in two colours.
+
+**Tradeoffs:**
+- The markers carry no text; the info window and the route card name the ends
+- The active ride map keeps its orange passenger figure for the pickup: there it marks the person waiting, not an end of the route
+- The pickup still cannot be changed while a drop-off is set, short of clearing the drop-off
+- `passenger_marker.png` and the `passengerMarker` / `destinationMarker` constants are no longer used by any screen
+
+---
+
+## D35: Home Has No "Where To?" Card
+
+**Decision:** Home is the header, the promo banner and the vehicle list. The "Where to?" search card between the banner and the list is removed.
+
+**Rationale:**
+- User decision
+- The card did not search: it opened the same booking map a vehicle row opens, only without a vehicle chosen
+- The drop-off is chosen on the booking map (D22, D23), and is optional (D21)
+
+**Tradeoffs:**
+- A passenger now always starts by picking a vehicle; the map's chips still let them change it
+- `TaSearchCard` and the `whereTo` string are no longer used by any screen
+
+---
+
+## D36: Home Header Is a Brand Bar
+
+**Decision:** The Home header is one row on a single centre line: the PU Taxi mark (the launcher icon, 40×40, radius 12), "PU TAXI" (22/800) over the tagline (13), and the language segment. It starts 12px under the status bar. The tagline is translated: "Ride with trust" in English, "ពូ តាក់ស៊ី · ជិះដោយទំនុកចិត្ត" in Khmer, the Khmer name still in the brand colour.
+
+**Rationale:**
+- 46px of empty space sat above the title and pushed the vehicle list down
+- The header was text alone; the mark the passenger tapped to open the app was not on it
+- "Ride with trust" was a hardcoded English string, so the Khmer header read in two languages
+- The language segment sat at the top of a two-line title rather than centred on it
+
+**Options the user chose:** the brand bar, over a greeting bar (avatar and name) and a pickup-location bar — both need data Home does not load. The language segment stays on Home (D19); the bell stays hidden (PDD-03).
+
+**Tradeoffs:**
+- On a narrow screen the name and tagline shrink to fit rather than wrap
+- The header still scrolls away with the page
+- The Khmer tagline is the prototype's wording; `rideWithTrust` used to hold "ពូ តាក់ស៊ី · ធ្វើដំណើរដោយទុកចិត្ត" and was not shown anywhere
+
+---
+
+## D37: Khmer Is the Default Language
+
+**Decision:** The app opens in Khmer until the passenger picks a language (`AppConstant.defaultLanguageCode`). A saved choice still wins.
+
+**Rationale:**
+- User decision
+- The app started in English and fell back to English when no choice was saved, for a Khmer-speaking market
+
+**Tradeoffs:**
+- A passenger who never touched the language segment had no saved choice, so an update moves them from English to Khmer; one tap on the segment switches back and is remembered
+
+---
+
 ## Decision Summary
 
 | # | Decision | Impact | Risk |
@@ -506,3 +597,8 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 | D30 | Driver-cancel and booking-failed dialogs | Medium | Low |
 | D31 | Booking history: compact cards | Medium | Low |
 | D32 | Trip details page | Medium | Low |
+| D33 | Docked tab bar (replaces D4) | Medium | Low |
+| D34 | Trip markers match the route card; drop-off editable | Medium | Low |
+| D35 | Home: no "Where to?" card | Low | None |
+| D36 | Home header: brand bar | Low | None |
+| D37 | Khmer is the default language | Medium | Low |
