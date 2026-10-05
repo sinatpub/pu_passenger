@@ -1,5 +1,6 @@
 import 'package:com.tara.passenger/core/utils/vehicle_cell_data.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 SingleVehical _vehicle({
@@ -30,6 +31,18 @@ void main() {
       expect(data.pricePerKm, '1,500 ៛/km'); // PDD-01: formatter + KHR
       expect(data.priceFrom, 'from 4,000 ៛');
       expect(data.eta, '~2 min'); // deterministic lookup placeholder
+    });
+
+    test('a known vehicle type carries its drawing; an unknown one has none',
+        () {
+      expect(vehicleCellData(_vehicle(id: 1)).art, isA<SvgPicture>());
+      expect(vehicleCellData(_vehicle(id: 99)).art, isNull);
+    });
+
+    test('the name shown is the one the server sent', () {
+      // The app draws the vehicle and counts its seats by id, but does not
+      // rename it: the vehicle type's name is the backend's to set.
+      expect(vehicleCellData(_vehicle(name: 'Tuk Tuk')).name, 'Tuk Tuk');
     });
 
     test('unknown vehicle id falls back to default seats/eta', () {

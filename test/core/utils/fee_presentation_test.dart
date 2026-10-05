@@ -54,12 +54,11 @@ void main() {
 
   group('feeDateTime — never throws the screen away', () {
     test('formats the documented backend pattern', () {
-      expect(feeDateTime('2026-09-11 09:41:00'), contains('2026'));
-      expect(feeDateTime('2026-09-11 09:41:00'), contains('Sep'));
+      expect(feeDateTime('2026-09-11 09:41:00'), '11 Sep 2026, 9:41 AM');
     });
 
-    test('falls back to ISO-8601 parsing', () {
-      expect(feeDateTime('2026-09-11T09:41:00'), contains('2026'));
+    test('falls back to ISO-8601 parsing, in the same format', () {
+      expect(feeDateTime('2026-10-05T14:03:00'), '5 Oct 2026, 2:03 PM');
     });
 
     test('a null start time degrades to an em dash', () {
@@ -72,6 +71,24 @@ void main() {
       expect(feeDateTime('not a date'), '—');
       expect(feeDateTime('null'), '—');
       expect(feeDateTime(''), '—');
+    });
+  });
+
+  group('feeOptionalValue — absent is null, for the caller to word', () {
+    test('a value is trimmed and kept', () {
+      expect(feeOptionalValue('  Aeon Mall '), 'Aeon Mall');
+    });
+
+    test('null, empty and the string "null" are all absent', () {
+      expect(feeOptionalValue(null), isNull);
+      expect(feeOptionalValue('  '), isNull);
+      expect(feeOptionalValue('null'), isNull);
+    });
+
+    test('the payment method follows the same rule — never invented', () {
+      expect(feePaymentMethod('Cash'), 'Cash');
+      expect(feePaymentMethod(null), isNull);
+      expect(feePaymentMethod('null'), isNull);
     });
   });
 }

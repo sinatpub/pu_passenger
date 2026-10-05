@@ -50,6 +50,10 @@ class MapState {
   String? destinationAddress;
   LatLng? destinationLatLng;
 
+  /// A drop-off the map was opened with ("Book again"), waiting for the
+  /// pickup to be known before it is applied.
+  LatLng? pendingDestination;
+
   String distance = "";
 
   /// Route length behind [distance]; 0 until a destination is set. Kept so

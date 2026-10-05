@@ -8,7 +8,11 @@ class AppConstant {
   static const timeoutBooking = 60;
   static const double initZoomLevel = 17.0;
 
-  static const String titleApp = 'TAARRAA';
+  static const String titleApp = 'PU TAXI';
+
+  /// The brand in Khmer, shown under the Latin name — the same in both
+  /// languages, so it is a constant rather than a translation.
+  static const String titleAppKhmer = 'ពូ តាក់ស៊ី';
 
   // F-07: these now delegate to AppConfig, which owns every environment
   // value. Kept as AppConstant members so the existing call sites are

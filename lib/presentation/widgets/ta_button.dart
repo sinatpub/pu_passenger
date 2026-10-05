@@ -20,6 +20,7 @@ class TaButton extends StatelessWidget {
     this.variant = TaButtonVariant.primary,
     this.size = TaButtonSize.large,
     this.width,
+    this.icon,
   });
 
   final String label;
@@ -29,6 +30,9 @@ class TaButton extends StatelessWidget {
   final TaButtonVariant variant;
   final TaButtonSize size;
   final double? width;
+
+  /// Optional icon drawn before [label], in the label's colour.
+  final IconData? icon;
 
   bool get _interactive => isEnabled && !isLoading && onTap != null;
 
@@ -61,13 +65,26 @@ class TaButton extends StatelessWidget {
                   color: _foreground(enabled),
                 ),
               )
-            : Text(
-                label,
-                style: TextStyle(
-                  fontSize: fontSize,
-                  fontWeight: FontWeight.w700,
-                  color: _foreground(enabled),
-                ),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(icon, size: fontSize + 4, color: _foreground(enabled)),
+                    const SizedBox(width: 8),
+                  ],
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: fontSize,
+                        fontWeight: FontWeight.w700,
+                        color: _foreground(enabled),
+                      ),
+                    ),
+                  ),
+                ],
               ),
       ),
     );

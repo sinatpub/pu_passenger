@@ -9,10 +9,15 @@ import 'package:get/get.dart';
 
 
 class CalculateFeeLogic extends GetxController {
-  CalculateFeeLogic({RatingPromptStore? promptStore})
-      : _promptStore = promptStore ?? RatingPromptStore();
+  CalculateFeeLogic({
+    RatingPromptStore? promptStore,
+    CheckBookingApi? checkBookingApi,
+  })  : _promptStore = promptStore ?? RatingPromptStore(),
+        requestBookingApi = checkBookingApi ?? CheckBookingApi();
 
-  final CheckBookingApi requestBookingApi = CheckBookingApi();
+  /// Injectable so loading, failing and retrying are testable without the
+  /// network client.
+  final CheckBookingApi requestBookingApi;
   final CalculateFeeState state = CalculateFeeState();
 
   /// C7 — reads whether this trip's rating was already handled. Injectable so
@@ -25,26 +30,32 @@ class CalculateFeeLogic extends GetxController {
     getCalculateFeeApi();
   }
 
-  getCalculateFeeApi() async {
+  /// Loads the finished trip and its fare. Also the page's Retry: a failure
+  /// is recorded in `hasError` rather than swallowed, so the passenger is
+  /// told and can ask again.
+  Future<void> getCalculateFeeApi() async {
+    state.isLoading.value = true;
+    state.hasError.value = false;
     try {
-      state.isLoading.value = true;
-      var result = await requestBookingApi.checkBookingApi();
-      state.data.value = result;
-      state.isLoading.value = false;
+      state.data.value = await requestBookingApi.checkBookingApi();
     } catch (e) {
+      state.hasError.value = true;
+    } finally {
       state.isLoading.value = false;
     }
   }
 
-  /// C7 — the post-payment chain is now `Fee → Rating → Receipt → Home`
-  /// rather than `Fee → Home`. Everything else here is unchanged: the same
-  /// 2s settle, the same socket re-init, the same `offAll` semantics.
+  /// The post-payment chain is `Fee → Thank you → Home`: the rating is a
+  /// dialog over the Thank you page, not a page of its own. Everything else
+  /// here is unchanged: the same 2s settle, the same socket re-init, the same
+  /// `offAll` semantics.
   ///
-  /// The rating screen is offered only when N-10's rule says to
-  /// ([shouldPromptForRating]) — a trip already rated or already skipped goes
-  /// straight home, because re-asking is the punishment that rule forbids. If
-  /// the booking has no id there is nothing to key that on, so the passenger
-  /// goes home rather than being asked about a trip that cannot be recorded.
+  /// The dialog is offered only when N-10's rule says to
+  /// ([shouldPromptForRating]) — a trip already rated or already skipped is
+  /// not asked again, because re-asking is the punishment that rule forbids.
+  /// If the booking has no id there is nothing to key that on, so it is not
+  /// asked either. With no booking at all there is nothing to thank for, and
+  /// the passenger goes home.
   void syncNavigateBack() async {
     EasyLoading.show();
     await 2.delay();
@@ -58,8 +69,11 @@ class CalculateFeeLogic extends GetxController {
           skipped: false,
         );
 
-    if (prompt) {
-      Get.offAllNamed(AppRoutes.RATING, arguments: {'booking': booking});
+    if (booking != null) {
+      Get.offAllNamed(
+        AppRoutes.RECEIPT,
+        arguments: {'booking': booking, 'promptRating': prompt},
+      );
     } else {
       Get.offAllNamed(AppRoutes.BOTTOMNAV);
     }

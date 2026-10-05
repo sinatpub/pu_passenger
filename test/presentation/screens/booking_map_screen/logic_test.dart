@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:com.tara.passenger/core/utils/status_util.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
 import 'package:com.tara.passenger/data/models/request_booking_model.dart';
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/logic.dart';
+import 'package:com.tara.passenger/services/booking_session.dart';
 import 'package:com.tara.passenger/services/location_imp.dart';
 
 /// P-09 (docs/12, docs/09 §7, docs/08 M-2) — `getBookingInfo` is triggered
@@ -29,6 +31,41 @@ class _FakeCheckBookingApi extends CheckBookingApi {
     _completers[index].complete(response);
   }
 }
+
+/// A directions service that answers with a fixed route, at once or when the
+/// test completes [pending].
+class _FakeLocationRepo extends LocationRepo {
+  final List<(LatLng, LatLng)> requests = [];
+  Completer<RouteInfo>? pending;
+
+  static const route = RouteInfo(
+    points: [LatLng(11.57, 104.92), LatLng(11.56, 104.93)],
+    distanceMeters: 1240,
+    duration: Duration(seconds: 250),
+  );
+
+  @override
+  Future<RouteInfo> getRoute(LatLng start, LatLng end) {
+    requests.add((start, end));
+    return pending?.future ?? Future.value(route);
+  }
+}
+
+/// A booking with a pickup, a driver somewhere else and, optionally, a
+/// drop-off — enough for `drawPolyline()` to ask for a route.
+RequestBookingModel _tripModel(int status, {bool withDropOff = true}) =>
+    RequestBookingModel(
+      data: Data(
+        status: status,
+        startLatitude: '11.5600',
+        startLongitude: '104.9300',
+        endLatitude: withDropOff ? '11.5500' : null,
+        endLongitude: withDropOff ? '104.8500' : null,
+        driver: Driver(
+          lastLocation: LastLocation(latitude: '11.5700', longitude: '104.9200'),
+        ),
+      ),
+    );
 
 /// `startLatitude`/`startLongitude` and `driver` are left null so
 /// `drawPolyline()` hits its `start.latitude == 0` guard and returns before
@@ -107,6 +144,130 @@ void main() {
       await call2;
 
       expect(logic.state.bookingRequestData?.data?.status, BookingStatus.arrival);
+    });
+  });
+
+  /// The arrival time on the sheet comes from the route that draws the line:
+  /// one directions request gives both.
+  group('driver arrival time', () {
+    BookingMapLogic logicWith(_FakeLocationRepo repo, RequestBookingModel model) {
+      final logic = BookingMapLogic(
+        checkBookingApi: _FakeCheckBookingApi(),
+        locationRepo: repo,
+      );
+      logic.state.bookingRequestData = model;
+      return logic;
+    }
+
+    test('accepted: the driver → pickup route gives the time and distance',
+        () async {
+      final repo = _FakeLocationRepo();
+      final logic = logicWith(repo, _tripModel(BookingStatus.accepted));
+
+      await logic.drawPolyline();
+
+      expect(repo.requests.single,
+          (const LatLng(11.57, 104.92), const LatLng(11.56, 104.93)));
+      expect(logic.state.pickupEta, const Duration(seconds: 250));
+      expect(logic.state.pickupDistanceMeters, 1240);
+      expect(logic.state.polyline, hasLength(1));
+    });
+
+    test('arrived: the line and the arrival time are both cleared', () async {
+      final repo = _FakeLocationRepo();
+      final logic = logicWith(repo, _tripModel(BookingStatus.accepted));
+      await logic.drawPolyline();
+
+      logic.state.bookingRequestData = _tripModel(BookingStatus.arrival);
+      await logic.drawPolyline();
+
+      expect(logic.state.pickupEta, isNull);
+      expect(logic.state.pickupDistanceMeters, isNull);
+      expect(logic.state.polyline, isEmpty);
+    });
+
+    test('on trip: the trip route is drawn, but it is not an arrival time',
+        () async {
+      final repo = _FakeLocationRepo();
+      final logic = logicWith(repo, _tripModel(BookingStatus.onGoing));
+
+      await logic.drawPolyline();
+
+      expect(repo.requests, hasLength(1));
+      expect(logic.state.polyline, hasLength(1));
+      expect(logic.state.pickupEta, isNull);
+    });
+
+    test('on trip without a drop-off: no route is asked for', () async {
+      final repo = _FakeLocationRepo();
+      final logic = logicWith(
+          repo, _tripModel(BookingStatus.onGoing, withDropOff: false));
+
+      await logic.drawPolyline();
+
+      expect(repo.requests, isEmpty);
+      expect(logic.state.pickupEta, isNull);
+    });
+
+    test('a route that lands after the stage changed is dropped', () async {
+      final repo = _FakeLocationRepo()..pending = Completer<RouteInfo>();
+      final logic = logicWith(repo, _tripModel(BookingStatus.accepted));
+
+      final drawing = logic.drawPolyline();
+      // The driver arrives while the directions request is still out.
+      logic.state.bookingRequestData = _tripModel(BookingStatus.arrival);
+      repo.pending!.complete(_FakeLocationRepo.route);
+      await drawing;
+
+      expect(logic.state.pickupEta, isNull,
+          reason: 'an arrival time under "Driver has arrived"');
+      expect(logic.state.polyline, isEmpty);
+    });
+  });
+
+  // Reaching the ride screen — by the accept event, a poll or a restart —
+  // is what ends the request phase. Until this, the session stayed
+  // `awaitingDriver` and refused every later booking.
+  group('the ride screen takes the booking over', () {
+    test('opening it marks the request accepted, keeping the draft', () async {
+      final session = BookingSession()
+        ..beginRequest(
+          pickup: const LatLng(11.56, 104.93),
+          destination: const LatLng(11.55, 104.85),
+          vehicleTypeId: 3,
+        )
+        ..markAwaitingDriver();
+      final logic = BookingMapLogic(
+        checkBookingApi: _FakeCheckBookingApi(),
+        bookingSession: session,
+      );
+
+      // `onInit` calls this first; the rest of it fetches the booking and
+      // loads marker images, which this test does not provide.
+      logic.markRequestAccepted();
+
+      expect(session.status, BookingRequestStatus.accepted);
+      expect(session.isBusy, isFalse);
+      expect(session.vehicleTypeId, 3);
+    });
+
+    test('the session the app registered is the one it marks', () {
+      final session = Get.put<BookingSession>(
+        BookingSession()
+          ..beginRequest(pickup: const LatLng(11.56, 104.93))
+          ..markAwaitingDriver(),
+      );
+      final logic = BookingMapLogic(checkBookingApi: _FakeCheckBookingApi());
+
+      logic.markRequestAccepted();
+
+      expect(session.status, BookingRequestStatus.accepted);
+    });
+
+    test('with no session registered it still opens', () {
+      final logic = BookingMapLogic(checkBookingApi: _FakeCheckBookingApi());
+
+      expect(logic.markRequestAccepted, returnsNormally);
     });
   });
 

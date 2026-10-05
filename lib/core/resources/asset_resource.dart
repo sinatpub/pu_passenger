@@ -26,6 +26,18 @@ class ImageAssets {
   static const String current_location = '$ICON_SVG_PATH/current_location.svg';
   static const String map_outline = '$ICON_SVG_PATH/map_out.svg';
 
+  /// The PU Taxi mark: the launcher icon, reused wherever the app shows its
+  /// own logo.
+  static const String brandMark =
+      'assets/launcher/launcher_passenger_1024.png';
+
+  /// Service art, one per vehicle type — see `vehicle_art.dart`.
+  static const String vehicleTukTuk = '$IMAGE_SVG_PATH/vehicle_tuk_tuk.svg';
+  static const String vehicleClassic = '$IMAGE_SVG_PATH/vehicle_classic.svg';
+  static const String vehicleMiniVan = '$IMAGE_SVG_PATH/vehicle_mini_van.svg';
+  static const String vehicleSuv = '$IMAGE_SVG_PATH/vehicle_suv.svg';
+  static const String vehicleVip = '$IMAGE_SVG_PATH/vehicle_vip.svg';
+
   static const String tokt_tok = '$IMAGE_PNG_PATH/Group 18279.png';
   static const String vip_car = '$IMAGE_PNG_PATH/Group 18282.png';
   static const String suv_car = '$IMAGE_PNG_PATH/Group 18280.png';

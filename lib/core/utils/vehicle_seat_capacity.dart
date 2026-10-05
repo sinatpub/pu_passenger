@@ -5,7 +5,7 @@
 /// default (any id not 1-4 gets 5 seats). IDs match the vehicle-type
 /// scheme used by `driverMarkerImage()` in the same feature.
 const Map<int, int> _seatCapacityByVehicleId = {
-  1: 3, // rickshaw
+  1: 3, // tuk tuk
   2: 4, // classic car
   3: 7, // mini van
   4: 4, // suv
@@ -20,7 +20,7 @@ int seatCapacityForVehicleId(int? vehicleId) {
 /// follows the same deterministic-lookup pattern as [seatCapacityForVehicleId]:
 /// a practical placeholder until the API exposes a real ETA.
 const Map<int, int> _etaByVehicleId = {
-  1: 2,  // rickshaw
+  1: 2,  // tuk tuk
   2: 3,  // classic car
   3: 4,  // mini van
   4: 4,  // suv

@@ -13,6 +13,7 @@ class TaDriverCard extends StatelessWidget {
     required this.initials,
     this.rating,
     this.plateNumber,
+    this.bordered = false,
   });
 
   final String name;
@@ -21,13 +22,18 @@ class TaDriverCard extends StatelessWidget {
   final String? rating;
   final String? plateNumber;
 
+  /// White with a hairline border — the look of the cards on the booking
+  /// sheets — instead of the default grey fill.
+  final bool bordered;
+
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: TaColors.background,
-        borderRadius: BorderRadius.circular(14),
+        color: bordered ? TaColors.surface : TaColors.background,
+        borderRadius: BorderRadius.circular(bordered ? 16 : 14),
+        border: bordered ? Border.all(color: TaColors.border) : null,
       ),
       child: Row(
         children: [

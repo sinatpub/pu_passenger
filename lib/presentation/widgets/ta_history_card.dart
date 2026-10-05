@@ -3,136 +3,101 @@ import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
-import 'package:com.tara.passenger/core/theme/ta_shadow.dart';
 
-import 'ta_avatar.dart';
 import 'ta_pressable.dart';
-import 'ta_badge.dart';
+import 'ta_trip_card.dart';
 
 /// History list item (`.hcard`) — component spec §10.
 ///
+/// One booking, compact: when it was and what it cost, the vehicle and
+/// driver, the route, and — for a completed trip — how far and how long. The
+/// tab above the list says whether these are completed or cancelled trips,
+/// so the card carries no status badge.
+///
 /// Presentational: [HistoryItem] carries pre-formatted strings only.
 class TaHistoryCard extends StatelessWidget {
-  const TaHistoryCard({
-    super.key,
-    required this.item,
-    this.onTap,
-    this.isCompleted = true,
-    this.statusLabel,
-  });
+  const TaHistoryCard({super.key, required this.item, this.onTap});
 
   final HistoryItem item;
   final VoidCallback? onTap;
-  final bool isCompleted;
-
-  /// The badge's text. Defaults to the English spec wording; callers in the
-  /// app pass a localised string (S1).
-  final String? statusLabel;
 
   @override
   Widget build(BuildContext context) {
     final card = Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: TaColors.surface,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: TaShadows.shadowMd,
+        border: Border.all(color: TaColors.border),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
-              TaAvatar(variant: TaAvatarVariant.history, initials: item.initials),
+              _art(),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.invoice,
+                      item.cardDate ?? item.date,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 13,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
                         color: TaColors.textPrimary,
                       ),
                     ),
-                    Text(
-                      '${item.driver} · ${item.date}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: TaColors.textSecondary),
-                    ),
+                    if (item.subtitle != null)
+                      Text(
+                        item.subtitle!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: TaColors.textSecondary,
+                        ),
+                      ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                item.amount,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: TaColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TaBadge(
-              label: statusLabel ??
-                  (isCompleted
-                      ? AppLocale.completed.tr
-                      : AppLocale.cancelled.tr),
-              variant: isCompleted ? TaBadgeVariant.success : TaBadgeVariant.error,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: TaColors.background,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              children: [
-                _routeRow(
-                  dotColor: TaColors.dark,
-                  haloColor: const Color(0xFFE3E5EC),
-                  text: item.from,
-                ),
-                if (item.to != null) ...[
-                  const SizedBox(height: 6),
-                  _routeRow(
-                    dotColor: TaColors.primary,
-                    haloColor: TaColors.primaryBorder,
-                    text: item.to!,
+              if (item.fare != null) ...[
+                const SizedBox(width: 8),
+                Text(
+                  item.fare!,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: TaColors.textPrimary,
                   ),
-                ],
+                ),
               ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              const Icon(Icons.route, size: 14, color: TaColors.textSecondary),
-              const SizedBox(width: 4),
-              Text(
-                item.distance,
-                style: const TextStyle(fontSize: 12, color: TaColors.textSecondary),
-              ),
-              const SizedBox(width: 14),
-              const Icon(Icons.access_time, size: 14, color: TaColors.textSecondary),
-              const SizedBox(width: 4),
-              Text(
-                item.duration,
-                style: const TextStyle(fontSize: 12, color: TaColors.textSecondary),
-              ),
             ],
           ),
+          const SizedBox(height: 10),
+          TaTripRows(
+            pickupLabel: AppLocale.pickup.tr,
+            pickup: item.from,
+            dropOffLabel: AppLocale.destination.tr,
+            dropOff: item.to,
+            noDropOffText: item.noDropOffText,
+          ),
+          if (item.summary != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              item.summary!,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12,
+                color: TaColors.textSecondary,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -143,37 +108,26 @@ class TaHistoryCard extends StatelessWidget {
     return TaPressable(onTap: onTap, child: card);
   }
 
-  Widget _routeRow({
-    required Color dotColor,
-    required Color haloColor,
-    required String text,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 9,
-          height: 9,
-          margin: const EdgeInsets.only(top: 4, right: 10),
-          decoration: BoxDecoration(
-            color: dotColor,
-            shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: haloColor, spreadRadius: 2)],
-          ),
-        ),
-        Expanded(
-          child: Text(
-            text,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: TaColors.textPrimary,
+  /// The drawing of the vehicle that made the trip, or a neutral car when the
+  /// booking never got a vehicle — it was cancelled before a driver took it.
+  Widget _art() {
+    return ExcludeSemantics(
+      child: SizedBox(
+        width: 52,
+        height: 32,
+        child: item.art ??
+            Container(
+              decoration: BoxDecoration(
+                color: TaColors.background,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.directions_car,
+                color: TaColors.textMuted,
+                size: 20,
+              ),
             ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -189,6 +143,12 @@ class HistoryItem {
     required this.distance,
     required this.duration,
     required this.initials,
+    this.cardDate,
+    this.subtitle,
+    this.fare,
+    this.summary,
+    this.noDropOffText,
+    this.art,
   });
 
   final String invoice;
@@ -204,4 +164,25 @@ class HistoryItem {
   final String distance;
   final String duration;
   final String initials;
+
+  // ---- The list card. The detail page reads the fields above. ----
+
+  /// The card's headline date — shorter than [date]. Falls back to [date].
+  final String? cardDate;
+
+  /// "Classic Car · Sok Dara" — whichever of the two the booking has.
+  final String? subtitle;
+
+  /// What the trip cost. Null for a trip that was never charged: the card
+  /// then shows no amount at all.
+  final String? fare;
+
+  /// "10.3 km · 28 min". Null when the trip covered no distance to report.
+  final String? summary;
+
+  /// What the drop-off row says when [to] is null. Null leaves the row out.
+  final String? noDropOffText;
+
+  /// The drawing of the trip's vehicle type.
+  final Widget? art;
 }

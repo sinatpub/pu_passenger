@@ -153,6 +153,8 @@ flutter:
     - assets/icon/svg/
     - assets/icon/png/
     - assets/nav_icon/
+    # The PU Taxi mark shown on the splash and contact pages.
+    - assets/launcher/launcher_passenger_1024.png
     - assets/sounds/booking_sound.wav
     - ios/Runner/booking_sound.wav
 

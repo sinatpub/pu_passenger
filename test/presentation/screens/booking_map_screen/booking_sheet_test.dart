@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import 'package:com.tara.passenger/core/network/api_exception.dart';
 import 'package:com.tara.passenger/core/network/result.dart';
+import 'package:com.tara.passenger/core/utils/booking_vehicle_info.dart';
 import 'package:com.tara.passenger/core/utils/status_util.dart';
 import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
@@ -43,6 +44,13 @@ BookingMapLogic _logicWith({
   String? phone = '012345678',
   String? plate = '2AB-1234',
   String? vehicleName = 'Tuk-Tuk',
+  String? manufacturer,
+  String? model,
+  String? color,
+  String? startAddress,
+  String? endAddress,
+  Duration? pickupEta,
+  double? pickupDistanceMeters,
   Result<bool>? cancelResult,
   void Function()? onCancelRide,
 }) {
@@ -57,14 +65,23 @@ BookingMapLogic _logicWith({
   logic.state.bookingRequestData = RequestBookingModel(
     data: Data(
       status: status,
+      startAddress: startAddress,
+      endAddress: endAddress,
       typeVehicle: TypeVehicle(name: vehicleName),
       driver: Driver(
         name: driverName,
         phone: phone,
-        vehicle: Vehicle(plateNumber: plate),
+        vehicle: Vehicle(
+          plateNumber: plate,
+          manufacturer: manufacturer,
+          model: model,
+          color: color,
+        ),
       ),
     ),
   );
+  logic.state.pickupEta = pickupEta;
+  logic.state.pickupDistanceMeters = pickupDistanceMeters;
   return logic;
 }
 
@@ -137,34 +154,180 @@ void main() {
   });
 
   group('BookingSheet phase table (03 §Screen 9 States)', () {
-    testWidgets('accepted: timeline at step 1, cancel offered', (tester) async {
+    testWidgets('accepted: "on the way", bar at step 1, cancel offered',
+        (tester) async {
       await _pumpSheet(tester, _logicWith(status: BookingStatus.accepted));
 
-      final timeline = tester.widget<TaTimeline>(find.byType(TaTimeline));
-      expect(timeline.currentStep, 0);
+      expect(find.text(AppLocale.driverOnTheWay), findsOneWidget);
+      final bar = tester.widget<TaStepIndicator>(find.byType(TaStepIndicator));
+      expect(bar.current, 0);
       expect(find.text(AppLocale.cancelBooking), findsOneWidget);
     });
 
-    testWidgets('arrival: timeline at step 2, cancel still offered',
+    testWidgets('arrival: "has arrived", bar at step 2, cancel still offered',
         (tester) async {
       await _pumpSheet(tester, _logicWith(status: BookingStatus.arrival));
 
-      final timeline = tester.widget<TaTimeline>(find.byType(TaTimeline));
-      expect(timeline.currentStep, 1);
+      expect(find.text(AppLocale.driverHasArrived), findsOneWidget);
+      final bar = tester.widget<TaStepIndicator>(find.byType(TaStepIndicator));
+      expect(bar.current, 1);
       expect(find.text(AppLocale.cancelBooking), findsOneWidget);
     });
 
-    testWidgets('onGoing: timeline at step 3 and cancel is withdrawn',
+    testWidgets('onGoing: "On trip", bar full and cancel is withdrawn',
         (tester) async {
       await _pumpSheet(tester, _logicWith(status: BookingStatus.onGoing));
 
-      final timeline = tester.widget<TaTimeline>(find.byType(TaTimeline));
-      expect(timeline.currentStep, 2);
+      expect(find.text(AppLocale.stepOnTrip), findsOneWidget);
+      final bar = tester.widget<TaStepIndicator>(find.byType(TaStepIndicator));
+      expect(bar.current, 2);
       expect(
         find.text(AppLocale.cancelBooking),
         findsNothing,
         reason: 'the passenger is already in the vehicle',
       );
+    });
+  });
+
+  group('BookingSheet header — what matters at this stage', () {
+    testWidgets('accepted: minutes and distance to the pickup',
+        (tester) async {
+      await _pumpSheet(
+        tester,
+        _logicWith(
+          status: BookingStatus.accepted,
+          pickupEta: const Duration(seconds: 250),
+          pickupDistanceMeters: 1240,
+        ),
+      );
+
+      expect(find.text('4 min'), findsOneWidget);
+      expect(find.text('1.2 km away'), findsOneWidget);
+    });
+
+    testWidgets('accepted without a route: no arrival time is made up',
+        (tester) async {
+      await _pumpSheet(tester, _logicWith(status: BookingStatus.accepted));
+
+      expect(find.textContaining('min'), findsNothing);
+      expect(find.textContaining('km away'), findsNothing);
+    });
+
+    testWidgets('arrival: where to meet, and no stale arrival time',
+        (tester) async {
+      await _pumpSheet(
+        tester,
+        _logicWith(
+          status: BookingStatus.arrival,
+          startAddress: 'Street 271, Daun Penh, Phnom Penh',
+          // Left over from the accepted stage; the header must not show it.
+          pickupEta: const Duration(minutes: 4),
+          pickupDistanceMeters: 1240,
+        ),
+      );
+
+      expect(find.text('Meet at Street 271'), findsOneWidget);
+      expect(find.text('4 min'), findsNothing);
+    });
+
+    testWidgets('onGoing: where the trip is heading', (tester) async {
+      await _pumpSheet(
+        tester,
+        _logicWith(
+          status: BookingStatus.onGoing,
+          endAddress: 'Phnom Penh Airport, Russian Blvd',
+        ),
+      );
+
+      expect(find.text('To Phnom Penh Airport'), findsOneWidget);
+    });
+
+    testWidgets('onGoing without a drop-off: the fare is by meter',
+        (tester) async {
+      await _pumpSheet(tester, _logicWith(status: BookingStatus.onGoing));
+
+      expect(find.text(AppLocale.fareByMeter), findsOneWidget);
+    });
+  });
+
+  group('BookingSheet trip card', () {
+    testWidgets('pickup over drop-off', (tester) async {
+      await _pumpSheet(
+        tester,
+        _logicWith(
+          status: BookingStatus.accepted,
+          startAddress: 'Street 271, Daun Penh',
+          endAddress: 'Phnom Penh Airport',
+        ),
+      );
+
+      final pickup = tester.getRect(find.text('Street 271, Daun Penh'));
+      final dropOff = tester.getRect(find.text('Phnom Penh Airport'));
+      expect(pickup.bottom, lessThanOrEqualTo(dropOff.top));
+      expect(find.text(AppLocale.noDropOffMeter), findsNothing);
+    });
+
+    testWidgets('a trip booked without a drop-off says so', (tester) async {
+      await _pumpSheet(
+        tester,
+        _logicWith(
+          status: BookingStatus.accepted,
+          startAddress: 'Street 271, Daun Penh',
+        ),
+      );
+
+      expect(find.text(AppLocale.noDropOffMeter), findsOneWidget);
+    });
+  });
+
+  group('etaMinutes', () {
+    test('rounds to whole minutes', () {
+      expect(etaMinutes(const Duration(seconds: 250)), 4);
+      expect(etaMinutes(const Duration(seconds: 90)), 2);
+    });
+
+    test('never shows less than a minute', () {
+      expect(etaMinutes(const Duration(seconds: 20)), 1);
+      expect(etaMinutes(Duration.zero), 1);
+    });
+  });
+
+  group('bookingVehicleInfo — what to look for on the street', () {
+    Data dataWith({String? manufacturer, String? model, String? color}) => Data(
+          typeVehicle: TypeVehicle(name: 'Classic Car'),
+          driver: Driver(
+            vehicle: Vehicle(
+              manufacturer: manufacturer,
+              model: model,
+              color: color,
+            ),
+          ),
+        );
+
+    test('maker, model and colour', () {
+      expect(
+        bookingVehicleInfo(
+            dataWith(manufacturer: 'Toyota', model: 'Prius', color: 'White')),
+        'Toyota Prius · White',
+      );
+    });
+
+    test('a model that already names the maker is not doubled', () {
+      expect(
+        bookingVehicleInfo(dataWith(
+            manufacturer: 'Toyota', model: 'Toyota Prius', color: 'White')),
+        'Toyota Prius · White',
+      );
+    });
+
+    test('no model falls back to the vehicle type, keeping the colour', () {
+      expect(bookingVehicleInfo(dataWith(color: 'White')),
+          'Classic Car · White');
+    });
+
+    test('nothing known degrades to a placeholder', () {
+      expect(bookingVehicleInfo(Data()), '---');
+      expect(bookingVehicleInfo(null), '---');
     });
   });
 
@@ -223,17 +386,12 @@ void main() {
       expect(call.isEnabled, isFalse);
     });
 
-    testWidgets('Safety toasts "coming soon" rather than navigating',
+    testWidgets('Call is the only button; Safety waits for the feature',
         (tester) async {
       await _pumpSheet(tester, _logicWith(status: BookingStatus.accepted));
 
-      await tester.tap(find.widgetWithText(TaButton, AppLocale.safety));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
-
-      expect(find.text(AppLocale.safetyComingSoon), findsOneWidget);
-      // Let the toast's 2400ms auto-dismiss run out so no timer is pending.
-      await tester.pump(const Duration(seconds: 3));
+      expect(find.byType(TaButton), findsOneWidget);
+      expect(find.text(AppLocale.safety), findsNothing);
     });
   });
 
@@ -252,7 +410,7 @@ void main() {
       );
       await _pumpSheet(tester, logic);
 
-      await tester.tap(find.widgetWithText(TaButton, AppLocale.cancelBooking));
+      await tester.tap(find.text(AppLocale.cancelBooking));
       await tester.pumpAndSettle();
 
       expect(find.text(AppLocale.titleCancelBooking), findsOneWidget);
@@ -274,7 +432,7 @@ void main() {
       );
       await _pumpSheet(tester, logic);
 
-      await tester.tap(find.widgetWithText(TaButton, AppLocale.cancelBooking));
+      await tester.tap(find.text(AppLocale.cancelBooking));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(TaButton, AppLocale.keepWaiting));
       await tester.pumpAndSettle();
@@ -299,7 +457,7 @@ void main() {
       );
       await _pumpSheet(tester, logic);
 
-      await tester.tap(find.widgetWithText(TaButton, AppLocale.cancelBooking));
+      await tester.tap(find.text(AppLocale.cancelBooking));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(TaButton, AppLocale.yesCancel));
       await tester.pump();
@@ -343,7 +501,7 @@ void main() {
       );
       await _pumpSheet(tester, logic);
 
-      await tester.tap(find.widgetWithText(TaButton, AppLocale.cancelBooking));
+      await tester.tap(find.text(AppLocale.cancelBooking));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(TaButton, AppLocale.yesCancel));
       await tester.pump();

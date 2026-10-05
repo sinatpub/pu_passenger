@@ -35,8 +35,9 @@ class HistoryScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // The same words as the tab that opens this page.
                   Text(
-                    AppLocale.ridingHistory.tr,
+                    AppLocale.myBooking.tr,
                     style: TaTextStyles.titleLarge.copyWith(fontSize: 17),
                   ),
                   const SizedBox(height: 14),
@@ -51,6 +52,7 @@ class HistoryScreen extends StatelessWidget {
                         AppLocale.cancelled.tr,
                       ],
                       selectedIndex: logic.tabController.index,
+                      expanded: true,
                       onChanged: (index) =>
                           logic.tabController.animateTo(index),
                     ),

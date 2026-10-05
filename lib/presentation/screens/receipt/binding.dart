@@ -12,6 +12,7 @@ class ReceiptBinding extends Bindings {
       () => ReceiptLogic(
         booking: map['booking'] is Data ? map['booking'] as Data : null,
         stars: map['stars'] is int ? map['stars'] as int : null,
+        promptRating: map['promptRating'] == true,
       ),
     );
   }

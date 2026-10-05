@@ -9,6 +9,12 @@ class BookingMapState {
 
   RequestBookingModel? bookingRequestData;
 
+  /// How long and how far the driver's drive to the pickup is, from the
+  /// route that draws the line. Null outside the accepted stage, and when
+  /// the directions service did not say.
+  Duration? pickupEta;
+  double? pickupDistanceMeters;
+
   BitmapDescriptor? driverIcon;
   BitmapDescriptor? passengerIcon;
   BitmapDescriptor? destinationIcon;

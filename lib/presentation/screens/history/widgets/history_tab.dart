@@ -8,6 +8,7 @@ import 'package:com.tara.passenger/core/utils/history_cell_data.dart';
 import 'package:com.tara.passenger/core/utils/x_paged_child_builder_delegate.dart';
 import 'package:com.tara.passenger/data/models/history_booking_model.dart';
 import 'package:com.tara.passenger/presentation/screens/history/logic.dart';
+import 'package:com.tara.passenger/presentation/screens/history/vehicle_type_name.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
@@ -57,11 +58,13 @@ class HistoryTab extends StatelessWidget {
               padding: EdgeInsets.only(top: 8),
               child: Column(
                 children: [
-                  TaSkeletonCard(children: [TaSkeleton(height: 96)]),
-                  SizedBox(height: 12),
-                  TaSkeletonCard(children: [TaSkeleton(height: 96)]),
-                  SizedBox(height: 12),
-                  TaSkeletonCard(children: [TaSkeleton(height: 96)]),
+                  TaSkeleton(height: 132, radius: 16),
+                  SizedBox(height: 10),
+                  TaSkeleton(height: 132, radius: 16),
+                  SizedBox(height: 10),
+                  TaSkeleton(height: 132, radius: 16),
+                  SizedBox(height: 10),
+                  TaSkeleton(height: 132, radius: 16),
                 ],
               ),
             ),
@@ -109,9 +112,11 @@ class HistoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TaHistoryCard(
-      item: historyCellData(data),
-      isCompleted: isCompletedHistory(data?.status),
-      statusLabel: historyStatusLabel(data?.status),
+      item: historyCellData(
+        data,
+        vehicleName:
+            currentVehicleTypeName(data?.driver?.vehicle?.typeVehicleId),
+      ),
       onTap: () => Get.toNamed(AppRoutes.HISTORYDETAIL, arguments: data),
     );
   }

@@ -1,12 +1,17 @@
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
+import 'package:com.tara.passenger/core/utils/booking_vehicle_info.dart';
 import 'package:com.tara.passenger/core/utils/display_date.dart';
 import 'package:com.tara.passenger/core/utils/fee_presentation.dart';
 import 'package:com.tara.passenger/core/utils/initials.dart';
 import 'package:com.tara.passenger/core/utils/status_util.dart';
+import 'package:com.tara.passenger/core/utils/vehicle_art.dart';
 import 'package:com.tara.passenger/data/models/history_booking_model.dart';
 import 'package:com.tara.passenger/presentation/widgets/ta_history_card.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:intl/intl.dart';
 
 /// Maps a history `Datum` onto the presentational [HistoryItem] (S1), the same
 /// split as `vehicle_cell_data.dart` (C3) and `fee_presentation.dart` (C6) —
@@ -15,19 +20,132 @@ import 'package:get/get.dart';
 ///
 /// The payload policy holds: the amount is money and fails loudly; everything
 /// else degrades to an em dash.
-HistoryItem historyCellData(Datum? data) {
+///
+/// [vehicleName] is the trip's vehicle type as the app currently names it;
+/// the caller looks it up, and without one the booking's own record is used.
+/// [now] decides whether the card's date needs its year.
+HistoryItem historyCellData(
+  Datum? data, {
+  String? vehicleName,
+  DateTime? now,
+}) {
   final driverName = data?.driver?.name;
+  final completed = isCompletedHistory(data?.status);
+  final fare = feeAmount(data?.payment?.amount);
+  final art = vehicleArtAsset(data?.driver?.vehicle?.typeVehicleId);
   return HistoryItem(
     invoice: historyInvoice(data?.payment?.invoiceId),
     driver: driverName ?? AppLocale.unKnown.tr,
     initials: initialsFromName(driverName),
     date: historyDate(data?.createdAt),
-    amount: feeAmount(data?.payment?.amount) ?? '—',
+    amount: fare ?? '—',
     from: feeDisplayValue(data?.startAddress),
     to: historyDestination(data?.endAddress),
     distance: feeDisplayValue(data?.payment?.distance),
     duration: historyDuration(data?.payment?.duration),
+    cardDate: historyCardDate(data?.createdAt, now: now),
+    subtitle: historySubtitle(
+      vehicleName: vehicleName ?? historyVehicleName(data),
+      driverName: driverName,
+    ),
+
+    /// A completed trip was charged, so a fare the backend did not send is
+    /// said to be missing ("—") rather than left out. A cancelled trip was
+    /// not, and shows none.
+    fare: completed ? fare ?? '—' : null,
+    summary: completed
+        ? historyTripSummary(
+            distance: data?.payment?.distance,
+            duration: data?.payment?.duration,
+          )
+        : null,
+
+    /// A completed trip with no drop-off was booked by meter. A cancelled
+    /// one simply never had one, and the row is dropped (roadmap S1 Risk).
+    noDropOffText: completed ? AppLocale.noDropOffMeter.tr : null,
+    art: art == null ? null : SvgPicture.asset(art),
   );
+}
+
+/// The card's headline: `5 Oct, 2:59 PM`, with the year only when the trip
+/// is not from this one — the list is mostly recent trips, and the year on
+/// every row crowds out the fare beside it.
+String historyCardDate(String? createdAt, {DateTime? now}) {
+  final raw = createdAt?.trim();
+  if (raw == null || raw.isEmpty || raw == 'null') return '—';
+  final parsed = DateTime.tryParse(raw);
+  if (parsed == null) return '—';
+  final sameYear = parsed.year == (now ?? DateTime.now()).year;
+  return DateFormat(sameYear ? 'd MMM, h:mm a' : 'd MMM yyyy, h:mm a')
+      .format(parsed);
+}
+
+/// The vehicle type recorded on the booking, or null when it has none — a
+/// trip cancelled before a driver took it.
+String? historyVehicleName(Datum? data) {
+  final vehicle = data?.driver?.vehicle;
+  if (vehicle?.typeVehicleId == null) return null;
+  final name = vehicle!.vehicleTypeName;
+  return name == 'Unknown' ? null : name;
+}
+
+/// `Classic Car · Sok Dara` — whichever parts the booking has, or null.
+String? historySubtitle({String? vehicleName, String? driverName}) {
+  final parts = [vehicleName, driverName]
+      .map((part) => part?.trim() ?? '')
+      .where((part) => part.isNotEmpty);
+  return parts.isEmpty ? null : parts.join(' · ');
+}
+
+/// `10.25 km` as `10.3 km`. Anything that is not a plain kilometre figure is
+/// shown as the backend sent it; nothing at all is null.
+String? historyDistanceShort(String? distance) {
+  final raw = distance?.trim();
+  if (raw == null || raw.isEmpty || raw == 'null') return null;
+  final match =
+      RegExp(r'^(\d+(?:\.\d+)?)\s*km$', caseSensitive: false).firstMatch(raw);
+  final km = match == null ? null : double.tryParse(match.group(1)!);
+  return km == null ? raw : '${km.toStringAsFixed(1)} km';
+}
+
+/// `27 mins 57 seconds` as `28 min`; `1 hours 5 mins` as `1 h 5 min`.
+/// Rounded to the minute and never below one. A value in some other shape is
+/// shown as the backend sent it; nothing at all is null.
+String? historyDurationShort(String? duration) {
+  final raw = duration?.trim();
+  if (raw == null || raw.isEmpty || raw == 'null') return null;
+
+  int? part(String unit) {
+    final match =
+        RegExp('(\\d+)\\s*$unit', caseSensitive: false).firstMatch(raw);
+    return match == null ? null : int.parse(match.group(1)!);
+  }
+
+  final hours = part('hour');
+  final minutes = part('min');
+  final seconds = part('sec');
+  if (hours == null && minutes == null && seconds == null) return raw;
+
+  final totalSeconds =
+      (hours ?? 0) * 3600 + (minutes ?? 0) * 60 + (seconds ?? 0);
+  var totalMinutes = (totalSeconds / 60).round();
+  if (totalMinutes < 1) totalMinutes = 1;
+
+  final h = totalMinutes ~/ 60;
+  final m = totalMinutes % 60;
+  return [
+    if (h > 0) AppLocale.hoursShort.trParams({'count': '$h'}),
+    if (m > 0 || h == 0) AppLocale.etaMinutes.trParams({'count': '$m'}),
+  ].join(' ');
+}
+
+/// `10.3 km · 28 min`, or null when the trip has neither to show.
+String? historyTripSummary({String? distance, String? duration}) {
+  final parts = [
+    historyDistanceShort(distance),
+    historyDurationShort(duration),
+  ].whereType<String>();
+  return parts.isEmpty ? null : parts.join(' · ');
 }
 
 /// `INV-2041`, or an em dash when the backend sent no invoice — never
@@ -69,3 +187,39 @@ bool isCompletedHistory(int? status) => status == BookingStatus.completed;
 String historyStatusLabel(int? status) => isCompletedHistory(status)
     ? AppLocale.completed.tr
     : AppLocale.cancelled.tr;
+
+/// "Paid · Wallet" when the record names a method, plain "Paid" otherwise —
+/// the method is not invented.
+String historyPaidLabel(Object? paymentMethod) {
+  final method = feePaymentMethod(paymentMethod);
+  return method == null
+      ? AppLocale.paid.tr
+      : '${AppLocale.paid.tr} · $method';
+}
+
+/// The car as the detail page describes it: maker, model and colour, with
+/// the vehicle type standing in for a missing model.
+String historyVehicleInfo(Datum? data, {String? vehicleName}) {
+  final vehicle = data?.driver?.vehicle;
+  return vehicleDescription(
+    manufacturer: vehicle?.manufacturer,
+    model: vehicle?.model,
+    color: vehicle?.color,
+    typeName: vehicleName ?? historyVehicleName(data),
+  );
+}
+
+/// A cancelled trip is said to have cost nothing only when its record agrees:
+/// no amount, or zero. Anything else is a charge, and is shown as one.
+bool historyWasCharged(Object? amount) {
+  final value = num.tryParse(amount?.toString().trim() ?? '');
+  return value != null && value > 0;
+}
+
+/// A coordinate pair from the record's strings, or null when either half is
+/// missing or unparseable — never (0, 0).
+LatLng? historyLatLng(String? latitude, String? longitude) {
+  final lat = double.tryParse(latitude?.trim() ?? '');
+  final lng = double.tryParse(longitude?.trim() ?? '');
+  return lat == null || lng == null ? null : LatLng(lat, lng);
+}

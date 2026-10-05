@@ -14,6 +14,10 @@ enum BookingRequestStatus {
 
   /// The attempt failed and can be retried from the recorded draft.
   failed,
+
+  /// A driver took it. The request phase is over and the ride screen owns
+  /// the trip from here.
+  accepted,
 }
 
 /// P-08 (docs/12) — the booking attempt, held outside the route that started
@@ -86,6 +90,15 @@ class BookingSession extends GetxService {
   }
 
   void markAwaitingDriver() => status = BookingRequestStatus.awaitingDriver;
+
+  /// A driver has accepted, so nothing is "in progress" any more: without
+  /// this the session stayed `awaitingDriver` for the rest of the app's run
+  /// and [isBusy] refused every later booking.
+  ///
+  /// The draft is kept on purpose. If that driver then cancels, "Book again"
+  /// starts from the same vehicle and drop-off; the next [beginRequest]
+  /// overwrites it.
+  void markAccepted() => status = BookingRequestStatus.accepted;
 
   void markFailed(String message) {
     status = BookingRequestStatus.failed;

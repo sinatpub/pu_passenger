@@ -15,7 +15,7 @@ class AppLocale {
   static var sendAgain = "Send again";
 
   // vehicle type
-  static var rickshaw = "Rickshaw"; //"រុឺម៉ក";
+  static var tukTuk = "Tuk Tuk";
   static var classicCar = 'Classic car';
   static var miniVan = "Mini Van";
   static var suvCar = "SUV car";
@@ -30,7 +30,7 @@ class AppLocale {
   static var promoTag = 'PROMO';
   static var promoTitle = '20% off airport rides';
   static var promoSubtitle = 'Use code FLY20';
-  static var rideWithTrust = 'តារា · Ride with trust';
+  static var rideWithTrust = 'ពូ តាក់ស៊ី · Ride with trust';
   static var somethingWentWrong = 'Something went wrong';
   static var selectDestinationToContinue = "Select a destination to continue";
   static var contactingDrivers = "Contacting nearby drivers…";
@@ -71,7 +71,22 @@ class AppLocale {
   static var stepAccepted = "Accepted";
   static var stepArriving = "Arriving";
   static var stepOnTrip = "On trip";
-  static var callDriver = "Call";
+
+  // Active ride sheet: headline, what is under it, and the arrival time.
+  static var driverOnTheWay = "Driver is on the way";
+  static var driverHasArrived = "Driver has arrived";
+  static var meetAt = "Meet at @place";
+  static var headingTo = "To @place";
+  static var fareByMeter = "Fare by meter";
+  static var noDropOffMeter = "No drop-off · fare by meter";
+  static var etaMinutes = "@count min";
+
+  // Trip details (history).
+  static var tripDetails = "Trip details";
+  static var noFareCharged = "No fare was charged";
+  static var hoursShort = "@count h";
+  static var recenterMap = "Recenter map";
+  static var callDriver = "Call driver";
   static var safety = "Safety";
   static var safetyComingSoon = "Safety coming soon";
   static var titleCancelBooking = "Cancel booking?";
@@ -143,9 +158,21 @@ class AppLocale {
   static var tagFriendly = "Friendly";
   static var tagGoodRoute = "Good route";
   static var thankYou = "Thank you!";
-  static var tripCompleteReceiptSent = "Your trip is complete. Receipt sent.";
+  static var tripComplete = "Your trip is complete";
+  static var invoice = "Invoice";
+  static var yourRating = "Your rating";
+  static var secondsShort = "@count s";
   static var backToHome = "Back to Home";
   static var bookAgain = "Book again";
+
+  // The two "your ride did not happen" dialogs.
+  static var driverCancelledTitle = "Your driver cancelled";
+  static var driverCancelledBody =
+      "Sorry about that. You can book another ride now.";
+  static var bookingFailedTitle = "Couldn't book your ride";
+  static var bookingFailedBody = "Check your connection and try again.";
+  static var bookingFailedNoLocation =
+      "We can't find your location. Turn on location and try again.";
   static var paid = "Paid";
 
   // S1 — history (Screen 13) empty and error states
@@ -158,7 +185,7 @@ class AppLocale {
   static var savedPlacesComingSoon = "Saved places — coming soon";
   static var version = "Version";
   // S2 — contact us (Screen 17)
-  static var taarraaPhnomPenh = "Taarraa Taxi · Phnom Penh";
+  static var brandPhnomPenh = "PU Taxi · Phnom Penh";
 
   // S3 — announcements (Screen 18/19)
   static var untitledAnnouncement = "Untitled announcement";
@@ -166,7 +193,6 @@ class AppLocale {
   static var couldNotLoadAnnouncements = "Couldn't load announcements";
 
   // S4 — auth (Screen 1-4)
-  static var taarraaTaxiSubtitle = "តារា · Taxi";
   static var tapToAddPhotoRequired = "Tap to add a photo (required)";
   static var fullName = "Full name";
   static var enterFullName = "Enter your full name";
@@ -185,8 +211,9 @@ class AppLocale {
 
   static var paymentCollection = "Payment Collection";
 
-  static var waitPaymentDriver =
-      "Please wait until the driver accepts your payment.";
+  static var waitPaymentDriver = "Waiting for the driver to confirm payment";
+  static var couldNotLoadFare = "Couldn't load the fare";
+  static var askDriverForAmount = "Ask your driver for the amount";
 
   static var locationSelected = "Location Selected";
   static var desLocationSelected =
@@ -286,7 +313,7 @@ class AppLocale {
 
   static var pendingPayment = "Pending Payment";
 
-  static var skip = "SKIP";
+  static var skip = "Skip";
   static var or = "Or";
 
   static var vehicleType = "Vehicle Type";

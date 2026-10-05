@@ -30,6 +30,64 @@ abstract class LocationImpl {
   Future<List<double>> getPlaceDetails(String placeId);
 
   Future<List<LatLng>> getDirectionPoint(LatLng start, LatLng end);
+
+  Future<RouteInfo> getRoute(LatLng start, LatLng end);
+}
+
+/// A driving route between two points: the line to draw, and how far and how
+/// long the drive is. The distance and duration are null when the directions
+/// service did not report them.
+class RouteInfo {
+  const RouteInfo({
+    this.points = const [],
+    this.distanceMeters,
+    this.duration,
+  });
+
+  final List<LatLng> points;
+  final double? distanceMeters;
+  final Duration? duration;
+}
+
+/// Reads the first route of a Directions API response. The line comes from
+/// `overview_polyline`; the length and driving time are summed over the
+/// route's legs (`legs[].distance.value` in metres, `legs[].duration.value`
+/// in seconds) and stay null when a leg does not carry them.
+RouteInfo parseDirectionsRoute(
+  dynamic body,
+  List<LatLng> Function(String encoded) decodePolyline,
+) {
+  final routes = body is Map ? body['routes'] : null;
+  if (routes is! List || routes.isEmpty || routes.first is! Map) {
+    return const RouteInfo();
+  }
+  final Map route = routes.first;
+
+  final overview = route['overview_polyline'];
+  final encoded = overview is Map ? overview['points'] : null;
+  final points =
+      encoded is String ? decodePolyline(encoded) : const <LatLng>[];
+
+  num? sum(String field) {
+    final legs = route['legs'];
+    if (legs is! List || legs.isEmpty) return null;
+    num total = 0;
+    for (final leg in legs) {
+      final entry = leg is Map ? leg[field] : null;
+      final value = entry is Map ? entry['value'] : null;
+      if (value is! num) return null;
+      total += value;
+    }
+    return total;
+  }
+
+  final metres = sum('distance');
+  final seconds = sum('duration');
+  return RouteInfo(
+    points: points,
+    distanceMeters: metres?.toDouble(),
+    duration: seconds == null ? null : Duration(seconds: seconds.round()),
+  );
 }
 
 class LocationRepo implements LocationImpl {
@@ -263,12 +321,27 @@ class LocationRepo implements LocationImpl {
   }
 
   @override
-  Future<List<LatLng>> getDirectionPoint(LatLng start, LatLng end) async {
+  Future<List<LatLng>> getDirectionPoint(LatLng start, LatLng end) async =>
+      (await getRoute(start, end)).points;
+
+  /// The Directions API answers one request with the route's line and, per
+  /// leg, its length and driving time — so the arrival time on the booking
+  /// screen costs nothing beyond the call that already draws the line.
+  @override
+  Future<RouteInfo> getRoute(LatLng start, LatLng end) async {
     if (MockMode.isActive) {
-      await Future<void>.delayed(MockMode.scaled(const Duration(milliseconds: 300)));
-      return mockRoute(start, end);
+      await Future<void>.delayed(
+          MockMode.scaled(const Duration(milliseconds: 300)));
+      final points = mockRoute(start, end);
+      final metres = pathLengthMeters(points);
+      return RouteInfo(
+        points: points,
+        distanceMeters: metres,
+        // The simulated car covers the map in seconds; a city-traffic speed
+        // gives the screen a believable arrival time to show.
+        duration: Duration(seconds: (metres / _mockMetresPerSecond).round()),
+      );
     }
-    List<LatLng> polylinePoints = [];
 
     // 1. Define the Google Directions API URL
     String url =
@@ -278,18 +351,17 @@ class LocationRepo implements LocationImpl {
       var response = await Dio().get(url);
 
       if (response.statusCode == 200) {
-        String encodedPoints =
-            response.data['routes'][0]['overview_polyline']['points'];
-
-        // 3. Decode the encoded string into a list of LatLng
-        polylinePoints = _decodePolyline(encodedPoints);
+        return parseDirectionsRoute(response.data, _decodePolyline);
       }
     } catch (e) {
       print("Directions API Error: $e");
     }
 
-    return polylinePoints;
+    return const RouteInfo();
   }
+
+  /// 25 km/h.
+  static const double _mockMetresPerSecond = 25000 / 3600;
 
   // 4. The Decoding Algorithm (Standard Google Polyline Algorithm)
   List<LatLng> _decodePolyline(String encoded) {

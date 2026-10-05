@@ -24,18 +24,29 @@ String? receiptRating(int? stars) {
   return '${'★' * stars}${'☆' * (5 - stars)} · $stars/5';
 }
 
-/// Screen 12 — Receipt.
+/// "Paid · Wallet" when the backend names a method, plain "Paid" otherwise —
+/// the method is not invented.
+String receiptPaidLabel(Payment? payment) {
+  final method = feePaymentMethod(payment?.paymentMethod);
+  return method == null
+      ? AppLocale.paid.tr
+      : '${AppLocale.paid.tr} · $method';
+}
+
+/// Screen 12 — Thank you.
+///
+/// What was paid, for which trip, and the way home. The rating is a dialog
+/// `ReceiptLogic` opens over this page, and the page returns home by itself
+/// when the countdown on "Back to Home" runs out.
 class ReceiptScreen extends StatelessWidget {
   const ReceiptScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final logic = Get.find<ReceiptLogic>();
-    final booking = logic.state.booking;
 
     return PopScope(
-      // The trip is finished; Back would land on the rating screen the
-      // passenger has already answered.
+      // The trip is finished; Back has nowhere to return to.
       canPop: false,
       child: Scaffold(
         backgroundColor: TaColors.background,
@@ -45,27 +56,27 @@ class ReceiptScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 20),
-                const Center(child: ReceiptSuccessCheck()),
-                const SizedBox(height: 16),
-                Text(
-                  AppLocale.thankYou.tr,
-                  style: TaTextStyles.displayLarge,
-                  textAlign: TextAlign.center,
+                Expanded(
+                  child: SingleChildScrollView(
+                    // Rebuilt when the rating lands, not on every tick.
+                    child: GetBuilder<ReceiptLogic>(
+                      builder: (logic) => ReceiptSummary(
+                        booking: logic.state.booking,
+                        stars: logic.state.stars,
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  AppLocale.tripCompleteReceiptSent.tr,
-                  style: TaTextStyles.bodyMedium
-                      .copyWith(color: TaColors.textSecondary),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ReceiptCard(booking: booking, stars: logic.state.stars),
-                const Spacer(),
-                TaButton(
-                  label: AppLocale.backToHome.tr,
-                  onTap: logic.backToHome,
+                const SizedBox(height: 12),
+                GetBuilder<ReceiptLogic>(
+                  id: ReceiptUpdate.countdown,
+                  builder: (logic) => TaButton(
+                    label: '${AppLocale.backToHome.tr} · '
+                        '${AppLocale.secondsShort.trParams({
+                          'count': '${logic.state.secondsLeft}'
+                        })}',
+                    onTap: logic.backToHome,
+                  ),
                 ),
                 const SizedBox(height: 10),
                 TaButton(
@@ -77,6 +88,123 @@ class ReceiptScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The page above the buttons: the thank-you, the amount paid, the trip, and
+/// the invoice details. Rows the backend did not fill are dropped rather
+/// than shown empty.
+class ReceiptSummary extends StatelessWidget {
+  const ReceiptSummary({super.key, required this.booking, required this.stars});
+
+  final Data? booking;
+
+  /// Null until rated, and when the rating was skipped.
+  final int? stars;
+
+  @override
+  Widget build(BuildContext context) {
+    final payment = booking?.payment;
+    final amount = feeAmount(payment?.amount);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 4),
+        const Center(child: ReceiptSuccessCheck()),
+        const SizedBox(height: 12),
+        Text(
+          AppLocale.thankYou.tr,
+          style: TaTextStyles.headlineLarge,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          AppLocale.tripComplete.tr,
+          style:
+              TaTextStyles.bodyMedium.copyWith(color: TaColors.textSecondary),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 16),
+
+        /// Money fails loudly: an amount the backend did not send, or sent
+        /// unparseably, is said to be unavailable rather than shown as a
+        /// number — and nothing is called "Paid" without one.
+        if (amount != null) ...[
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              amount,
+              maxLines: 1,
+              style: TaTextStyles.displayLarge.copyWith(
+                fontSize: 36,
+                color: TaColors.textPrimary,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: TaBadge(
+              label: receiptPaidLabel(payment),
+              icon: const Icon(Icons.check_circle),
+            ),
+          ),
+        ] else
+          Text(
+            AppLocale.fareUnavailable.tr,
+            textAlign: TextAlign.center,
+            style: TaTextStyles.bodyMedium.copyWith(color: TaColors.error),
+          ),
+        const SizedBox(height: 16),
+        TaTripCard(
+          pickupLabel: AppLocale.pickup.tr,
+          pickup: feeDisplayValue(booking?.startAddress),
+          dropOffLabel: AppLocale.destination.tr,
+          dropOff: feeOptionalValue(booking?.endAddress),
+          noDropOffText: AppLocale.noDropOffMeter.tr,
+        ),
+        const SizedBox(height: 10),
+        ReceiptCard(booking: booking, stars: stars),
+      ],
+    );
+  }
+}
+
+/// Invoice, date and the passenger's rating, each under its own label.
+class ReceiptCard extends StatelessWidget {
+  const ReceiptCard({super.key, required this.booking, required this.stars});
+
+  final Data? booking;
+  final int? stars;
+
+  @override
+  Widget build(BuildContext context) {
+    final invoice = receiptInvoice(booking?.payment);
+    final rating = receiptRating(stars);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: TaColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: TaColors.border),
+      ),
+      child: Column(
+        children: [
+          if (invoice != null)
+            TaKVRow(label: AppLocale.invoice.tr, value: invoice),
+          TaKVRow(
+            label: AppLocale.dateTime.tr,
+            value: feeDateTime(booking?.startTime),
+          ),
+
+          /// Skipping leaves the row out rather than claiming a score the
+          /// passenger never gave.
+          if (rating != null)
+            TaKVRow(label: AppLocale.yourRating.tr, value: rating),
+        ],
       ),
     );
   }
@@ -111,64 +239,13 @@ class _ReceiptSuccessCheckState extends State<ReceiptSuccessCheck>
         curve: const Cubic(0.2, 0.9, 0.3, 1.2),
       ),
       child: Container(
-        width: 96,
-        height: 96,
+        width: 72,
+        height: 72,
         decoration: const BoxDecoration(
           color: TaColors.successBg,
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.check, size: 48, color: TaColors.success),
-      ),
-    );
-  }
-}
-
-/// Invoice, rating, destination + amount, and the payment row — all from
-/// existing trip data (roadmap C7 Done When). Rows the backend did not fill
-/// are dropped rather than shown empty.
-class ReceiptCard extends StatelessWidget {
-  const ReceiptCard({super.key, required this.booking, required this.stars});
-
-  final Data? booking;
-  final int? stars;
-
-  @override
-  Widget build(BuildContext context) {
-    final payment = booking?.payment;
-    final invoice = receiptInvoice(payment);
-    final rating = receiptRating(stars);
-    final amount = feeAmount(payment?.amount);
-    final method = payment?.paymentMethod?.toString().trim();
-
-    return TaCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (invoice != null)
-            TaKVRow(
-              label: invoice,
-              // Skipping the rating leaves this row's value empty rather than
-              // claiming a score the passenger never gave.
-              value: rating ?? '—',
-            ),
-          TaKVRow(
-            label: feeDisplayValue(booking?.endAddress),
-
-            /// Money fails loudly, but a `TaKVRow` value is a short
-            /// pre-formatted string — the explanation goes below the card
-            /// rather than being stuffed into the row, which overflows it.
-            value: amount ?? '—',
-          ),
-          if (method != null && method.isNotEmpty && method != 'null')
-            TaKVRow(label: method, value: AppLocale.paid.tr),
-          if (amount == null) ...[
-            const SizedBox(height: 10),
-            Text(
-              AppLocale.fareUnavailable.tr,
-              style: TaTextStyles.bodySmall.copyWith(color: TaColors.error),
-            ),
-          ],
-        ],
+        child: const Icon(Icons.check, size: 36, color: TaColors.success),
       ),
     );
   }

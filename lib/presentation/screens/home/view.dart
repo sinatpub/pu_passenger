@@ -92,7 +92,7 @@ for (final vehicle in vehicles)
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'TAARRAA',
+              AppConstant.titleApp,
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
@@ -103,7 +103,7 @@ for (final vehicle in vehicles)
               final isEn =
                   appLogic.languageKeyCode.value == AppConstant.englishCode;
               const kmWord = TextSpan(
-                text: 'តារា',
+                text: AppConstant.titleAppKhmer,
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w800,

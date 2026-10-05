@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
+import 'package:com.tara.passenger/core/resources/asset_resource.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 
@@ -52,7 +53,7 @@ class ContactUsPage extends StatelessWidget {
               const Center(child: ContactLogoBadge()),
               const SizedBox(height: 12),
               Text(
-                AppLocale.taarraaPhnomPenh.tr,
+                AppLocale.brandPhnomPenh.tr,
                 textAlign: TextAlign.center,
                 style: TaTextStyles.bodySmall
                     .copyWith(color: TaColors.textSecondary),
@@ -83,7 +84,7 @@ class ContactUsPage extends StatelessWidget {
               ),
               const SizedBox(height: 18),
               Text(
-                '© 2025 TAARRAA. All rights reserved.',
+                '© 2025 PU Taxi. All rights reserved.',
                 textAlign: TextAlign.center,
                 style: TaTextStyles.bodySmall
                     .copyWith(color: TaColors.textMuted),
@@ -105,16 +106,12 @@ class ContactLogoBadge extends StatelessWidget {
     return Container(
       width: 72,
       height: 72,
-      alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [TaColors.primary, TaColors.primaryLight],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(22),
       ),
-      child: const Icon(Icons.star, size: 36, color: Colors.white),
+      // The PU Taxi mark — the launcher icon, as on the splash.
+      child: Image.asset(ImageAssets.brandMark, fit: BoxFit.cover),
     );
   }
 }

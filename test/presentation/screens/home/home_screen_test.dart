@@ -8,6 +8,8 @@ import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/home/view.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -93,8 +95,36 @@ void main() {
 
       expect(find.byType(TaVehicleRow), findsOneWidget);
       expect(find.text('Rickshaw'), findsOneWidget);
+      // The row shows the vehicle's drawing, not the grey placeholder car.
+      expect(
+        find.descendant(
+          of: find.byType(TaVehicleRow),
+          matching: find.byType(SvgPicture),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.directions_car), findsNothing);
       expect(find.textContaining('1,500'), findsWidgets); // pricePerKm / priceFrom
       expect(find.textContaining('2 min'), findsWidgets); // ETA
+    });
+
+    testWidgets('the header carries the PU Taxi name, in Khmer too',
+        (tester) async {
+      homeLogic.state.isLoading = RxStatus.success();
+      homeLogic.update();
+      await tester.pumpWidget(GetMaterialApp(home: HomeScreen()));
+      await tester.pump();
+
+      expect(find.text('PU TAXI'), findsOneWidget);
+      expect(find.textContaining('TAARRAA'), findsNothing);
+      // English: the tagline alone.
+      expect(find.textContaining('ពូ តាក់ស៊ី', findRichText: true),
+          findsNothing);
+
+      Get.find<AppLogic>().languageKeyCode.value = AppConstant.khmerCode;
+      await tester.pump();
+      expect(find.textContaining('ពូ តាក់ស៊ី', findRichText: true),
+          findsOneWidget);
     });
 
     testWidgets('error → skeleton rows (toast fired separately by logic)',

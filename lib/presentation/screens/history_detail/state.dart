@@ -6,5 +6,11 @@ class HistoryDetailState {
   bool isLoading = false;
   Set<Marker> markers = {};
   Set<Polyline> polyline = {};
-  BitmapDescriptor? driverBitMarker;
+
+  GoogleMapController? mapController;
+
+  /// The pins for the two ends of the trip — the same images the booking map
+  /// uses for a pickup and a drop-off.
+  BitmapDescriptor? pickupIcon;
+  BitmapDescriptor? dropOffIcon;
 }

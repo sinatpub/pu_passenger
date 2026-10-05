@@ -16,8 +16,6 @@ import 'package:com.tara.passenger/presentation/screens/login/binding.dart';
 import 'package:com.tara.passenger/presentation/screens/login/view.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/binding.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/view.dart';
-import 'package:com.tara.passenger/presentation/screens/rating/binding.dart';
-import 'package:com.tara.passenger/presentation/screens/rating/view.dart';
 import 'package:com.tara.passenger/presentation/screens/receipt/binding.dart';
 import 'package:com.tara.passenger/presentation/screens/receipt/view.dart';
 import 'package:com.tara.passenger/presentation/screens/otp/binding.dart';
@@ -51,7 +49,6 @@ abstract class AppRoutes {
   static const MYBOOKING = '/my_booking';
   static const CALCULATEFEE = '/calculatefee';
   // C7 — the only routes the redesign adds (new screens, 03 Screen 11/12).
-  static const RATING = '/rating';
   static const RECEIPT = '/receipt';
   static const WHERETOGO = "/wheretogo";
   static const DRAGMAP = "/dragMap";
@@ -113,11 +110,6 @@ class AppPages {
       name: AppRoutes.CALCULATEFEE,
       page: () => const CalculateFeeScreen(),
       binding: CalculateFeeBinding(),
-    ),
-    GetPage(
-      name: AppRoutes.RATING,
-      page: () => const RatingScreen(),
-      binding: RatingBinding(),
     ),
     GetPage(
       name: AppRoutes.RECEIPT,

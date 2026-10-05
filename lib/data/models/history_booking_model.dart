@@ -253,11 +253,11 @@ class Vehicle {
     this.vehicleImage,
   });
   static const Map<int, String> _vehicleTypeMap = {
-    1: 'Rickshaw',
+    1: 'Tuk Tuk',
     2: 'Classic Car',
     3: 'Mini Van',
-    4: 'SUV Car',
-    5: 'ALPHARD VIP',
+    4: 'SUV',
+    5: 'Alphard VIP',
   };
 
   String get vehicleTypeName {

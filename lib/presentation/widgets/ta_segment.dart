@@ -15,11 +15,17 @@ class TaSegment extends StatelessWidget {
     required this.options,
     required this.selectedIndex,
     this.onChanged,
+    this.expanded = false,
   });
 
   final List<String> options;
   final int selectedIndex;
   final ValueChanged<int>? onChanged;
+
+  /// Shares the width it is given equally between the options — the history
+  /// tabs — instead of hugging the labels, which leaves an empty track when
+  /// the control is stretched.
+  final bool expanded;
 
   @override
   Widget build(BuildContext context) {
@@ -30,34 +36,41 @@ class TaSegment extends StatelessWidget {
         borderRadius: BorderRadius.circular(99),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: expanded ? MainAxisSize.max : MainAxisSize.min,
         children: [
           for (var i = 0; i < options.length; i++) ...[
             if (i > 0) const SizedBox(width: 2),
-            TaPressable(
-              onTap: onChanged == null ? null : () => onChanged!(i),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: selectedIndex == i ? TaColors.surface : Colors.transparent,
-                  borderRadius: BorderRadius.circular(99),
-                  boxShadow: selectedIndex == i ? TaShadows.shadowSm : null,
-                ),
-                child: Text(
-                  options[i],
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: selectedIndex == i
-                        ? TaColors.textPrimary
-                        : TaColors.textSecondary,
-                  ),
-                ),
-              ),
-            ),
+            if (expanded) Expanded(child: _option(i)) else _option(i),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _option(int i) {
+    return TaPressable(
+      onTap: onChanged == null ? null : () => onChanged!(i),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        alignment: expanded ? Alignment.center : null,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: selectedIndex == i ? TaColors.surface : Colors.transparent,
+          borderRadius: BorderRadius.circular(99),
+          boxShadow: selectedIndex == i ? TaShadows.shadowSm : null,
+        ),
+        child: Text(
+          options[i],
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: selectedIndex == i
+                ? TaColors.textPrimary
+                : TaColors.textSecondary,
+          ),
+        ),
       ),
     );
   }

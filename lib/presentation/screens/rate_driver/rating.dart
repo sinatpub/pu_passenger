@@ -15,9 +15,14 @@
 ///
 /// **Superseded 2026-09-19 (roadmap C7, confirmed by the user):** the
 /// "no thank-you screen" half no longer holds. The redesign's Screen 12
-/// (Receipt) *is* that screen, and the chain is now
-/// `Fee → Rating → Receipt → Home`. Only the navigation changed — every rule
-/// below still governs, and `screens/rating/` consumes them unmodified.
+/// (Receipt) *is* that screen, and the chain became
+/// `Fee → Rating → Receipt → Home`.
+///
+/// **Superseded again (user decision):** the rating is no longer a page. It
+/// is a dialog the Thank you page opens over itself, so the chain is
+/// `Fee → Thank you → Home`, and the Thank you page returns home on its own
+/// after a minute. Only the navigation changed — every rule below still
+/// governs, and `screens/rating/` consumes them unmodified.
 library;
 
 const int kMinStars = 1;

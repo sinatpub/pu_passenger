@@ -47,9 +47,10 @@ class MapBottomSheet extends StatelessWidget {
 
           // `paddingOf` drops to zero while the keyboard is up, so the home
           // indicator inset only applies when it is actually exposed.
+          // No grab handle: the sheet does not drag, so it does not offer to.
           final padding = EdgeInsets.fromLTRB(
             20.d,
-            12.d,
+            20.d,
             20.d,
             24.d + MediaQuery.paddingOf(context).bottom,
           );
@@ -78,8 +79,6 @@ class MapBottomSheet extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Center(child: TaGrabHandle()),
-                    SizedBox(height: 12.d),
                     _RouteCard(logic: logic),
                     if (hasDestination) ...[
                       SizedBox(height: 8.d),
@@ -146,7 +145,7 @@ class MapBottomSheet extends StatelessWidget {
         });
   }
 
-  /// "Book Rickshaw", plus the estimate once there is a route to price.
+  /// "Book Tuk Tuk", plus the estimate once there is a route to price.
   static String _bookLabel(MapLogic logic, SingleVehical? vehicle) {
     if (vehicle == null) return AppLocale.bookingNow.tr;
     final label =

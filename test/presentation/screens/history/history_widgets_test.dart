@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 
-import 'package:com.tara.passenger/core/utils/history_cell_data.dart';
 import 'package:com.tara.passenger/core/utils/status_util.dart';
 import 'package:com.tara.passenger/data/models/history_booking_model.dart';
+import 'package:com.tara.passenger/data/models/vehical_model.dart';
+import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/history/widgets/history_tab.dart';
 import 'package:com.tara.passenger/presentation/screens/history_detail/view.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
@@ -18,18 +20,23 @@ Datum _trip({
   String? endAddress = 'Aeon Mall',
   String? amount = '12000',
   String? method = 'Cash',
+  int? vehicleTypeId = 2,
+  String? duration = '18 mins 20 seconds',
 }) =>
     Datum(
       status: status,
       createdAt: '2026-09-11T09:41:00',
       startAddress: 'No. 128, St. 271',
       endAddress: endAddress,
-      driver: Driver(name: 'Sok Dara'),
+      driver: Driver(
+        name: 'Sok Dara',
+        vehicle: Vehicle(typeVehicleId: vehicleTypeId),
+      ),
       payment: Payment(
         invoiceId: 2041,
         amount: amount,
-        distance: '6.1 km',
-        duration: '18',
+        distance: '6.14 km',
+        duration: duration,
         paymentMethod: method,
       ),
     );
@@ -62,28 +69,89 @@ void main() {
   tearDown(() => Get.reset());
 
   group('HistoryRow (03 §Screen 13)', () {
-    testWidgets('renders the compact card with formatted trip data',
+    testWidgets('a completed trip: when, what it cost, who drove, how far',
         (tester) async {
       await _pump(tester, HistoryRow(data: _trip()));
 
-      final card = tester.widget<TaHistoryCard>(find.byType(TaHistoryCard));
-      expect(card.item.invoice, 'INV-2041');
-      expect(card.item.driver, 'Sok Dara');
-      expect(card.item.amount, '12,000 ${AppLocale.khmerCurrency}');
-      expect(card.isCompleted, isTrue);
-      expect(card.statusLabel, AppLocale.completed);
+      expect(find.textContaining('11 Sep'), findsOneWidget);
+      expect(find.text('12,000 ${AppLocale.khmerCurrency}'), findsOneWidget);
+      expect(find.text('Classic Car · Sok Dara'), findsOneWidget);
+      expect(find.text('No. 128, St. 271'), findsOneWidget);
+      expect(find.text('Aeon Mall'), findsOneWidget);
+      expect(find.text('6.1 km · 18 min'), findsOneWidget);
     });
 
-    testWidgets('a cancelled trip gets the error badge and its own label',
+    testWidgets('the vehicle is drawn, and the invoice and status are not '
+        'on the card', (tester) async {
+      await _pump(tester, HistoryRow(data: _trip()));
+
+      expect(find.byType(SvgPicture), findsOneWidget);
+      // The invoice is on the detail page; the tab already says Completed.
+      expect(find.textContaining('INV-'), findsNothing);
+      expect(find.byType(TaBadge), findsNothing);
+      expect(find.text(AppLocale.completed), findsNothing);
+    });
+
+    testWidgets('a cancelled trip shows no fare and no distance',
         (tester) async {
       await _pump(
         tester,
         HistoryRow(data: _trip(status: BookingStatus.cancel)),
       );
 
+      expect(find.textContaining(AppLocale.khmerCurrency), findsNothing);
+      expect(find.textContaining('km'), findsNothing);
+      expect(find.text(AppLocale.cancelled), findsNothing);
+      // What was booked is still there.
+      expect(find.text('Classic Car · Sok Dara'), findsOneWidget);
+      expect(find.text('Aeon Mall'), findsOneWidget);
+    });
+
+    testWidgets('a completed trip with no fare says it is missing, not zero',
+        (tester) async {
+      await _pump(tester, HistoryRow(data: _trip(amount: null)));
+
       final card = tester.widget<TaHistoryCard>(find.byType(TaHistoryCard));
-      expect(card.isCompleted, isFalse);
-      expect(card.statusLabel, AppLocale.cancelled);
+      expect(card.item.fare, '—');
+    });
+
+    testWidgets('a booking with no vehicle yet gets the neutral car',
+        (tester) async {
+      await _pump(
+        tester,
+        HistoryRow(
+          data: _trip(status: BookingStatus.cancel, vehicleTypeId: null),
+        ),
+      );
+
+      expect(find.byType(SvgPicture), findsNothing);
+      expect(find.byIcon(Icons.directions_car), findsOneWidget);
+      expect(find.text('Sok Dara'), findsOneWidget);
+    });
+
+    testWidgets('the vehicle is named as Home names it today', (tester) async {
+      final home = _HomeLogicHarness()
+        ..state.vehicleAllType = VehicalTypeEntities(
+          data: [
+            SingleVehical(
+              id: 2,
+              name: 'Sedan',
+              price: 1500,
+              orderKey: 2,
+              miniMunFare: 6000,
+              image: null,
+              createdAt: DateTime(2026),
+              updatedAt: DateTime(2026),
+            ),
+          ],
+          message: '',
+          status: true,
+        );
+      Get.put<HomeLogic>(home);
+
+      await _pump(tester, HistoryRow(data: _trip()));
+
+      expect(find.text('Sedan · Sok Dara'), findsOneWidget);
     });
 
     testWidgets('tapping anywhere on the card opens the detail screen',
@@ -121,7 +189,7 @@ void main() {
       expect(find.text('Aeon Mall'), findsOneWidget);
     });
 
-    testWidgets('drops the row entirely when there is no destination',
+    testWidgets('a cancelled trip with no destination drops the row',
         (tester) async {
       await _pump(
         tester,
@@ -133,8 +201,44 @@ void main() {
       final card = tester.widget<TaHistoryCard>(find.byType(TaHistoryCard));
       expect(card.item.to, isNull);
       expect(find.text(AppLocale.unKnown), findsNothing);
+      expect(find.text(AppLocale.noDropOffMeter), findsNothing);
       // The pickup still renders.
       expect(find.text('No. 128, St. 271'), findsOneWidget);
+    });
+
+    testWidgets('a completed trip with no destination was a metered trip',
+        (tester) async {
+      await _pump(tester, HistoryRow(data: _trip(endAddress: null)));
+
+      expect(find.text(AppLocale.noDropOffMeter), findsOneWidget);
+    });
+
+    testWidgets('long addresses fit a narrow phone on one line each',
+        (tester) async {
+      tester.view.physicalSize = const Size(320, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      await _pump(
+        tester,
+        HistoryRow(
+          data: Datum(
+            status: BookingStatus.completed,
+            createdAt: '2026-09-11T09:41:00',
+            startAddress:
+                'Independence Monument, Chamkar Mon, Phnom Penh, Cambodia',
+            endAddress:
+                'Phnom Penh International Airport, Pou Senchey, Phnom Penh',
+            driver: Driver(
+              name: 'A Driver With A Rather Long Name',
+              vehicle: Vehicle(typeVehicleId: 5),
+            ),
+            payment: Payment(amount: '1234500', distance: '10.25 km'),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
     });
   });
 
@@ -161,45 +265,178 @@ void main() {
   });
 
   group('HistoryDetailCard (03 §Screen 14)', () {
-    testWidgets('uses the same formatters as the list', (tester) async {
-      final trip = _trip();
-      await _pump(tester, HistoryDetailCard(data: trip));
+    Datum detailed({
+      int? status = BookingStatus.completed,
+      String? amount = '19900',
+      String? method = 'Wallet',
+      String? endAddress = 'Phnom Penh International Airport',
+      bool withDriver = true,
+    }) =>
+        Datum(
+          status: status,
+          createdAt: '2026-10-05T14:59:00',
+          startAddress: 'Independence Monument',
+          endAddress: endAddress,
+          driver: withDriver
+              ? Driver(
+                  name: 'Dara Sok',
+                  vehicle: Vehicle(
+                    typeVehicleId: 2,
+                    manufacturer: 'Toyota',
+                    model: 'Prius',
+                    color: 'White',
+                    plateNumber: '2AB-1234',
+                  ),
+                )
+              : null,
+          payment: Payment(
+            invoiceId: 70000,
+            amount: amount,
+            distance: '10.25 km',
+            duration: '27 mins 57 seconds',
+            paymentMethod: method,
+          ),
+        );
 
-      final item = historyCellData(trip);
-      expect(find.text(item.invoice), findsOneWidget);
-      expect(find.text(item.amount), findsOneWidget);
-      expect(find.text('${item.driver} · ${item.date}'), findsOneWidget);
-    });
+    testWidgets('a completed trip leads with the fare, marked paid',
+        (tester) async {
+      await _pump(tester, HistoryDetailCard(data: detailed()));
 
-    testWidgets('shows the completed badge and the paid row', (tester) async {
-      await _pump(tester, HistoryDetailCard(data: _trip()));
-
+      final fare = find.text('19,900 ${AppLocale.khmerCurrency}');
+      expect(fare, findsOneWidget);
       final badge = tester.widget<TaBadge>(find.byType(TaBadge));
       expect(badge.variant, TaBadgeVariant.success);
-      expect(find.text(AppLocale.paid), findsOneWidget);
+      expect(badge.label, '${AppLocale.paid} · Wallet');
+      expect(
+        tester.getRect(fare).bottom,
+        lessThan(tester.getRect(find.byType(TaDriverCard)).top),
+      );
     });
 
-    testWidgets('a cancelled trip gets the error badge and no destination row',
+    testWidgets('the driver card names the car and carries its plate',
         (tester) async {
+      await _pump(tester, HistoryDetailCard(data: detailed()));
+
+      final card = tester.widget<TaDriverCard>(find.byType(TaDriverCard));
+      expect(card.name, 'Dara Sok');
+      expect(card.vehicleInfo, 'Toyota Prius · White');
+      expect(card.plateNumber, '2AB-1234');
+    });
+
+    testWidgets('route and record: rounded distance and time, labelled invoice',
+        (tester) async {
+      await _pump(tester, HistoryDetailCard(data: detailed()));
+
+      final trip = tester.widget<TaTripCard>(find.byType(TaTripCard));
+      expect(trip.pickup, 'Independence Monument');
+      expect(trip.dropOff, 'Phnom Penh International Airport');
+
+      expect(find.text('5 Oct 2026, 2:59 PM'), findsOneWidget);
+      expect(find.text('10.3 km'), findsOneWidget);
+      expect(find.text('28 min'), findsOneWidget);
+      expect(find.text(AppLocale.invoice), findsOneWidget);
+      expect(find.text('INV-70000'), findsOneWidget);
+    });
+
+    testWidgets('no payment method: plain "Paid", nothing invented',
+        (tester) async {
+      await _pump(tester, HistoryDetailCard(data: detailed(method: null)));
+
+      expect(tester.widget<TaBadge>(find.byType(TaBadge)).label,
+          AppLocale.paid);
+    });
+
+    testWidgets('a completed trip with no fare says so and is not called paid',
+        (tester) async {
+      await _pump(tester, HistoryDetailCard(data: detailed(amount: null)));
+
+      expect(find.text(AppLocale.fareUnavailable), findsOneWidget);
+      expect(find.byType(TaBadge), findsNothing);
+    });
+
+    // The page this replaced showed "<method> · Paid" for any trip that had a
+    // payment method, cancelled ones included.
+    testWidgets('a cancelled trip is never called paid', (tester) async {
       await _pump(
         tester,
         HistoryDetailCard(
-          data: _trip(status: BookingStatus.cancel, endAddress: null),
+          data: detailed(status: BookingStatus.cancel, amount: '0'),
         ),
       );
 
       final badge = tester.widget<TaBadge>(find.byType(TaBadge));
       expect(badge.variant, TaBadgeVariant.error);
-
-      final rows =
-          tester.widgetList<TaAddressRow>(find.byType(TaAddressRow)).toList();
-      expect(rows, hasLength(1));
-      expect(rows.single.type, TaAddressType.pickup);
+      expect(badge.label, AppLocale.cancelled);
+      expect(find.textContaining(AppLocale.paid), findsNothing);
+      expect(find.text(AppLocale.noFareCharged), findsOneWidget);
+      expect(find.textContaining(AppLocale.khmerCurrency), findsNothing);
+      // No distance or duration for a trip that did not happen.
+      expect(find.text(AppLocale.distance), findsNothing);
+      expect(find.text(AppLocale.duration), findsNothing);
     });
 
-    testWidgets('no payment method drops the paid row', (tester) async {
-      await _pump(tester, HistoryDetailCard(data: _trip(method: null)));
-      expect(find.text(AppLocale.paid), findsNothing);
+    testWidgets('a cancelled trip the record did charge for shows the charge',
+        (tester) async {
+      await _pump(
+        tester,
+        HistoryDetailCard(
+          data: detailed(status: BookingStatus.cancel, amount: '2000'),
+        ),
+      );
+
+      expect(find.text('2,000 ${AppLocale.khmerCurrency}'), findsOneWidget);
+      expect(find.text(AppLocale.noFareCharged), findsNothing,
+          reason: 'the page does not say "no fare" over an amount');
+      expect(find.text(AppLocale.cancelled), findsOneWidget);
+    });
+
+    testWidgets('a trip cancelled before a driver took it has no driver card '
+        'and no drop-off row', (tester) async {
+      await _pump(
+        tester,
+        HistoryDetailCard(
+          data: detailed(
+            status: BookingStatus.cancel,
+            amount: null,
+            endAddress: null,
+            withDriver: false,
+          ),
+        ),
+      );
+
+      expect(find.byType(TaDriverCard), findsNothing);
+      expect(tester.widget<TaTripCard>(find.byType(TaTripCard)).dropOff,
+          isNull);
+      expect(find.text(AppLocale.noDropOffMeter), findsNothing);
+      expect(find.text(AppLocale.unKnown), findsNothing);
+    });
+
+    testWidgets('a completed trip with no drop-off was a metered trip',
+        (tester) async {
+      await _pump(tester, HistoryDetailCard(data: detailed(endAddress: null)));
+
+      expect(find.text(AppLocale.noDropOffMeter), findsOneWidget);
+    });
+
+    testWidgets('the vehicle type is named as the caller names it when the '
+        'record has no model', (tester) async {
+      await _pump(
+        tester,
+        HistoryDetailCard(
+          data: Datum(
+            status: BookingStatus.completed,
+            driver: Driver(
+              name: 'Dara Sok',
+              vehicle: Vehicle(typeVehicleId: 2, color: 'White'),
+            ),
+            payment: Payment(amount: '5000'),
+          ),
+          vehicleName: 'Sedan',
+        ),
+      );
+
+      expect(tester.widget<TaDriverCard>(find.byType(TaDriverCard)).vehicleInfo,
+          'Sedan · White');
     });
 
     testWidgets('an empty payload renders without throwing', (tester) async {
@@ -207,4 +444,15 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+}
+
+// ignore: must_call_super
+class _HomeLogicHarness extends HomeLogic {
+  @override
+  // ignore: must_call_super
+  Future<void> onInit() async {}
+
+  @override
+  // ignore: must_call_super
+  Future<void> onReady() async {}
 }

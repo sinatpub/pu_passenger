@@ -7,9 +7,9 @@ import 'package:com.tara.passenger/mock/mock_models.dart';
 import 'package:com.tara.passenger/mock/mock_mode.dart';
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/calculate_fee/logic.dart';
+import 'package:com.tara.passenger/presentation/shared/ride_dialogs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 import 'package:logger/logger.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
@@ -285,7 +285,7 @@ PassengerSocketService._internal();
       SocketEvent.driverAcceptPayment: (data) =>
           _handleDriverAcceptedPayment(context, data),
       // P-15 (docs/12) — re-enabled 2026-09-03. Was dead: the handler and
-      // its user-facing panel (ShowInfoWidget, wired in main.dart) already
+      // its user-facing panel (now `presentDriverCancelled`) already
       // existed; only this registration was commented out, so a
       // driver-initiated mid-trip cancellation reached the passenger only
       // via the 10s poll or a push notification (docs/08 H-7).
@@ -427,9 +427,6 @@ PassengerSocketService._internal();
   /// rather than removed.
   void _handleOnDriverCancel(BuildContext context, dynamic data) {
     emitEvent(SocketEvent.onDriverCancel, null);
-    if (data != null) {
-      EasyLoading.showInfo("", duration: const Duration(seconds: 8));
-      Get.offAllNamed(AppRoutes.BOTTOMNAV);
-    }
+    if (data != null) presentDriverCancelled();
   }
 }

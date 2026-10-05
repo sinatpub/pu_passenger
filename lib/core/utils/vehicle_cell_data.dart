@@ -1,8 +1,10 @@
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
+import 'package:com.tara.passenger/core/utils/vehicle_art.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_seat_capacity.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:com.tara.passenger/presentation/widgets/ta_vehicle_row.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
+import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 
 /// Masks a [SingleVehical] model into the presentational [VehicleData] the
@@ -12,7 +14,8 @@ import 'package:get/get.dart';
 /// Formatting lives here so the Home list and the Map sheet cannot drift:
 /// price per km / "from" use today's formatter + KHR currency (PDD-01, D15
 /// superseded), and the ETA is the deterministic `formatEtaMinutes` estimate
-/// because the backend exposes no per-vehicle ETA.
+/// because the backend exposes no per-vehicle ETA. The art is the app's own
+/// drawing for the vehicle type (`vehicle_art.dart`).
 VehicleData vehicleCellData(SingleVehical vehicle) {
   final pricePerKm = '${vehicle.price.toMoneyFormat()} '
       '${AppLocale.khmerCurrency.tr}/km';
@@ -20,6 +23,7 @@ VehicleData vehicleCellData(SingleVehical vehicle) {
       ? 'from —'
       : 'from ${vehicle.miniMunFare!.toMoneyFormat()} '
           '${AppLocale.khmerCurrency.tr}';
+  final art = vehicleArtAsset(vehicle.id);
   return VehicleData(
     name: vehicle.name,
     seats: '${seatCapacityForVehicleId(vehicle.id)} '
@@ -27,5 +31,6 @@ VehicleData vehicleCellData(SingleVehical vehicle) {
     pricePerKm: pricePerKm,
     priceFrom: priceFrom,
     eta: formatEtaMinutes(vehicle.id),
+    art: art == null ? null : SvgPicture.asset(art),
   );
 }

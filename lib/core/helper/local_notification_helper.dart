@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import '../utils/app_constant.dart';
 import '../utils/pretty_logger.dart';
 import '../utils/status_util.dart';
 
@@ -11,9 +10,12 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 class NotificationLocal {
   static final notifications = FlutterLocalNotificationsPlugin();
   static const AndroidNotificationChannel channel = AndroidNotificationChannel(
-    '${AppConstant.titleApp} Notification V2',
-    '${AppConstant.titleApp} Taxi',
-    description: 'Channel for ${AppConstant.titleApp} notifications',
+    // Channel id is persisted by Android per install; keep it stable across
+    // the rename so existing passengers keep their sound and importance
+    // settings.
+    'TAARRAA Notification V2',
+    'PU Taxi',
+    description: 'Channel for PU Taxi notifications',
     importance: Importance.high,
     playSound: true,
     sound: RawResourceAndroidNotificationSound('booking_sound'),

@@ -18,6 +18,7 @@ import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/map_presentation.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/driver_info_sheet.dart';
+import 'package:com.tara.passenger/presentation/shared/ride_dialogs.dart';
 import 'package:com.tara.passenger/services/location_imp.dart';
 import 'package:com.tara.passenger/services/booking_session.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
@@ -36,12 +37,16 @@ import '../../../core/resources/asset_resource.dart';
 /// of Done (`.agent/RULES.md`) rules out ad hoc `EasyLoading` calls inside a
 /// controller, and a direct call also makes every failure path untestable
 /// without a MaterialApp.
-typedef BookingErrorPresenter = Future<void> Function(String userMessage);
+///
+/// Completes with whether the passenger asked to try again.
+typedef BookingErrorPresenter = Future<bool> Function(BookingFailure failure);
 
-Future<void> _defaultBookingErrorPresenter(String userMessage) async {
-  EasyLoading.showError(userMessage);
-  await 1.delay();
-  EasyLoading.dismiss();
+/// The "Couldn't book your ride" dialog. With no screen to show it on there
+/// is nobody to ask, so nothing is retried.
+Future<bool> _defaultBookingErrorPresenter(BookingFailure failure) async {
+  final context = Get.context;
+  if (context == null) return false;
+  return showBookingFailedDialog(context, failure);
 }
 
 class MapLogic extends GetxController {
@@ -124,8 +129,13 @@ class MapLogic extends GetxController {
   @override
   void onInit() {
     var arg = Get.arguments;
-    if (arg != null) {
-      state.vehicleTypeId = arg?['vehicleId'];
+    if (arg is Map) {
+      final vehicleId = arg['vehicleId'];
+      if (vehicleId is int) state.vehicleTypeId = vehicleId;
+      // "Book again" after a driver cancelled carries the lost trip's
+      // drop-off; it is applied once the pickup is known.
+      final destination = arg['destination'];
+      if (destination is LatLng) state.pendingDestination = destination;
     }
     super.onInit();
   }
@@ -167,12 +177,19 @@ class MapLogic extends GetxController {
     update([MapUpdate.mapID]);
   }
 
+  /// The vehicle the map opened for — or, when it was opened without one
+  /// ("Where to?" on Home, "Book again"), the first type on offer. Without a
+  /// default the sheet had no vehicle, no chips to pick one from, and a Book
+  /// button that could never be pressed.
   void getVehicleTypeSelection() {
-    var vehicle = homeLogic.state.vehicleAllType?.data
-        .firstWhereOrNull((e) => e.id == (state.vehicleTypeId ?? 0));
+    final vehicles = homeLogic.state.vehicleAllType?.data ?? const [];
+    final vehicle =
+        vehicles.firstWhereOrNull((e) => e.id == state.vehicleTypeId) ??
+            vehicles.firstOrNull;
     if (vehicle != null) {
+      state.vehicleTypeId = vehicle.id;
       state.vehicleTypeSelection = vehicle;
-      update([MapUpdate.vehicleID]);
+      update([MapUpdate.mapID, MapUpdate.vehicleID]);
     }
   }
 
@@ -193,6 +210,15 @@ class MapLogic extends GetxController {
     EasyLoading.dismiss();
   }
 
+  /// Fills in the drop-off the map was opened with, once. It needs the
+  /// pickup first: the distance and the fare are measured from it.
+  void applyPendingDestination() {
+    final destination = state.pendingDestination;
+    if (destination == null || state.currentLatLng == null) return;
+    state.pendingDestination = null;
+    updateDestinationLocation(latLng: destination);
+  }
+
   void onCameraIdle() async {
     if (state.mapController == null) return;
     // 1. Get the center coordinates of the map
@@ -211,6 +237,9 @@ class MapLogic extends GetxController {
   void updateCurrentLatLng({required LatLng latLng}) async {
     state.currentLatLng = latLng;
     await getCurrentAddress();
+    // Whichever way the pickup became known — GPS, or the pin on the map
+    // when there is no GPS — a drop-off waiting for it can now be set.
+    applyPendingDestination();
   }
 
   Future<void> moveToCurrentLocation() async {
@@ -458,12 +487,18 @@ class MapLogic extends GetxController {
     update([MapUpdate.bookingID]);
   }
 
-  /// Terminal failure: drop the overlay and surface the reason.
-  Future<void> _failBooking(String logMessage) async {
+  /// The attempt failed: drop the overlay, tell the passenger, and send it
+  /// again if they ask. The draft is still in the session and the map's
+  /// state is untouched, so "Try again" is the same request.
+  Future<void> _failBooking(
+    String logMessage, {
+    BookingFailure failure = BookingFailure.requestFailed,
+  }) async {
     setBookingLoading(false);
     session.markFailed(logMessage);
     xPrettyLog(message: "requestBooking failed: $logMessage");
-    await _presentError(AppLocale.pleaseTryAgain.tr);
+    final retry = await _presentError(failure);
+    if (retry) await requestBooking();
   }
 
   /// P-08: restores the overlay from the session when this controller is
@@ -480,7 +515,10 @@ class MapLogic extends GetxController {
     if (session.isBusy || state.isBookingLoading) return;
 
     if (state.currentLatLng == null) {
-      await _failBooking("no current location");
+      await _failBooking(
+        "no current location",
+        failure: BookingFailure.noLocation,
+      );
       return;
     }
 

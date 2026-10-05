@@ -34,6 +34,19 @@ String feeDisplayValue(Object? value) {
   return text;
 }
 
+/// A value that is allowed to be absent — the drop-off of a trip booked
+/// without one — or null, so the caller can say so in its own words rather
+/// than show a dash.
+String? feeOptionalValue(Object? value) {
+  final text = value?.toString().trim();
+  if (text == null || text.isEmpty || text == 'null') return null;
+  return text;
+}
+
+/// The payment method the backend named, or null when it named none — the
+/// label is not invented.
+String? feePaymentMethod(Object? method) => feeOptionalValue(method);
+
 /// `start_time` arrives as `dynamic` and is not always the
 /// `yyyy-MM-dd HH:mm:ss` that `formatDateTime` demands — it can be null, a
 /// number, or an ISO string. The bare `formatDateTime(data.startTime)` this

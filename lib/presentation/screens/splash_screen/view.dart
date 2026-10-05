@@ -4,8 +4,9 @@ import 'package:get/get.dart';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/utils/motion.dart';
 import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
+import 'package:com.tara.passenger/core/resources/asset_resource.dart';
+import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/presentation/screens/splash_screen/logic.dart';
-import 'package:com.tara.passenger/translations/app_locale.dart';
 
 /// Screen 1 — Splash.
 ///
@@ -30,7 +31,7 @@ class SplashScreen extends StatelessWidget {
               const SplashLogoBadge(),
               const SizedBox(height: 16),
               Text(
-                'TAARRAA',
+                AppConstant.titleApp,
                 style: TaTextStyles.displayLarge.copyWith(
                   fontSize: 30,
                   letterSpacing: 3,
@@ -38,7 +39,7 @@ class SplashScreen extends StatelessWidget {
               ),
               const SizedBox(height: 2),
               Text(
-                AppLocale.taarraaTaxiSubtitle.tr,
+                AppConstant.titleAppKhmer,
                 style: TaTextStyles.titleMedium
                     .copyWith(color: TaColors.primary),
               ),
@@ -52,7 +53,7 @@ class SplashScreen extends StatelessWidget {
   }
 }
 
-/// The 96px gradient badge, popping in on open (`03 §Screen 1`).
+/// The 96px PU Taxi mark, popping in on open (`03 §Screen 1`).
 class SplashLogoBadge extends StatefulWidget {
   const SplashLogoBadge({super.key});
 
@@ -83,14 +84,8 @@ class _SplashLogoBadgeState extends State<SplashLogoBadge>
       child: Container(
         width: 96,
         height: 96,
-        alignment: Alignment.center,
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFFFF6A00), TaColors.primary, Color(0xFFE63E00)],
-            stops: [0, 0.6, 1],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
           borderRadius: BorderRadius.circular(28),
           boxShadow: [
             BoxShadow(
@@ -100,7 +95,8 @@ class _SplashLogoBadgeState extends State<SplashLogoBadge>
             ),
           ],
         ),
-        child: const Icon(Icons.star, size: 52, color: Colors.white),
+        // The launcher icon itself, so the splash matches the home screen.
+        child: Image.asset(ImageAssets.brandMark, fit: BoxFit.cover),
       ),
     );
   }

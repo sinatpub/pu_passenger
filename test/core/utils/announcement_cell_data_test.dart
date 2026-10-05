@@ -7,7 +7,9 @@ import 'package:com.tara.passenger/translations/app_locale.dart';
 void main() {
   group('displayIsoDate (shared by S1 history and S3 announcements)', () {
     test('formats an ISO timestamp', () {
-      expect(displayIsoDate('2026-09-11T09:41:00'), contains('2026'));
+      // One format app-wide: the fare page, history and announcements.
+      expect(displayIsoDate('2026-09-11T09:41:00'), '11 Sep 2026, 9:41 AM');
+      expect(displayIsoDate('2026-10-05T14:03:00'), '5 Oct 2026, 2:03 PM');
     });
 
     test('degrades rather than throwing', () {

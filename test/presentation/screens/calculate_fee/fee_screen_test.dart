@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:com.tara.passenger/data/models/request_booking_model.dart';
 import 'package:com.tara.passenger/presentation/screens/calculate_fee/calculate_fee_screen.dart';
 import 'package:com.tara.passenger/presentation/screens/calculate_fee/widgets/fee_card.dart';
+import 'package:com.tara.passenger/presentation/screens/calculate_fee/widgets/fee_waiting_banner.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 
@@ -13,6 +14,7 @@ Data _data({
   String? method = 'Cash',
   String? driverName = 'Sok Dara',
   String? vehicleName = 'Tuk-Tuk',
+  Vehicle? vehicle,
   String? distance = '6.1 km',
   String? duration = '18 min',
   String? startAddress = 'No. 128, St. 271',
@@ -24,7 +26,7 @@ Data _data({
     startAddress: startAddress,
     endAddress: endAddress,
     typeVehicle: TypeVehicle(name: vehicleName),
-    driver: Driver(name: driverName),
+    driver: Driver(name: driverName, vehicle: vehicle),
     payment: Payment(
       amount: amount,
       paymentMethod: method,
@@ -62,13 +64,32 @@ void main() {
       expect(card.plateNumber, isNull);
     });
 
-    testWidgets('renders the four KV rows', (tester) async {
+    testWidgets('names the car by model and colour when the booking has them',
+        (tester) async {
+      await _pump(
+        tester,
+        FeeCard(
+          data: _data(
+            vehicle: Vehicle(
+                manufacturer: 'Toyota', model: 'Prius', color: 'White'),
+          ),
+        ),
+      );
+
+      final card = tester.widget<TaDriverCard>(find.byType(TaDriverCard));
+      expect(card.vehicleInfo, 'Toyota Prius · White');
+    });
+
+    testWidgets('distance, duration and date — and no second "Vehicle" line',
+        (tester) async {
       await _pump(tester, FeeCard(data: _data()));
 
       expect(find.text('6.1 km'), findsOneWidget);
       expect(find.text('18 min'), findsOneWidget);
-      expect(find.text(AppLocale.vehicle), findsOneWidget);
-      expect(find.text(AppLocale.dateTime), findsOneWidget);
+      expect(find.text('11 Sep 2026, 9:41 AM'), findsOneWidget);
+      expect(find.text(AppLocale.vehicle), findsNothing);
+      // The vehicle is named once, under the driver.
+      expect(find.text('Tuk-Tuk'), findsOneWidget);
     });
 
     testWidgets('pickup and destination read their own fields', (tester) async {
@@ -76,14 +97,16 @@ void main() {
       // pickup line showed the destination.
       await _pump(tester, FeeCard(data: _data()));
 
-      final rows = tester
-          .widgetList<TaAddressRow>(find.byType(TaAddressRow))
-          .toList();
-      expect(rows, hasLength(2));
-      expect(rows[0].type, TaAddressType.pickup);
-      expect(rows[0].name, 'No. 128, St. 271');
-      expect(rows[1].type, TaAddressType.destination);
-      expect(rows[1].name, 'Aeon Mall Phnom Penh');
+      final trip = tester.widget<TaTripCard>(find.byType(TaTripCard));
+      expect(trip.pickup, 'No. 128, St. 271');
+      expect(trip.dropOff, 'Aeon Mall Phnom Penh');
+    });
+
+    testWidgets('a trip booked without a drop-off says so, not a dash',
+        (tester) async {
+      await _pump(tester, FeeCard(data: _data(endAddress: null)));
+
+      expect(find.text(AppLocale.noDropOffMeter), findsOneWidget);
     });
 
     testWidgets('a payload with nothing filled in degrades instead of crashing',
@@ -114,29 +137,42 @@ void main() {
     });
   });
 
-  group('FeeContent total box — money fails loudly', () {
-    testWidgets('renders the fare and the payment method in the label',
+  group('FeeContent fare — money fails loudly', () {
+    testWidgets('the fare leads the page, with the payment method under it',
         (tester) async {
       await _pump(tester, FeeContent(data: _data()));
 
-      final box = tester.widget<TaTotalBox>(find.byType(TaTotalBox));
-      expect(box.amount, '12,000 ${AppLocale.khmerCurrency}');
-      expect(box.label, '${AppLocale.totalPrice} · Cash');
+      final fare = find.text('12,000 ${AppLocale.khmerCurrency}');
+      expect(fare, findsOneWidget);
+      expect(find.text('Cash'), findsOneWidget);
+
+      final fareRect = tester.getRect(fare);
+      expect(fareRect.bottom,
+          lessThanOrEqualTo(tester.getRect(find.text('Cash')).top));
+      expect(
+        fareRect.bottom,
+        lessThan(tester.getRect(find.byType(FeeWaitingBanner)).top),
+        reason: 'what is owed comes before everything else',
+      );
+      expect(
+        tester.getRect(find.byType(FeeWaitingBanner)).bottom,
+        lessThan(tester.getRect(find.byType(FeeCard)).top),
+      );
     });
 
-    testWidgets('falls back to a plain total when no method is named',
+    testWidgets('no method named: the fare stands alone, nothing invented',
         (tester) async {
       await _pump(tester, FeeContent(data: _data(method: null)));
 
-      final box = tester.widget<TaTotalBox>(find.byType(TaTotalBox));
-      expect(box.label, AppLocale.totalPrice);
+      expect(find.text('12,000 ${AppLocale.khmerCurrency}'), findsOneWidget);
+      expect(find.text('Cash'), findsNothing);
     });
 
     testWidgets('an unparseable fare says so instead of showing a number',
         (tester) async {
       await _pump(tester, FeeContent(data: _data(amount: 'abc')));
 
-      expect(find.byType(TaTotalBox), findsNothing);
+      expect(find.textContaining(AppLocale.khmerCurrency), findsNothing);
       expect(find.text(AppLocale.fareUnavailable), findsOneWidget);
     });
 
@@ -144,18 +180,36 @@ void main() {
         (tester) async {
       await _pump(tester, FeeContent(data: _data(amount: null)));
 
-      expect(find.byType(TaTotalBox), findsNothing);
+      expect(find.textContaining(AppLocale.khmerCurrency), findsNothing);
       expect(find.text(AppLocale.fareUnavailable), findsOneWidget);
+    });
+
+    testWidgets('a missing fare can be asked for again', (tester) async {
+      var retries = 0;
+      await _pump(
+        tester,
+        FeeContent(data: _data(amount: null), onRetry: () => retries++),
+      );
+
+      await tester.tap(find.text(AppLocale.retry));
+      expect(retries, 1);
     });
   });
 
   group('FeeContent payment wait (D14 — no demo controls)', () {
-    testWidgets('shows the waiting badge', (tester) async {
+    testWidgets('says the driver is confirming the payment', (tester) async {
       await _pump(tester, FeeContent(data: _data()));
 
-      final badge = tester.widget<TaBadge>(find.byType(TaBadge));
-      expect(badge.variant, TaBadgeVariant.warning);
+      expect(find.byType(FeeWaitingBanner), findsOneWidget);
       expect(find.text(AppLocale.waitPaymentDriver), findsOneWidget);
+    });
+
+    testWidgets('the same message whatever the payment method',
+        (tester) async {
+      for (final method in ['Cash', 'Wallet', 'Card', null]) {
+        await _pump(tester, FeeContent(data: _data(method: method)));
+        expect(find.text(AppLocale.waitPaymentDriver), findsOneWidget);
+      }
     });
 
     testWidgets('offers no "simulate payment" control', (tester) async {
@@ -166,13 +220,34 @@ void main() {
     });
   });
 
+  group('FeeErrorView — the trip could not be loaded', () {
+    testWidgets('says so, points at the driver, and offers Retry',
+        (tester) async {
+      var retries = 0;
+      await _pump(tester, FeeErrorView(onRetry: () => retries++));
+
+      expect(find.text(AppLocale.couldNotLoadFare), findsOneWidget);
+      expect(find.text(AppLocale.askDriverForAmount), findsOneWidget);
+
+      await tester.tap(find.text(AppLocale.retry));
+      expect(retries, 1);
+    });
+
+    testWidgets('still shows that the driver is confirming the payment',
+        (tester) async {
+      await _pump(tester, FeeErrorView(onRetry: () {}));
+
+      expect(find.byType(FeeWaitingBanner), findsOneWidget);
+    });
+  });
+
   group('FeeLoadingView', () {
     testWidgets('renders the shimmer placeholder', (tester) async {
       await _pump(tester, const FeeLoadingView());
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.byType(TaSkeleton), findsWidgets);
-      expect(find.byType(TaTotalBox), findsNothing);
+      expect(find.byType(FeeWaitingBanner), findsNothing);
     });
   });
 }

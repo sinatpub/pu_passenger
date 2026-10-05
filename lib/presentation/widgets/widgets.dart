@@ -38,4 +38,5 @@ export 'ta_text_field.dart';
 export 'ta_timeline.dart';
 export 'ta_toast.dart';
 export 'ta_total_box.dart';
+export 'ta_trip_card.dart';
 export 'ta_vehicle_row.dart';

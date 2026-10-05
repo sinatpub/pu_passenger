@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
 
+/// How the app writes a date and time: "5 Oct 2026, 2:03 PM". One format so
+/// the fare, the history list and the announcements cannot drift apart.
+final DateFormat _displayDateTime = DateFormat("d MMM yyyy, h:mm a");
+
 extension DateTimeStringFormatter on String {
   /// Formats a date-time string into a human-readable format.
   String formatDateString() {
@@ -14,7 +18,7 @@ extension DateTimeStringFormatter on String {
       DateTime dt = DateTime.parse(newStr);
 
       // Format the DateTime object into the desired format.
-      return DateFormat("EEE/d/MMM/yyyy - HH:mma").format(dt);
+      return _displayDateTime.format(dt);
     } catch (e) {
       // Handle invalid date-time strings gracefully.
       return 'Invalid Date-Time';
@@ -50,7 +54,7 @@ extension DateTimeFormatter on DateTime {
   String formatDateTime() {
     try {
       // Use DateFormat from the intl package to format the DateTime.
-      return DateFormat("EEE/d/MMM/yyyy - HH:mma").format(this);
+      return _displayDateTime.format(this);
     } catch (e) {
       // Handle any unexpected errors gracefully.
       return 'Invalid Date-Time';
@@ -96,6 +100,5 @@ String formatDateTime(String input) {
   final inputFormat = DateFormat("yyyy-MM-dd HH:mm:ss");
   final dateTime = inputFormat.parse(input);
 
-  final outputFormat = DateFormat("EEE/dd/MMM/yyyy hh:mm a");
-  return outputFormat.format(dateTime);
+  return _displayDateTime.format(dateTime);
 }

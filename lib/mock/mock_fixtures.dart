@@ -251,7 +251,7 @@ class MockData {
           'updated_at': created,
         };
     return [
-      type(1, 'Rickshaw', 1000, 4000),
+      type(1, 'Tuk Tuk', 1000, 4000),
       type(2, 'Classic Car', pricePerKm, minimumFare),
       type(3, 'Mini Van', 2000, 8000),
       type(4, 'SUV', 2500, 10000),

@@ -8,7 +8,10 @@ import 'package:com.tara.passenger/data/models/request_booking_model.dart';
 import 'package:com.tara.passenger/data/datasources/update_passenger_location_api.dart';
 import 'package:com.tara.passenger/data/models/passenger_location_model.dart'
     show UpdateLocationModel;
+import 'package:com.tara.passenger/data/models/vehical_model.dart';
+import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
+import 'package:com.tara.passenger/presentation/shared/ride_dialogs.dart';
 import 'package:com.tara.passenger/services/booking_session.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -102,7 +105,16 @@ void main() {
   /// so nothing touches the network, the socket, or GetX bindings.
   late _FakeSocket socket;
   late _FakeUpdateLocationApi updateLocation;
-  late List<String> shownErrors;
+  late List<BookingFailure> shownErrors;
+
+  /// What the passenger answers each time the failure dialog is shown: true
+  /// is "Try again". Runs out to "Close".
+  late List<bool> retryAnswers;
+
+  Future<bool> presentError(BookingFailure failure) async {
+    shownErrors.add(failure);
+    return retryAnswers.isEmpty ? false : retryAnswers.removeAt(0);
+  }
   late BookingSession session;
 
   /// Builds a controller over an *existing* session, to simulate the route
@@ -113,7 +125,7 @@ void main() {
       requestBookingApi: api ?? _FakeRequestBookingApi(),
       socket: _FakeSocket(),
       updatePassengerLocationApi: _FakeUpdateLocationApi(),
-      errorPresenter: (message) async => shownErrors.add(message),
+      errorPresenter: presentError,
       bookingSession: existing,
     );
   }
@@ -121,7 +133,8 @@ void main() {
   MapLogic buildLogic(_FakeRequestBookingApi api) {
     socket = _FakeSocket();
     updateLocation = _FakeUpdateLocationApi();
-    shownErrors = <String>[];
+    shownErrors = <BookingFailure>[];
+    retryAnswers = <bool>[];
     session = BookingSession();
     // Only the collaborators `requestBooking()` actually reaches are supplied.
     // The rest stay unresolved — which is the point of the lazy fields.
@@ -129,7 +142,7 @@ void main() {
       requestBookingApi: api,
       socket: socket,
       updatePassengerLocationApi: updateLocation,
-      errorPresenter: (message) async => shownErrors.add(message),
+      errorPresenter: presentError,
       bookingSession: session,
       cancelBookingRepo: _FakeCancelBookingApi(),
     );
@@ -163,6 +176,8 @@ void main() {
       // early return left it there permanently.
       expect(logic.state.isBookingLoading, isFalse);
       expect(api.callCount, 0, reason: 'no request without a location');
+      expect(shownErrors, [BookingFailure.noLocation],
+          reason: 'the passenger is told it is their location, not the server');
     });
   });
 
@@ -263,9 +278,71 @@ void main() {
       );
       await call;
 
-      expect(shownErrors, hasLength(1),
+      expect(shownErrors, [BookingFailure.requestFailed],
           reason: 'the passenger must be told, not left guessing');
       expect(socket.rideRequests, 0);
+    });
+
+    test('"Try again" on the failure dialog sends the same request again',
+        () async {
+      final api = _FakeRequestBookingApi();
+      final logic = buildLogic(api);
+      logic.state.currentLatLng = const LatLng(11.55, 104.91);
+      retryAnswers = [true];
+
+      final call = logic.requestBooking();
+      api.completers[0].complete(
+        Result.err(const ApiException(
+            type: ApiErrorType.connection, message: 'network down')),
+      );
+      // Let the failure reach the dialog and the retry go out.
+      await Future<void>.delayed(Duration.zero);
+      expect(api.callCount, 2);
+      expect(logic.state.isBookingLoading, isTrue,
+          reason: 'the waiting overlay is back while the retry is out');
+
+      api.completers[1].complete(Result.ok(_booking()));
+      await call;
+
+      expect(shownErrors, hasLength(1));
+      expect(socket.rideRequests, 1);
+      expect(session.status, BookingRequestStatus.awaitingDriver);
+    });
+
+    test('"Close" on the failure dialog sends nothing more', () async {
+      final api = _FakeRequestBookingApi();
+      final logic = buildLogic(api);
+      logic.state.currentLatLng = const LatLng(11.55, 104.91);
+      retryAnswers = [false];
+
+      final call = logic.requestBooking();
+      api.completers[0].complete(
+        Result.err(const ApiException(
+            type: ApiErrorType.connection, message: 'network down')),
+      );
+      await call;
+
+      expect(api.callCount, 1);
+      expect(logic.state.isBookingLoading, isFalse);
+    });
+
+    test('a retry that fails again asks again, and stops when told to',
+        () async {
+      final api = _FakeRequestBookingApi();
+      final logic = buildLogic(api);
+      logic.state.currentLatLng = const LatLng(11.55, 104.91);
+      retryAnswers = [true, false];
+
+      final call = logic.requestBooking();
+      const failure = ApiException(
+          type: ApiErrorType.connection, message: 'network down');
+      api.completers[0].complete(Result.err(failure));
+      await Future<void>.delayed(Duration.zero);
+      api.completers[1].complete(Result.err(failure));
+      await call;
+
+      expect(api.callCount, 2);
+      expect(shownErrors, hasLength(2));
     });
 
     test('a failed booking can be retried', () async {
@@ -377,4 +454,149 @@ void main() {
       expect(session.hasRecoverableAttempt, isFalse);
     });
   });
+
+  /// The session used to stay `awaitingDriver` for the rest of the app's run
+  /// once a driver accepted, so `isBusy` refused every later booking: Book
+  /// did nothing on a second trip.
+  group('BookingSession after a driver accepts', () {
+    test('accepting ends the request phase and keeps the draft', () {
+      final session = BookingSession()
+        ..beginRequest(
+          pickup: const LatLng(11.55, 104.91),
+          destination: const LatLng(11.54, 104.85),
+          vehicleTypeId: 3,
+        )
+        ..markAwaitingDriver();
+
+      session.markAccepted();
+
+      expect(session.isBusy, isFalse);
+      expect(session.hasRecoverableAttempt, isFalse);
+      expect(session.vehicleTypeId, 3, reason: '"Book again" starts from it');
+      expect(session.destination, const LatLng(11.54, 104.85));
+    });
+
+    test('a second trip can be booked once the first was accepted', () async {
+      shownErrors = <BookingFailure>[];
+      retryAnswers = <bool>[];
+      final accepted = BookingSession()
+        ..beginRequest(pickup: const LatLng(11.55, 104.91))
+        ..markAwaitingDriver()
+        ..markAccepted();
+
+      final api = _FakeRequestBookingApi();
+      final logic = buildLogicWith(accepted, api: api);
+      logic.state.currentLatLng = const LatLng(11.56, 104.92);
+
+      final call = logic.requestBooking();
+      expect(api.callCount, 1);
+      api.completers[0].complete(Result.ok(_booking()));
+      await call;
+
+      expect(accepted.status, BookingRequestStatus.awaitingDriver);
+      expect(accepted.pickup, const LatLng(11.56, 104.92));
+    });
+  });
+
+  group('opening the map', () {
+    VehicalTypeEntities types(List<int> ids) => VehicalTypeEntities(
+          data: [
+            for (final id in ids)
+              SingleVehical(
+                id: id,
+                name: 'Type $id',
+                price: 1000,
+                orderKey: id,
+                miniMunFare: 4000,
+                image: null,
+                createdAt: DateTime(2026),
+                updatedAt: DateTime(2026),
+              ),
+          ],
+          message: '',
+          status: true,
+        );
+
+    MapLogic logicWith(List<int> ids) {
+      final home = _HomeLogicHarness()..state.vehicleAllType = types(ids);
+      return _MapLogicHarness(homeLogic: home);
+    }
+
+    // "Where to?" on Home and "Book again" open the map with no vehicle. The
+    // sheet then had none, no chips to choose one, and a dead Book button.
+    test('with no vehicle chosen, the first one on offer is selected', () {
+      final logic = logicWith([2, 3, 5]);
+
+      logic.getVehicleTypeSelection();
+
+      expect(logic.state.vehicleTypeSelection?.id, 2);
+      expect(logic.state.vehicleTypeId, 2);
+    });
+
+    test('the vehicle it was opened for is kept', () {
+      final logic = logicWith([2, 3, 5])..state.vehicleTypeId = 5;
+
+      logic.getVehicleTypeSelection();
+
+      expect(logic.state.vehicleTypeSelection?.id, 5);
+    });
+
+    test('a vehicle that is no longer offered falls back to the first', () {
+      final logic = logicWith([2, 3])..state.vehicleTypeId = 9;
+
+      logic.getVehicleTypeSelection();
+
+      expect(logic.state.vehicleTypeSelection?.id, 2);
+    });
+
+    test('nothing on offer selects nothing', () {
+      final logic = logicWith([]);
+
+      logic.getVehicleTypeSelection();
+
+      expect(logic.state.vehicleTypeSelection, isNull);
+    });
+
+    test('a drop-off it was opened with waits for the pickup, then is applied '
+        'once', () {
+      final logic = logicWith([2]) as _MapLogicHarness;
+      logic.state.pendingDestination = const LatLng(11.54, 104.85);
+
+      logic.applyPendingDestination();
+      expect(logic.destinations, isEmpty,
+          reason: 'distance and fare are measured from a pickup');
+
+      logic.state.currentLatLng = const LatLng(11.55, 104.91);
+      logic.applyPendingDestination();
+      logic.applyPendingDestination();
+
+      expect(logic.destinations, [const LatLng(11.54, 104.85)]);
+      expect(logic.state.pendingDestination, isNull);
+    });
+  });
+}
+
+// ignore: must_call_super
+class _HomeLogicHarness extends HomeLogic {
+  @override
+  // ignore: must_call_super
+  Future<void> onInit() async {}
+
+  @override
+  // ignore: must_call_super
+  Future<void> onReady() async {}
+}
+
+/// Records the drop-offs the map is asked to set instead of geocoding and
+/// routing them.
+class _MapLogicHarness extends MapLogic {
+  _MapLogicHarness({super.homeLogic});
+
+  final List<LatLng> destinations = [];
+
+  @override
+  void updateDestinationLocation(
+      {required LatLng latLng, bool? reset = false}) async {
+    destinations.add(latLng);
+  }
 }

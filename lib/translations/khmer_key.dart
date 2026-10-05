@@ -40,6 +40,27 @@ get khmerKey => {
       AppLocale.language: "ភាសា",
       AppLocale.refresh: "ផ្ទុកឡើងវិញ",
       AppLocale.addDropOff: "បន្ថែមគោលដៅ (មិនចាំបាច់)",
+      AppLocale.driverCancelledTitle: "អ្នកបើកបររបស់អ្នកបានបោះបង់",
+      AppLocale.driverCancelledBody:
+          "សូមអភ័យទោស។ អ្នកអាចកក់ការធ្វើដំណើរថ្មីបានឥឡូវនេះ។",
+      AppLocale.bookingFailedTitle: "មិនអាចកក់ការធ្វើដំណើររបស់អ្នកបានទេ",
+      AppLocale.bookingFailedBody:
+          "សូមពិនិត្យការតភ្ជាប់របស់អ្នក រួចព្យាយាមម្តងទៀត។",
+      AppLocale.bookingFailedNoLocation:
+          "យើងរកមិនឃើញទីតាំងរបស់អ្នកទេ។ សូមបើកទីតាំង រួចព្យាយាមម្តងទៀត។",
+      AppLocale.couldNotLoadFare: "មិនអាចផ្ទុកតម្លៃធ្វើដំណើរបានទេ",
+      AppLocale.askDriverForAmount: "សូមសួរអ្នកបើកបរអំពីចំនួនទឹកប្រាក់",
+      AppLocale.driverOnTheWay: "អ្នកបើកបរកំពុងមក",
+      AppLocale.driverHasArrived: "អ្នកបើកបរមកដល់ហើយ",
+      AppLocale.meetAt: "ជួបនៅ @place",
+      AppLocale.headingTo: "ទៅ @place",
+      AppLocale.fareByMeter: "តម្លៃគិតតាមម៉ែត្រ",
+      AppLocale.noDropOffMeter: "គ្មានគោលដៅ · តម្លៃគិតតាមម៉ែត្រ",
+      AppLocale.etaMinutes: "@count នាទី",
+      AppLocale.tripDetails: "ព័ត៌មានលម្អិតនៃការធ្វើដំណើរ",
+      AppLocale.noFareCharged: "មិនមានការគិតថ្លៃទេ",
+      AppLocale.hoursShort: "@count ម៉ោង",
+      AppLocale.recenterMap: "ដាក់ផែនទីឲ្យចំកណ្ដាល",
       AppLocale.searchMinChars: "វាយយ៉ាងហោចណាស់ ៣ តួអក្សរដើម្បីស្វែងរក",
       AppLocale.clearSearch: "សម្អាតការស្វែងរក",
       AppLocale.cantFindLocation: "រកមិនឃើញទីតាំងរបស់អ្នក",
@@ -55,7 +76,10 @@ get khmerKey => {
       AppLocale.tagFriendly: "រាក់ទាក់",
       AppLocale.tagGoodRoute: "ផ្លូវល្អ",
       AppLocale.thankYou: "អរគុណ!",
-      AppLocale.tripCompleteReceiptSent: "ដំណើររបស់អ្នកបានបញ្ចប់។ បានផ្ញើវិក្កយបត្រ។",
+      AppLocale.tripComplete: "ដំណើររបស់អ្នកបានបញ្ចប់",
+      AppLocale.invoice: "វិក្កយបត្រ",
+      AppLocale.yourRating: "ការវាយតម្លៃរបស់អ្នក",
+      AppLocale.secondsShort: "@count វិ",
       AppLocale.backToHome: "ត្រឡប់ទៅទំព័រដើម",
       AppLocale.bookAgain: "កក់ម្ដងទៀត",
       AppLocale.paid: "បានបង់",
@@ -67,13 +91,12 @@ get khmerKey => {
       AppLocale.savedPlaces: "ទីតាំងបានរក្សាទុក",
       AppLocale.savedPlacesComingSoon: "ទីតាំងបានរក្សាទុក — ឆាប់ៗនេះ",
       AppLocale.version: "កំណែ",
-      AppLocale.taarraaPhnomPenh: "តារា តាក់ស៊ី · ភ្នំពេញ",
+      AppLocale.brandPhnomPenh: "ពូ តាក់ស៊ី · ភ្នំពេញ",
       // S3 — announcements
       AppLocale.untitledAnnouncement: "សេចក្តីជូនដំណឹងគ្មានចំណងជើង",
       AppLocale.noAnnouncements: "មិនទាន់មានសេចក្តីជូនដំណឹង",
       AppLocale.couldNotLoadAnnouncements: "មិនអាចផ្ទុកសេចក្តីជូនដំណឹងបាន",
       // S4 — auth
-      AppLocale.taarraaTaxiSubtitle: "តារា · Taxi",
       // P2 — keys that were declared and used but never wired into
       // either map; they fell back to English in the Khmer locale.
       AppLocale.checkSpelling: "ពិនិត្យអក្ខរាវិរុទ្ធ",
@@ -87,7 +110,7 @@ get khmerKey => {
       AppLocale.price: "តម្លៃ",
       AppLocale.resolvingAddress: "កំពុងកំណត់អាសយដ្ឋាន...",
       AppLocale.retry: "ព្យាយាមម្ដងទៀត",
-      AppLocale.rideWithTrust: "តារា · ធ្វើដំណើរដោយទុកចិត្ត",
+      AppLocale.rideWithTrust: "ពូ តាក់ស៊ី · ធ្វើដំណើរដោយទុកចិត្ត",
       AppLocale.searchLocation: "ស្វែងរកទីតាំង",
       AppLocale.startRide: "ចាប់ផ្ដើមដំណើរ",
       AppLocale.waitingDriverArrived: "កំពុងរង់ចាំអ្នកបើកបរមកដល់",
@@ -144,7 +167,7 @@ get khmerKey => {
       AppLocale.cancel: "បោះបង់",
 
       // Vehicle type
-      AppLocale.rickshaw: "RICKSHAW",
+      AppLocale.tukTuk: "តុកតុក",
       AppLocale.classicCar: "CLASSIC Car",
       AppLocale.miniVan: "MINI VAN",
       AppLocale.suvCar: "SUV Car",

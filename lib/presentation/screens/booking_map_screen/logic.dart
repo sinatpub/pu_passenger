@@ -7,6 +7,7 @@ import 'package:com.tara.passenger/data/datasources/check_request_book_source.da
 import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
 
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/state.dart';
+import 'package:com.tara.passenger/services/booking_session.dart';
 import 'package:com.tara.passenger/services/location_imp.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
@@ -37,7 +38,9 @@ class BookingMapLogic extends GetxController {
     AppLogic? appLogic,
     CancelBookingApi? cancelBookingRepo,
     void Function()? onCancelRide,
+    BookingSession? bookingSession,
   })  : checkBookingApi = checkBookingApi ?? CheckBookingApi(),
+        _injectedBookingSession = bookingSession,
         _isSocketConnected = isSocketConnected,
         _injectedLocationRepo = locationRepo,
         _injectedAppLogic = appLogic,
@@ -46,6 +49,7 @@ class BookingMapLogic extends GetxController {
 
   final LocationRepo? _injectedLocationRepo;
   final AppLogic? _injectedAppLogic;
+  final BookingSession? _injectedBookingSession;
   final CancelBookingApi? _cancelBookingRepo;
 
   /// Screen 9's cancel emit, injectable so `cancelBooking()` is unit-testable
@@ -94,10 +98,23 @@ class BookingMapLogic extends GetxController {
 
   @override
   Future<void> onInit() async {
+    markRequestAccepted();
     await getBookingInfo();
     await _loadMarkerIcons();
     await refreshMarkers();
     super.onInit();
+  }
+
+  /// However the app got here — the accept event, a poll, a restart — a ride
+  /// on this screen means the request for it is no longer pending. Without
+  /// this the booking session stayed `awaitingDriver` and refused every
+  /// later booking.
+  void markRequestAccepted() {
+    final session = _injectedBookingSession ??
+        (Get.isRegistered<BookingSession>()
+            ? Get.find<BookingSession>()
+            : null);
+    session?.markAccepted();
   }
 
   @override
@@ -218,6 +235,7 @@ class BookingMapLogic extends GetxController {
     // Rule: If driver arrived, clear path to keep the map clean
     if (data.status == BookingStatus.arrival) {
       state.polyline = {};
+      _clearPickupEta();
       update();
       return;
     }
@@ -245,21 +263,39 @@ class BookingMapLogic extends GetxController {
       end = LatLng(destLat, destLng);
     } else {
       state.polyline = {};
+      _clearPickupEta();
       update();
       return;
     }
 
+    // Only the driver → pickup leg is an arrival time. On trip the route
+    // runs from the pickup, not from where the car is now.
+    final isPickupLeg = data.status == BookingStatus.accepted;
+    if (!isPickupLeg) _clearPickupEta();
+
     // Guard: Don't call API if coordinates are invalid
-    if (start.latitude == 0 || end.latitude == 0) return;
+    if (start.latitude == 0 || end.latitude == 0) {
+      update();
+      return;
+    }
 
-    // Fetch road points from your LocationRepo
-    List<LatLng> points = await _locationRepo.getDirectionPoint(start, end);
+    // Fetch the road path — and its length and driving time — from LocationRepo
+    final route = await _locationRepo.getRoute(start, end);
 
-    if (points.isNotEmpty) {
+    // The booking moved to another stage while the route was in flight: this
+    // line and this arrival time belong to the stage it left.
+    if (state.bookingRequestData?.data?.status != data.status) return;
+
+    if (isPickupLeg) {
+      state.pickupEta = route.duration;
+      state.pickupDistanceMeters = route.distanceMeters;
+    }
+
+    if (route.points.isNotEmpty) {
       state.polyline = {
         Polyline(
           polylineId: const PolylineId("trip_route"),
-          points: points,
+          points: route.points,
           color: TaColors.primary,
           width: 5,
           jointType: JointType.round,
@@ -267,8 +303,13 @@ class BookingMapLogic extends GetxController {
           endCap: Cap.roundCap,
         ),
       };
-      update();
     }
+    update();
+  }
+
+  void _clearPickupEta() {
+    state.pickupEta = null;
+    state.pickupDistanceMeters = null;
   }
 
   void navigateMapPerspective() {
@@ -314,7 +355,10 @@ class BookingMapLogic extends GetxController {
         break;
 
       default:
-        // For payment/completed, just center on destination
+        // For payment/completed, just center on destination. A trip booked
+        // without one has none: leave the camera where it is rather than
+        // flying to (0, 0).
+        if (officialDestination.latitude == 0) break;
         state.mapController!.animateCamera(
           CameraUpdate.newLatLngZoom(officialDestination, 15.0),
         );
@@ -420,6 +464,10 @@ class BookingMapLogic extends GetxController {
         ),
       );
     }
+    // The booking usually loads before the map exists, when there was no
+    // camera to move. Frame the driver and the pickup now instead of leaving
+    // the map on the passenger until the next refresh.
+    navigateMapPerspective();
     EasyLoading.dismiss();
   }
 

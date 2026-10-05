@@ -210,6 +210,17 @@ void main() {
       expect(find.text(ContactUsPage.address), findsOneWidget);
     });
 
+    testWidgets('carries the PU Taxi name and mark', (tester) async {
+      await tester.pumpWidget(const GetMaterialApp(home: ContactUsPage()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ContactLogoBadge), findsOneWidget);
+      expect(find.text(AppLocale.brandPhnomPenh), findsOneWidget);
+      expect(find.textContaining('PU Taxi. All rights reserved'),
+          findsOneWidget);
+      expect(find.textContaining('TAARRAA'), findsNothing);
+    });
+
     testWidgets('the address row is not tappable', (tester) async {
       await tester.pumpWidget(const GetMaterialApp(home: ContactUsPage()));
       await tester.pumpAndSettle();

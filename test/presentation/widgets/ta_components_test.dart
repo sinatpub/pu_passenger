@@ -17,6 +17,15 @@ void main() {
       expect(tapped, isTrue);
     });
 
+    testWidgets('icon: drawn before the label', (tester) async {
+      await tester.pumpWidget(wrap(
+          TaButton(label: 'Call driver', icon: Icons.call, onTap: () {})));
+
+      final icon = tester.getRect(find.byIcon(Icons.call));
+      final label = tester.getRect(find.text('Call driver'));
+      expect(icon.right, lessThanOrEqualTo(label.left));
+    });
+
     testWidgets('pressed: applies scale feedback', (tester) async {
       await tester.pumpWidget(wrap(TaButton(label: 'Book Now', onTap: () {})));
       final gesture = await tester.startGesture(tester.getCenter(find.text('Book Now')));
@@ -196,12 +205,55 @@ void main() {
       expect(find.text('EN'), findsOneWidget);
       expect(find.text('KH'), findsOneWidget);
     });
+
+    // Stretched without `expanded`, the options hugged the left and the rest
+    // of the pill was an empty track.
+    testWidgets('expanded: the options share the width equally',
+        (tester) async {
+      var changedTo = -1;
+      await tester.pumpWidget(wrap(SizedBox(
+        width: 300,
+        child: TaSegment(
+          options: const ['Completed', 'Cancelled'],
+          selectedIndex: 0,
+          expanded: true,
+          onChanged: (i) => changedTo = i,
+        ),
+      )));
+
+      expect(tester.getSize(find.byType(TaSegment)).width, 300);
+      final first = tester.getCenter(find.text('Completed')).dx;
+      final second = tester.getCenter(find.text('Cancelled')).dx;
+      final left = tester.getTopLeft(find.byType(TaSegment)).dx;
+      // Each label sits in the middle of its own half.
+      expect(first - left, closeTo(75, 4));
+      expect(second - left, closeTo(225, 4));
+
+      // The whole half is tappable, not only the word.
+      await tester.tapAt(Offset(left + 290, tester.getCenter(
+        find.byType(TaSegment)).dy));
+      expect(changedTo, 1);
+    });
   });
 
   group('TaStepIndicator', () {
     testWidgets('renders all steps with current elevated', (tester) async {
       await tester.pumpWidget(wrap(const TaStepIndicator(steps: 3, current: 1)));
       expect(find.byType(TaStepIndicator), findsOneWidget);
+    });
+
+    testWidgets('expanded: the segments share the width they are given',
+        (tester) async {
+      await tester.pumpWidget(wrap(const SizedBox(
+        width: 300,
+        child: TaStepIndicator(steps: 3, current: 0, expanded: true),
+      )));
+
+      expect(tester.getSize(find.byType(TaStepIndicator)).width, 300);
+      final segments = tester
+          .widgetList<AnimatedContainer>(find.byType(AnimatedContainer))
+          .length;
+      expect(segments, 3);
     });
   });
 
@@ -210,6 +262,68 @@ void main() {
       await tester.pumpWidget(wrap(const TaKVRow(label: 'Distance', value: '6.1 km')));
       expect(find.text('Distance'), findsOneWidget);
       expect(find.text('6.1 km'), findsOneWidget);
+    });
+
+    testWidgets('a long value wraps instead of overflowing', (tester) async {
+      await tester.pumpWidget(wrap(const SizedBox(
+        width: 220,
+        child: TaKVRow(
+          label: 'Destination',
+          value: 'Phnom Penh International Airport, Pou Senchey',
+        ),
+      )));
+
+      expect(tester.takeException(), isNull);
+      final value = tester.getRect(
+          find.text('Phnom Penh International Airport, Pou Senchey'));
+      expect(value.height, greaterThan(20), reason: 'more than one line');
+    });
+  });
+
+  group('TaTripCard', () {
+    Widget card({String? dropOff}) => wrap(SizedBox(
+          width: 300,
+          child: TaTripCard(
+            pickupLabel: 'Pickup',
+            pickup: 'Central Market',
+            dropOffLabel: 'Destination',
+            dropOff: dropOff,
+            noDropOffText: 'No drop-off',
+          ),
+        ));
+
+    testWidgets('pickup over drop-off, each announced with its label',
+        (tester) async {
+      await tester.pumpWidget(card(dropOff: 'Airport'));
+
+      expect(
+        tester.getRect(find.text('Central Market')).bottom,
+        lessThanOrEqualTo(tester.getRect(find.text('Airport')).top),
+      );
+      expect(find.bySemanticsLabel('Pickup: Central Market'), findsOneWidget);
+      expect(find.bySemanticsLabel('Destination: Airport'), findsOneWidget);
+    });
+
+    testWidgets('no drop-off: says so in its place', (tester) async {
+      await tester.pumpWidget(card());
+
+      expect(find.text('No drop-off'), findsOneWidget);
+    });
+
+    testWidgets('TaTripRows with nothing to say about the drop-off leaves '
+        'the row out', (tester) async {
+      await tester.pumpWidget(wrap(const SizedBox(
+        width: 300,
+        child: TaTripRows(
+          pickupLabel: 'Pickup',
+          pickup: 'Central Market',
+          dropOffLabel: 'Destination',
+          dropOff: null,
+        ),
+      )));
+
+      expect(find.text('Central Market'), findsOneWidget);
+      expect(find.bySemanticsLabel(RegExp('^Destination')), findsNothing);
     });
   });
 
@@ -487,41 +601,77 @@ void main() {
   });
 
   group('TaHistoryCard', () {
-    testWidgets('renders invoice, driver, amount, route, badge', (tester) async {
-      await tester.pumpWidget(wrap(const TaHistoryCard(
-        item: HistoryItem(
-          invoice: 'INV-000123',
-          driver: 'Sokha',
-          date: '12 Sep',
-          amount: '\$4.50',
-          from: 'Home',
-          to: 'Airport',
-          distance: '6.1 km',
-          duration: '18 min',
-          initials: 'S',
-        ),
+    const item = HistoryItem(
+      invoice: 'INV-000123',
+      driver: 'Sokha',
+      date: '12 Sep 2026, 9:41 AM',
+      amount: '\$4.50',
+      from: 'Home',
+      to: 'Airport',
+      distance: '6.1 km',
+      duration: '18 min',
+      initials: 'S',
+      cardDate: '12 Sep, 9:41 AM',
+      subtitle: 'Classic Car · Sokha',
+      fare: '\$4.50',
+      summary: '6.1 km · 18 min',
+    );
+
+    testWidgets('date and fare lead; vehicle, route and distance follow',
+        (tester) async {
+      await tester.pumpWidget(wrap(const SizedBox(
+        width: 340,
+        child: TaHistoryCard(item: item),
       )));
-      expect(find.text('INV-000123'), findsOneWidget);
-      expect(find.text('\$4.50'), findsOneWidget);
-      expect(find.text('Completed'), findsOneWidget);
+
+      final date = tester.getRect(find.text('12 Sep, 9:41 AM'));
+      final fare = tester.getRect(find.text('\$4.50'));
+      expect(date.left, lessThan(fare.left));
+      expect(find.text('Classic Car · Sokha'), findsOneWidget);
+      expect(date.bottom, lessThan(tester.getRect(find.text('Home')).top));
+      expect(
+        tester.getRect(find.text('Airport')).bottom,
+        lessThan(tester.getRect(find.text('6.1 km · 18 min')).top),
+      );
+      // No invoice headline and no status badge.
+      expect(find.text('INV-000123'), findsNothing);
+      expect(find.text('Completed'), findsNothing);
     });
 
-    testWidgets('cancelled variant shows error badge', (tester) async {
-      await tester.pumpWidget(wrap(const TaHistoryCard(
-        item: HistoryItem(
-          invoice: 'INV-000124',
-          driver: 'Sokha',
-          date: '11 Sep',
-          amount: '\$0.00',
-          from: 'Home',
-          to: 'Airport',
-          distance: '0 km',
-          duration: '0 min',
-          initials: 'S',
+    testWidgets('a trip that was never charged shows no fare or distance',
+        (tester) async {
+      await tester.pumpWidget(wrap(const SizedBox(
+        width: 340,
+        child: TaHistoryCard(
+          item: HistoryItem(
+            invoice: '—',
+            driver: 'Sokha',
+            date: '11 Sep 2026, 8:00 AM',
+            amount: '—',
+            from: 'Home',
+            to: 'Airport',
+            distance: '—',
+            duration: '—',
+            initials: 'S',
+          ),
         ),
-        isCompleted: false,
       )));
-      expect(find.text('Cancelled'), findsOneWidget);
+
+      expect(find.text('—'), findsNothing);
+      expect(find.text('Home'), findsOneWidget);
+      // Falls back to the full date when no short one is given.
+      expect(find.text('11 Sep 2026, 8:00 AM'), findsOneWidget);
+    });
+
+    testWidgets('the whole card is the tap target', (tester) async {
+      var taps = 0;
+      await tester.pumpWidget(wrap(SizedBox(
+        width: 340,
+        child: TaHistoryCard(item: item, onTap: () => taps++),
+      )));
+
+      await tester.tap(find.text('Home'));
+      expect(taps, 1);
     });
   });
 

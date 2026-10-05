@@ -4,15 +4,19 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
+import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/widgets/booking_sheet.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
+import 'package:com.tara.passenger/translations/app_locale.dart';
 
 /// Screen 9 — Booking (Active Ride).
 ///
-/// The map fills the screen with the status pill floating over it and the
-/// booking sheet docked at the bottom (`03 §Screen 9`), replacing the old
-/// `bottomNavigationBar` panel that squeezed the map into a `Column`.
+/// The map takes the room above the booking sheet, as it does on the booking
+/// and set-destination screens, so whatever the camera frames is in view:
+/// nothing is hidden under the sheet. The stage is the sheet's headline; the
+/// status pill that used to float over the map said the same thing twice.
 ///
 /// The prototype's "Skip ▸" button and its 17s auto-advance are deliberately
 /// absent: `D14` lists both as demo-only — production advances on real socket
@@ -26,30 +30,30 @@ class BookingMapScreen extends StatelessWidget {
       // Unchanged: the active ride cannot be backed out of, only cancelled.
       canPop: false,
       child: Scaffold(
+        backgroundColor: TaColors.background,
         body: GetBuilder<BookingMapLogic>(builder: (logic) {
-          return Stack(
+          return Column(
             children: [
-              Positioned.fill(child: _map(context, logic)),
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 12,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: TaStatusPill(
-                    text: bookingStatusText(
-                      bookingPhaseFromStatus(
-                        logic.state.bookingRequestData?.data?.status,
+              Expanded(
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: _map(context, logic)),
+                    Positioned(
+                      right: 16.d,
+                      bottom: 16.d,
+                      // Puts the driver and the pickup (or the trip) back in
+                      // view after the passenger has panned away.
+                      child: TaIconButton(
+                        icon: const Icon(Icons.my_location),
+                        semanticLabel: AppLocale.recenterMap.tr,
+                        color: TaColors.primary,
+                        onTap: logic.navigateMapPerspective,
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: BookingSheet(logic: logic),
-              ),
+              BookingSheet(logic: logic),
             ],
           );
         }),
@@ -57,9 +61,8 @@ class BookingMapScreen extends StatelessWidget {
     );
   }
 
-  /// Camera, markers and polyline are `BookingMapLogic`'s (roadmap C5: "camera
-  /// and location updates on the booking map are untouched") — this only
-  /// renders them.
+  /// Camera, markers and polyline are `BookingMapLogic`'s — this only renders
+  /// them.
   Widget _map(BuildContext context, BookingMapLogic logic) {
     return GoogleMap(
       gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
@@ -75,11 +78,9 @@ class BookingMapScreen extends StatelessWidget {
       zoomControlsEnabled: false,
       zoomGesturesEnabled: true,
       mapToolbarEnabled: false,
-      // The sheet covers the bottom of the map, so Google's own controls are
-      // off (`03 §Screen 9` shows none) and the logo is padded clear of it.
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).size.height * 0.28,
-      ),
+      // The map runs up under the status bar; padding keeps what the camera
+      // frames — the driver's marker, most of all — clear of it.
+      padding: EdgeInsets.only(top: MediaQuery.paddingOf(context).top),
       initialCameraPosition: const CameraPosition(
         target: LatLng(11.5564, 104.9282),
         zoom: 12,
