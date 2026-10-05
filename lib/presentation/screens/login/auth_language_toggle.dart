@@ -22,15 +22,14 @@ class AuthLanguageToggle extends StatelessWidget {
     return Obx(() {
       final isEnglish =
           appLogic.languageKeyCode.value == AppConstant.englishCode;
-      return SizedBox(
-        width: 132,
-        child: TaSegment(
-          options: const ['EN', 'ខ្មែរ'],
-          selectedIndex: isEnglish ? 0 : 1,
-          onChanged: (index) {
-            if ((index == 0) != isEnglish) appLogic.toggleLanguage();
-          },
-        ),
+      // No fixed width: the segment hugs its two labels, so the pill has
+      // no empty track after "ខ្មែរ".
+      return TaSegment(
+        options: const ['EN', 'ខ្មែរ'],
+        selectedIndex: isEnglish ? 0 : 1,
+        onChanged: (index) {
+          if ((index == 0) != isEnglish) appLogic.toggleLanguage();
+        },
       );
     });
   }

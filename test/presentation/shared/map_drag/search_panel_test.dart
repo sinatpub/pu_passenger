@@ -105,6 +105,7 @@ void main() {
       await tester.pumpWidget(_host(SearchPanel(logic: logic)));
       await tester.pump();
 
+      logic.openSearch();
       expect(logic.state.isShowMap, isFalse);
       await tester.tap(find.text(AppLocale.setLocationMap.tr));
       await tester.pump();
@@ -113,10 +114,14 @@ void main() {
   });
 
   group('SearchPanel states (C4)', () {
-    testWidgets('idle → hint text', (tester) async {
+    // The page used to offer "Set on map" only once a search had returned,
+    // so before typing there was no way to reach the pin's Confirm.
+    testWidgets('idle → what starts a search, and "Set on map" already there',
+        (tester) async {
       await tester.pumpWidget(_host(SearchPanel(logic: logic)));
       await tester.pump();
-      expect(find.text(AppLocale.searchForPlace.tr), findsOneWidget);
+      expect(find.text(AppLocale.searchMinChars.tr), findsOneWidget);
+      expect(find.text(AppLocale.setLocationMap.tr), findsOneWidget);
     });
 
     testWidgets('searching with prior results → dimmed list keeps them visible',
@@ -183,16 +188,20 @@ void main() {
     });
   });
 
-  group('SearchPanel height cap', () {
-    // With the keyboard up the map area can be shorter than half the screen;
-    // the page passes that smaller height and every state must fit in it.
+  group('SearchPanel in the room above the keyboard', () {
+    // With the keyboard up the panel gets whatever is left under the search
+    // field; every state must fit in it by scrolling, not by overflowing.
     for (final entry in {
-      'results': () => logic.state.suggestLocationData = LocationModel(
-            predictions: List.generate(
-              20,
-              (i) => Prediction(description: 'Place $i, Phnom Penh'),
-            ),
+      'idle': () {},
+      'results': () {
+        logic.state.searchQuery = 'place';
+        logic.state.suggestLocationData = LocationModel(
+          predictions: List.generate(
+            20,
+            (i) => Prediction(description: 'Place $i, Phnom Penh'),
           ),
+        );
+      },
       'empty': () {
         logic.state.searchQuery = 'xyz';
         logic.state.suggestLocationData = LocationModel(predictions: []);
@@ -202,23 +211,20 @@ void main() {
         logic.state.hasSearchError = true;
       },
     }.entries) {
-      testWidgets('${entry.key} fits a 150px cap without overflow',
-          (tester) async {
+      testWidgets('${entry.key} fits 150px without overflow', (tester) async {
         entry.value();
-        // Loose constraints, as the page's bottom `Align` gives the panel.
         await tester.pumpWidget(GetMaterialApp(
           home: Scaffold(
             body: Align(
-              alignment: Alignment.bottomCenter,
-              child: SearchPanel(logic: logic, maxHeight: 150),
+              alignment: Alignment.topCenter,
+              child: SizedBox(height: 150, child: SearchPanel(logic: logic)),
             ),
           ),
         ));
         await tester.pump();
 
         expect(tester.takeException(), isNull);
-        expect(tester.getSize(find.byType(SearchPanel)).height,
-            lessThanOrEqualTo(150));
+        expect(find.text(AppLocale.setLocationMap.tr), findsOneWidget);
       });
     }
   });

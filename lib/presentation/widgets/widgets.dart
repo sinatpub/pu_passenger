@@ -11,6 +11,7 @@ export 'ta_bottom_nav.dart';
 export 'ta_bottom_sheet.dart';
 export 'ta_button.dart';
 export 'ta_card.dart';
+export 'ta_center_pin.dart';
 export 'ta_chip.dart';
 export 'ta_dialog.dart';
 export 'ta_driver_card.dart';

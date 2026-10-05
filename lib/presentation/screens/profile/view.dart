@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'package:com.tara.passenger/app/logic.dart';
-import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/core/utils/app_version.dart';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
 import 'package:com.tara.passenger/core/utils/initials.dart';
+import 'package:com.tara.passenger/presentation/screens/login/auth_language_toggle.dart';
 import 'package:com.tara.passenger/presentation/screens/profile/logic.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
@@ -58,28 +58,8 @@ class ProfileScreen extends StatelessWidget {
           style: TaTextStyles.titleLarge.copyWith(fontSize: 17),
         ),
 
-        /// The flag `IconButton` becomes the spec's segmented control. The
-        /// toggle itself is still `AppLogic.toggleLanguage`, untouched.
-        Obx(
-          () => SizedBox(
-            width: 132,
-            child: TaSegment(
-              options: const ['EN', 'ខ្មែរ'],
-              selectedIndex:
-                  appLogic.languageKeyCode.value == AppConstant.englishCode
-                      ? 0
-                      : 1,
-              onChanged: (index) {
-                final wantsEnglish = index == 0;
-                final isEnglish =
-                    appLogic.languageKeyCode.value == AppConstant.englishCode;
-                // `toggleLanguage` flips; only call it when the tap actually
-                // changes the language.
-                if (wantsEnglish != isEnglish) appLogic.toggleLanguage();
-              },
-            ),
-          ),
-        ),
+        /// The same `EN` / `ខ្មែរ` segment as the auth and home screens.
+        const AuthLanguageToggle(),
       ],
     );
   }

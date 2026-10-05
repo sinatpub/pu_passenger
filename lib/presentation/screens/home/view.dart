@@ -5,6 +5,7 @@ import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_cell_data.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
+import 'package:com.tara.passenger/presentation/screens/login/auth_language_toggle.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
@@ -126,7 +127,7 @@ for (final vehicle in vehicles)
           ],
         ),
         const Spacer(),
-        Row(
+        const Row(
           children: [
             // Bell entry (PDD-03): stays commented out until explicit
             // sign-off — roadmap C2 "Bell entry point restored ONLY if
@@ -136,24 +137,8 @@ for (final vehicle in vehicles)
             //   showDot: true,
             //   onTap: () => Get.toNamed(AppRoutes.ANNOUNCEMENT),
             // ),
-            const SizedBox(width: 10),
-            TaIconButton(
-              size: 42,
-              semanticLabel: AppLocale.language.tr,
-              icon: Obx(
-                () => Text(
-                  appLogic.languageKeyCode.value == AppConstant.englishCode
-                      ? 'ខ្មែរ'
-                      : 'EN',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: TaColors.primary,
-                  ),
-                ),
-              ),
-              onTap: appLogic.toggleLanguage,
-            ),
+            SizedBox(width: 10),
+            AuthLanguageToggle(),
           ],
         ),
       ],

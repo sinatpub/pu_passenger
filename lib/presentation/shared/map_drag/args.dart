@@ -21,6 +21,12 @@ enum MapDragPurpose {
   /// Choosing where the trip ends — the only flow live today.
   destination;
 
+  /// What the passenger is doing on the page, shown over the address.
+  String get title => switch (this) {
+        MapDragPurpose.pickup => AppLocale.setPickup.tr,
+        MapDragPurpose.destination => AppLocale.setDestination.tr,
+      };
+
   /// The confirm button's label for this purpose.
   String get confirmLabel => switch (this) {
         MapDragPurpose.pickup => AppLocale.confirmPickup.tr,

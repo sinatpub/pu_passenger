@@ -43,12 +43,21 @@ class RegisterPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    TaStepIndicator(steps: 3, current: 2),
-                    AuthLanguageToggle(),
+                    TaIconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                      semanticLabel: AppLocale.back.tr,
+                      onTap: Get.back,
+                    ),
+                    const AuthLanguageToggle(),
                   ],
+                ),
+                const SizedBox(height: 14),
+                const Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TaStepIndicator(steps: 3, current: 2),
                 ),
                 const SizedBox(height: 18),
                 Expanded(

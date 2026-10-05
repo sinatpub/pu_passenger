@@ -20,13 +20,6 @@ class MapDragLogic extends GetxController {
   final LocationRepo _locationRepo;
   final TextEditingController searchController = TextEditingController();
 
-  /// P-05: whether this page instance is the pickup (Screen 3) flow.
-  ///
-  /// Defaults to false — the destination flow, the route's only live caller.
-  /// The view sets it from the route arguments so the logic stays free of
-  /// routing concerns (and the VM-testable imports stay VM-testable).
-  bool isPickupFlow = false;
-
   /// P-05: the note-for-driver text. Gated to the spec's 60-char cap in the
   /// view via `LengthLimitingTextInputFormatter(kDriverNoteMaxLength)`.
   final TextEditingController noteController = TextEditingController();
@@ -79,7 +72,13 @@ class MapDragLogic extends GetxController {
     state.latlng = latlng;
     if (state.isCameraMove) return;
     state.isCameraMove = true;
-    update([MapDragUpdate.cameraMove, MapDragUpdate.confirm]);
+    // The address on screen belongs to the point the pin just left.
+    state.isResolving = true;
+    update([
+      MapDragUpdate.cameraMove,
+      MapDragUpdate.pickupLabel,
+      MapDragUpdate.confirm,
+    ]);
   }
 
   /// The map has stopped moving — drop the marker back onto the map, and start
@@ -92,41 +91,43 @@ class MapDragLogic extends GetxController {
     schedulePickupResolution();
   }
 
-  /// Whether the geocode-to-label pipeline applies at all. It follows the
-  /// route's purpose set by the view: Screen 3 (pickup) shows a resolved
-  /// label; the destination flow does not, so reverse-geocoding there would be
-  /// an invisible network call on every camera movement (behavior change on
-  /// the live caller).
-  bool get shouldResolvePickup => isPickupFlow && state.latlng != null;
+  /// Whether there is a point to reverse-geocode. Both flows resolve: the
+  /// address is on the pin's callout and in the confirm sheet for a
+  /// destination as much as for a pickup.
+  bool get shouldResolvePickup => state.latlng != null;
 
-  /// The spec's 400 ms debounce for Screen 3's reverse-geocode. Kept as a
+  /// The spec's 400 ms debounce for the pin's reverse-geocode. Kept as a
   /// separate timer from the search debounce so the two never cross-cancel.
   void schedulePickupResolution() {
     state.geocodeDebounceTimer?.cancel();
     if (!shouldResolvePickup) return;
+    state.isResolving = true;
+    update([MapDragUpdate.pickupLabel, MapDragUpdate.confirm]);
     state.geocodeDebounceTimer =
         Timer(const Duration(milliseconds: 400), resolvePickupAddress);
   }
 
-  /// Resolves the picked point to an address, updating the pickup label and
-  /// driving [pickupConfirm]. The spec's resolving state is a skeleton label
-  /// and a disabled Confirm — this sets `isResolving` and lets the view read
+  /// Resolves the picked point to an address, updating the label and driving
+  /// [pickupConfirm]. The spec's resolving state is a skeleton label and a
+  /// disabled pickup Confirm — this sets `isResolving` and lets the view read
   /// `pickupConfirm` rather than touching widgets itself.
   Future<void> resolvePickupAddress() async {
     final latlng = state.latlng;
     if (latlng == null) return;
     state.isResolving = true;
     update([MapDragUpdate.pickupLabel, MapDragUpdate.confirm]);
+    String? address;
     try {
-      final address = await _locationRepo.getAddressLocation(latlng: latlng);
-      state.resolvedAddress = address;
+      address = await _locationRepo.getAddressLocation(latlng: latlng);
     } catch (e) {
       Logger().e("Reverse geocode exception: $e");
-      state.resolvedAddress = null;
-    } finally {
-      state.isResolving = false;
-      update([MapDragUpdate.pickupLabel, MapDragUpdate.confirm]);
     }
+    // The pin moved on while this was in flight, so the answer describes a
+    // point it has left. That move schedules its own lookup when it settles.
+    if (state.isCameraMove || state.latlng != latlng) return;
+    state.resolvedAddress = address;
+    state.isResolving = false;
+    update([MapDragUpdate.pickupLabel, MapDragUpdate.confirm]);
   }
 
   /// Which tier the resolved point reached (spec Screen 3).
@@ -143,9 +144,9 @@ class MapDragLogic extends GetxController {
       );
 
   /// The label to show above the centre pin / in the sheet. `null` means the
-  /// spec's skeleton state.
+  /// spec's skeleton state: no pin yet, or its address is still on the way.
   String? get pickupLabelText {
-    if (state.isResolving) return null;
+    if (!hasPin || state.isResolving) return null;
     if (state.resolvedAddress != null &&
         state.resolvedAddress!.trim().isNotEmpty) {
       return state.resolvedAddress;
@@ -158,6 +159,39 @@ class MapDragLogic extends GetxController {
   /// position — with location permission denied and no interaction, it stays
   /// false and the confirm button stays disabled.
   bool get hasPin => state.latlng != null;
+
+  /// Opens the search view over the map.
+  void openSearch() {
+    if (!state.isShowMap) return;
+    state.isShowMap = false;
+    update([MapDragUpdate.search, MapDragUpdate.confirm]);
+  }
+
+  /// Back to the map and its pin: the search view's back button, the system
+  /// back gesture, and "Set location on the map" all land here.
+  void closeSearch() {
+    if (state.isShowMap) return;
+    state.isShowMap = true;
+    update([MapDragUpdate.search, MapDragUpdate.confirm]);
+  }
+
+  /// Empties the search field and drops back to the idle hint.
+  void clearSearch() {
+    searchController.clear();
+    fetchPlaceSuggestions('');
+  }
+
+  /// Re-centres the map — and with it the pin — on the passenger. Returns
+  /// false when there is no position to go to, so the view can say so.
+  Future<bool> moveToCurrentLocation() async {
+    final pos = await _locationRepo.getCurrentLocation();
+    final controller = state.mapController;
+    if (pos == null || controller == null) return false;
+    await controller.animateCamera(
+      CameraUpdate.newLatLngZoom(LatLng(pos.latitude, pos.longitude), 15),
+    );
+    return true;
+  }
 
   /// What the results area should be showing, per spec Screen 2's state table.
   DestinationSearchStatus get searchStatus => destinationSearchStatus(

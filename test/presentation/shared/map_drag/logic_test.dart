@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:com.tara.passenger/presentation/shared/map_drag/search_state.dart';
@@ -19,6 +21,19 @@ import 'package:com.tara.passenger/services/location_imp.dart';
 class _FakeLocationRepo extends LocationRepo {
   LocationModel Function(String query)? onSearch;
   final List<String> queries = [];
+
+  /// Reverse-geocode answers, held until the test completes them — by
+  /// default answered at once with [address].
+  String address = 'Street 271, Daun Penh, Phnom Penh';
+  final List<LatLng> geocoded = [];
+  Completer<String>? pendingAddress;
+
+  @override
+  Future<String> getAddressLocation(
+      {required LatLng latlng, bool localeKhmer = true}) {
+    geocoded.add(latlng);
+    return pendingAddress?.future ?? Future.value(address);
+  }
 
   @override
   Future<LocationModel> searchPlaces(String query) async {
@@ -172,6 +187,107 @@ void main() {
       logic.onCameraIdle();
 
       expect(logic.state.isCameraMove, isFalse);
+    });
+  });
+
+  /// The address under the pin. A destination resolves it as a pickup does:
+  /// it is on the pin's callout and in the confirm sheet for both.
+  group('pin address', () {
+    const a = LatLng(11.5564, 104.9282);
+    const b = LatLng(11.5700, 104.9000);
+
+    test('there is no label before there is a pin', () {
+      final logic = MapDragLogic(locationRepo: _FakeLocationRepo());
+
+      expect(logic.pickupLabelText, isNull,
+          reason: '"Pinned location" would name a point nobody has chosen');
+    });
+
+    testWidgets('a settled pin resolves to its address', (tester) async {
+      final fake = _FakeLocationRepo();
+      final logic = MapDragLogic(locationRepo: fake);
+
+      logic.onCameraMove(latlng: a);
+      expect(logic.pickupLabelText, isNull,
+          reason: 'while the pin moves, the old address is not its address');
+
+      logic.onCameraIdle();
+      await tester.pump(const Duration(milliseconds: 450));
+
+      expect(fake.geocoded, [a]);
+      expect(logic.pickupLabelText, 'Street 271, Daun Penh, Phnom Penh');
+    });
+
+    testWidgets('an answer for a point the pin has left is dropped',
+        (tester) async {
+      final fake = _FakeLocationRepo()..pendingAddress = Completer<String>();
+      final logic = MapDragLogic(locationRepo: fake);
+
+      logic.onCameraMove(latlng: a);
+      logic.onCameraIdle();
+      await tester.pump(const Duration(milliseconds: 450));
+      expect(fake.geocoded, [a]);
+
+      // The passenger drags away before the first answer arrives.
+      logic.onCameraMove(latlng: b);
+      fake.pendingAddress!.complete('Old Place, Phnom Penh');
+      await tester.pump();
+
+      expect(logic.state.resolvedAddress, isNull);
+      expect(logic.pickupLabelText, isNull);
+
+      fake.pendingAddress = null;
+      fake.address = 'New Place, Phnom Penh';
+      logic.onCameraIdle();
+      await tester.pump(const Duration(milliseconds: 450));
+
+      expect(fake.geocoded, [a, b]);
+      expect(logic.pickupLabelText, 'New Place, Phnom Penh');
+    });
+
+    testWidgets('a failed lookup still leaves a confirmable pin',
+        (tester) async {
+      final fake = _FakeLocationRepo()..pendingAddress = Completer<String>();
+      final logic = MapDragLogic(locationRepo: fake);
+
+      logic.onCameraMove(latlng: a);
+      logic.onCameraIdle();
+      await tester.pump(const Duration(milliseconds: 450));
+      fake.pendingAddress!.completeError(Exception('geocoder down'));
+      await tester.pump();
+
+      expect(logic.hasPin, isTrue);
+      expect(logic.state.isResolving, isFalse);
+      expect(logic.pickupLabelText, isNotNull);
+    });
+  });
+
+  group('search view', () {
+    test('the page opens on the map, with Confirm reachable', () {
+      final logic = MapDragLogic(locationRepo: _FakeLocationRepo());
+
+      expect(logic.state.isShowMap, isTrue);
+    });
+
+    test('search opens over the map and closes back to it', () {
+      final logic = MapDragLogic(locationRepo: _FakeLocationRepo());
+
+      logic.openSearch();
+      expect(logic.state.isShowMap, isFalse);
+
+      logic.closeSearch();
+      expect(logic.state.isShowMap, isTrue);
+    });
+
+    test('clearing the field returns to the idle hint', () {
+      final logic = MapDragLogic(locationRepo: _FakeLocationRepo());
+      logic.searchController.text = 'ph';
+      logic.state.searchQuery = 'ph';
+
+      logic.clearSearch();
+
+      expect(logic.searchController.text, isEmpty);
+      expect(logic.searchStatus, DestinationSearchStatus.idle);
     });
   });
 

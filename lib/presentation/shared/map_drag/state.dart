@@ -23,7 +23,10 @@ class MapDragState {
   bool hasSearchError = false;
 
   bool isTypingTextField = false;
-  bool isShowMap = false;
+
+  /// The page opens on the map — pin, address, Confirm. False while the
+  /// search view is open over it.
+  bool isShowMap = true;
 
   Prediction? selectedPrediction;
 
@@ -34,7 +37,9 @@ class MapDragState {
   /// The reverse-geocoded address string. Null before first resolution.
   String? resolvedAddress;
 
-  /// Reverse-geocode in flight. Spec: label goes to a skeleton, Confirm disabled.
+  /// The address on screen is not the pin's: the pin is moving, or its
+  /// reverse-geocode is pending or in flight. Spec: label goes to a skeleton,
+  /// pickup Confirm disabled.
   bool isResolving = false;
 
   /// Debounce timer for reverse-geocode calls on camera idle.

@@ -58,16 +58,18 @@ class OtpPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const TaStepIndicator(steps: 3, current: 1),
-                        TaIconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-                    semanticLabel: AppLocale.back.tr,
-                          onTap: Get.back,
-                        ),
-                      ],
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TaIconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                        semanticLabel: AppLocale.back.tr,
+                        onTap: Get.back,
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    const Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TaStepIndicator(steps: 3, current: 1),
                     ),
                     const SizedBox(height: 18),
                     Text(

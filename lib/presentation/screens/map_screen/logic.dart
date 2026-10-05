@@ -13,6 +13,7 @@ import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/driver_around_api.dart';
 import 'package:com.tara.passenger/data/datasources/request_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/update_passenger_location_api.dart';
+import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/map_presentation.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
@@ -242,7 +243,8 @@ class MapLogic extends GetxController {
   Future<void> getCurrentAddress({LatLng? latlng}) async {
     final latLng = state.currentLatLng;
     if (latLng == null) {
-      state.currentAddress = AppLocale.error.tr;
+      state.currentAddress = null;
+      state.addressFailed = true;
       update([MapUpdate.mapID]);
       return;
     }
@@ -250,9 +252,11 @@ class MapLogic extends GetxController {
     try {
       state.currentAddress =
           await _locationRepo.getAddressLocation(latlng: latLng);
+      state.addressFailed = false;
     } catch (e) {
       // Surface the failure rather than leaving a stale address on screen.
-      state.currentAddress = AppLocale.error.tr;
+      state.currentAddress = null;
+      state.addressFailed = true;
       xPrettyLog(message: "getCurrentAddress failed: $e");
     }
     update([MapUpdate.mapID]);
@@ -266,6 +270,7 @@ class MapLogic extends GetxController {
         state.destinationAddress = null;
         state.destinationLatLng = null;
         state.distance = "";
+        state.distanceKm = 0.0;
         state.totalFare = 0.0;
         state.polylines = {};
         // Only the trip layer resets — the nearby drivers are still there.
@@ -303,6 +308,7 @@ class MapLogic extends GetxController {
     );
 
     state.distance = formatDistance(distanceInKm);
+    state.distanceKm = distanceInKm;
 
     // Calculate price
     state.totalFare = estimateFare(
@@ -310,6 +316,34 @@ class MapLogic extends GetxController {
       pricePerKm: vehicle?.price ?? 1,
       minimumFare: vehicle?.miniMunFare ?? 1,
     );
+  }
+
+  /// Every vehicle type the passenger can pick from, in the server's order.
+  List<SingleVehical> get vehicles =>
+      homeLogic.state.vehicleAllType?.data ?? const [];
+
+  /// [vehicle]'s fare for the current route, or null while there is no
+  /// destination — the booking is then metered and only the minimum is known.
+  double? fareFor(SingleVehical vehicle) {
+    if (state.destinationLatLng == null || state.distanceKm <= 0) return null;
+    return estimateFare(
+      distanceKm: state.distanceKm,
+      pricePerKm: vehicle.price,
+      minimumFare: vehicle.miniMunFare ?? 1,
+    );
+  }
+
+  /// Switches the vehicle type being booked: re-prices the route and reloads
+  /// the nearby drivers and their marker for that type.
+  Future<void> selectVehicle(SingleVehical vehicle) async {
+    if (state.vehicleTypeSelection?.id == vehicle.id) return;
+    state.vehicleTypeId = vehicle.id;
+    state.vehicleTypeSelection = vehicle;
+    final fare = fareFor(vehicle);
+    if (fare != null) state.totalFare = fare;
+    update([MapUpdate.mapID, MapUpdate.vehicleID]);
+    await _loadMarkerIcons();
+    await getAvailableDriver();
   }
 
   /// Draw Polyline

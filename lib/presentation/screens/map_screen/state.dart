@@ -41,6 +41,9 @@ class MapState {
 
   // * Current Address
   String? currentAddress;
+
+  /// The reverse-geocode of the pickup pin failed; the sheet offers a retry.
+  bool addressFailed = false;
   LatLng? currentLatLng;
 
   // Destination
@@ -48,6 +51,10 @@ class MapState {
   LatLng? destinationLatLng;
 
   String distance = "";
+
+  /// Route length behind [distance]; 0 until a destination is set. Kept so
+  /// every vehicle chip can show its own fare estimate.
+  double distanceKm = 0.0;
   double totalFare = 0.0;
 
   Set<Polyline> polylines = {};

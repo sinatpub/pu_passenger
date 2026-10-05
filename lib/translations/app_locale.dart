@@ -251,6 +251,9 @@ class AppLocale {
   static var driversCantStopHere = "Drivers can't stop here";
 
   static var setLocationMap = "Set location on the map";
+  static var searchMinChars = "Type at least 3 letters to search";
+  static var clearSearch = "Clear search";
+  static var cantFindLocation = "Can't find your location";
 
   static var next = "Next";
 
@@ -328,4 +331,11 @@ class AppLocale {
   static var refresh = "Refresh";
 
   static var clearDestination = "Clear Destination";
+
+  // Booking sheet: destination is optional, fare is metered without one.
+  static var addDropOff = "Add drop-off (optional)";
+  static var bookVehicle = "Book @name";
+  static var fareByMeterHint =
+      "Fare is by meter. Add a drop-off to see an estimate";
+  static var cantFindAddress = "Can't find your address. Tap to retry";
 }

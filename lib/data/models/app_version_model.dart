@@ -55,8 +55,16 @@ class Data {
     playStoreLink: json["play_store_link"],
     appStoreLink: json["app_store_link"],
     featuresRelease: json["features_release"],
-    isActive: json["is_active"],
+    isActive: _asBool(json["is_active"]),
   );
+
+  /// The API sends `is_active` as `1`/`0`; accept a real bool too.
+  static bool? _asBool(Object? value) => switch (value) {
+        bool b => b,
+        num n => n != 0,
+        String s => s == '1' || s.toLowerCase() == 'true',
+        _ => null,
+      };
 
   Map<String, dynamic> toJson() => {
     "id": id,

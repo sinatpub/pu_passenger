@@ -68,6 +68,29 @@ void main() {
       await tester.tap(find.byType(TaIconButton));
       expect(tapped, isTrue);
     });
+
+    // The button used to wrap itself in an expanding `Center`, so any parent
+    // that offered spare room — a Row over the map, an `Align` — had it
+    // drift to the middle of that room instead of staying where it was put.
+    testWidgets('takes only its tap target, wherever it is placed',
+        (tester) async {
+      await tester.pumpWidget(const MaterialApp(
+        home: Stack(
+          children: [
+            Align(
+              alignment: Alignment.topLeft,
+              child: Row(
+                children: [TaIconButton(icon: Icon(Icons.arrow_back))],
+              ),
+            ),
+          ],
+        ),
+      ));
+
+      final rect = tester.getRect(find.byType(TaIconButton));
+      expect(rect.topLeft, Offset.zero);
+      expect(rect.size, const Size.square(TaIconButton.minTapTarget));
+    });
   });
 
   group('TaTextField', () {

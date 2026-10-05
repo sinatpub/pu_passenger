@@ -62,7 +62,12 @@ class TaIconButton extends StatelessWidget {
       button: onTap != null,
       enabled: onTap != null,
       excludeSemantics: semanticLabel != null,
+      // Factors of 1 make this hug the tap target. A bare `Center` grows to
+      // fill whatever room its parent offers and then centres the button in
+      // it — which put the map's back button halfway down the screen.
       child: Center(
+        widthFactor: 1,
+        heightFactor: 1,
         child: SizedBox(
           width: size < minTapTarget ? minTapTarget : size,
           height: size < minTapTarget ? minTapTarget : size,

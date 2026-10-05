@@ -34,21 +34,29 @@ class HistoryDetailLogic extends GetxController {
         BitmapDescriptor.bytes(markerDriverImage, width: 24.d);
   }
 
+  /// Draws the trip on the map. A trip booked without a destination (or
+  /// cancelled before one was set) has no end coordinates: it shows the
+  /// pickup marker only, with no route — never a line to (0, 0).
   drawPolyline() async {
     var data = state.data;
-    final startLatLng = LatLng(double.parse(data?.startLatitude ?? "0.0"),
-        double.parse(data?.startLongitude ?? "0.0"));
-    final endLatLng = LatLng(double.parse(data?.endLatitude ?? "0.0"),
-        double.parse(data?.endLongitude ?? "0.0"));
-    final mapLogic = Get.find<GoogleMapLogic>();
-    state.polyline = (await mapLogic.drawPolylineWithReturnValue(
-        startLatLng: startLatLng, endLatLng: endLatLng))!;
+    final startLatLng = LatLng(double.tryParse(data?.startLatitude ?? '') ?? 0.0,
+        double.tryParse(data?.startLongitude ?? '') ?? 0.0);
+    final endLat = double.tryParse(data?.endLatitude ?? '');
+    final endLng = double.tryParse(data?.endLongitude ?? '');
+    final endLatLng =
+        (endLat == null || endLng == null) ? null : LatLng(endLat, endLng);
+
+    if (endLatLng != null) {
+      final mapLogic = Get.find<GoogleMapLogic>();
+      final route = await mapLogic.drawPolylineWithReturnValue(
+          startLatLng: startLatLng, endLatLng: endLatLng);
+      if (route != null) state.polyline = route;
+    }
     await displayMarker(start: startLatLng, end: endLatLng);
     update();
   }
 
-  Future<void> displayMarker(
-      {required LatLng start, required LatLng end}) async {
+  Future<void> displayMarker({required LatLng start, LatLng? end}) async {
     final mapLogic = Get.find<GoogleMapLogic>();
     state.markers.add(
       Marker(
@@ -60,16 +68,18 @@ class HistoryDetailLogic extends GetxController {
       ),
     );
 
-    state.markers.add(
-      Marker(
-        markerId: const MarkerId("1234"),
-        consumeTapEvents: true,
-        position: end,
-        icon: mapLogic.parentState.passengerMarker ??
-            BitmapDescriptor.defaultMarker,
-        infoWindow: InfoWindow(title: AppLocale.passenger.tr),
-      ),
-    );
+    if (end != null) {
+      state.markers.add(
+        Marker(
+          markerId: const MarkerId("1234"),
+          consumeTapEvents: true,
+          position: end,
+          icon: mapLogic.parentState.passengerMarker ??
+              BitmapDescriptor.defaultMarker,
+          infoWindow: InfoWindow(title: AppLocale.passenger.tr),
+        ),
+      );
+    }
     update();
   }
 
