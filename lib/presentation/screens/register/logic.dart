@@ -1,10 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:com.tara.passenger/presentation/screens/login/data/repository/auth_repository.dart';
 import 'package:com.tara.passenger/presentation/screens/login/logic.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/storages/remove_storage.dart';
-import 'package:com.tara.passenger/storages/save_storage.dart';
+import 'package:com.tara.passenger/services/session_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
@@ -39,7 +40,6 @@ class RegisterLogic extends GetxController {
   late final LoginLogic loginLogic =
       _injectedLoginLogic ?? Get.find<LoginLogic>();
   final RegisterState state = RegisterState();
-  final SaveStoragePref _savePref = SaveStoragePref();
   final RemoveStoragePref _removePref = RemoveStoragePref();
   final ImagePicker _picker = ImagePicker();
 
@@ -57,10 +57,13 @@ class RegisterLogic extends GetxController {
         platform: Platform.isAndroid ? "android" : "ios",
         profileImage: state.profileImage,
       );
-      result.when(
-        ok: (data) {
+      await result.when<FutureOr<void>>(
+        ok: (data) async {
           if (data.data?.token != null && data.data?.user != null) {
-            _savePref.saveJsonToken(authModel: json.encode(data));
+            await SessionService.instance.startSession(
+              token: data.data?.token,
+              signInRecord: json.encode(data),
+            );
             Get.offAllNamed(AppRoutes.BOTTOMNAV);
           } else {
             _showRegisterError();

@@ -6,7 +6,6 @@ import 'package:com.tara.passenger/core/network/result.dart';
 import 'package:com.tara.passenger/data/models/user_response_model.dart';
 import 'package:com.tara.passenger/services/session_service.dart';
 import 'package:com.tara.passenger/storages/get_storage.dart';
-import 'package:com.tara.passenger/storages/save_storage.dart';
 import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 
 /// The password login the bypass signs in with: `AuthRepository.passwordLogin`.
@@ -104,10 +103,12 @@ class DebugAuthBypass {
     String token,
     UserResponseModel model,
   ) async {
-    await SessionService.instance.saveToken(token);
-    // The same blob the OTP screen stores: `initSocket()` and the legacy
-    // token bridge in `SessionService` both read it.
-    SaveStoragePref().saveJsonToken(authModel: jsonEncode(model));
+    // The same record the OTP screen stores: `initSocket()` reads it for
+    // the user id.
+    await SessionService.instance.startSession(
+      token: token,
+      signInRecord: jsonEncode(model),
+    );
   }
 }
 

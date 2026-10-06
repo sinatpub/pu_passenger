@@ -6,12 +6,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../core/utils/pretty_logger.dart';
 
 class SaveStoragePref with keyStoragePref {
-  void saveJsonToken({required String authModel}) async {
+  /// Awaitable, so whoever signs in can wait until the record is stored
+  /// before opening Home, which reads it straight away for the socket.
+  /// Written through `SessionService.startSession`, not called directly.
+  Future<void> saveJsonToken({required String authModel}) async {
     try {
       SharedPreferences pref = await SharedPreferences.getInstance();
-      pref
-          .setString(jsonToken, authModel)
-          .then((value) => debugPrint("Success to store json in cache"));
+      await pref.setString(jsonToken, authModel);
+      debugPrint("Success to store json in cache");
     } catch (e) {
       debugPrint("Unsuccessful to store json auth in cache");
     }

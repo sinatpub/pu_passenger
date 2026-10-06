@@ -7,7 +7,7 @@ import 'package:com.tara.passenger/presentation/screens/otp/view.dart';
 import 'package:com.tara.passenger/presentation/widgets/error_dialog_widget.dart';
 import 'package:com.tara.passenger/presentation/widgets/shake_widget.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
-import 'package:com.tara.passenger/storages/save_storage.dart';
+import 'package:com.tara.passenger/services/session_service.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,7 +35,6 @@ class OtpLogic extends GetxController {
       _injectedRepository ?? Get.find<AuthRepository>();
   late final LoginLogic loginLogic =
       _injectedLoginLogic ?? Get.find<LoginLogic>();
-  final SaveStoragePref _savePref = SaveStoragePref();
   final phoneShake = GlobalKey<ShakeWidgetState>();
   final smartAuth = SmartAuth.instance;
   late final SmsRetriever smsRetriever;
@@ -115,13 +114,16 @@ class OtpLogic extends GetxController {
     try {
       final result = await _repository.verifyOtp(
           phone: phoneNumber.toString(), otpCode: otpCode.toString());
-      result.when(
-        ok: (data) {
+      await result.when<FutureOr<void>>(
+        ok: (data) async {
           if (data.data?.user == null && data.data?.token == null) {
             Get.toNamed(AppRoutes.REGISTER);
           } else {
             forceErrorPinPut.value = false;
-            _savePref.saveJsonToken(authModel: json.encode(data));
+            await SessionService.instance.startSession(
+              token: data.data?.token,
+              signInRecord: json.encode(data),
+            );
             Get.offAllNamed(AppRoutes.BOTTOMNAV);
           }
         },

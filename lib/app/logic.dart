@@ -9,8 +9,8 @@ import 'package:com.tara.passenger/presentation/widgets/yesno_dialog_widget.dart
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/storages/get_storage.dart';
 import 'package:com.tara.passenger/storages/key_storage.dart';
-import 'package:com.tara.passenger/storages/remove_storage.dart';
 import 'package:com.tara.passenger/storages/save_storage.dart';
+import 'package:com.tara.passenger/services/session_service.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter/material.dart';
@@ -45,6 +45,9 @@ class AppLogic extends GetxController with keyStoragePref {
   void onInit() {
     super.onInit();
     _loadLanguageLocale();
+    // A socket left open stays registered as the user who just left, and a
+    // connected socket is not reopened for the next one.
+    SessionService.instance.onSessionEnded = socketRepo.disconnectSocket;
   }
 
   // init socket
@@ -122,12 +125,14 @@ class AppLogic extends GetxController with keyStoragePref {
   // logout
   void logout() async {
     try {
-      final RemoveStoragePref pref = RemoveStoragePref();
       showYesNoCustomDialog(Get.context!,
           title: AppLocale.logout.tr,
           description: AppLocale.logoutDescription.tr, onYes: () async {
         EasyLoading.show();
-        await pref.removeToken();
+        // The token and the sign-in record together. Removing the record
+        // alone left the token in place, and the next launch opened Home as
+        // the account that had just logged out.
+        await SessionService.instance.clear();
         await 1.delay();
         Get.offAllNamed(AppRoutes.LOGIN);
         EasyLoading.dismiss();
