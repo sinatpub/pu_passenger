@@ -42,13 +42,6 @@ extension ScreenUtilDouble on double {
   }
 }
 
-extension MoneyFormatExtension on num {
-  String toMoneyFormat({String locale = 'en_US'}) {
-    final formatter = NumberFormat.decimalPattern(locale);
-    return formatter.format(this);
-  }
-}
-
 extension DateTimeFormatter on DateTime {
   /// Formats a DateTime object into a human-readable format.
   String formatDateTime() {

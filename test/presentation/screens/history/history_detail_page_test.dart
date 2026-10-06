@@ -127,7 +127,7 @@ void main() {
 
       final map = tester.getRect(find.byKey(const Key('map')));
       final fare =
-          tester.getRect(find.text('19,900 ${AppLocale.khmerCurrency}'));
+          tester.getRect(find.text('\$19,900.00'));
       final driver = tester.getRect(find.byType(TaDriverCard));
       final button = tester.getRect(
           find.widgetWithText(TaButton, AppLocale.bookAgain));

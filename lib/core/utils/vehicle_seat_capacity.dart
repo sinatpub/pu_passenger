@@ -1,35 +1,33 @@
-/// P-06 (docs/12) — `map_screen/logic.dart`'s `getVehicleSet()` mapped
-/// vehicle-type ID to seat count via a nested ternary of hardcoded magic
-/// numbers (docs/01 Problem 7). Pulled out to a lookup table so the mapping
-/// is readable and testable; behavior is unchanged, including the implicit
-/// default (any id not 1-4 gets 5 seats). IDs match the vehicle-type
-/// scheme used by `driverMarkerImage()` in the same feature.
-const Map<int, int> _seatCapacityByVehicleId = {
-  1: 3, // tuk tuk
-  2: 4, // classic car
-  3: 7, // mini van
-  4: 4, // suv
-};
+import 'package:com.tara.passenger/core/utils/vehicle_kind.dart';
+import 'package:com.tara.passenger/translations/app_locale.dart';
+import 'package:get/get.dart';
 
-int seatCapacityForVehicleId(int? vehicleId) {
-  return _seatCapacityByVehicleId[vehicleId] ?? 5; // 5 = default (alphard/vip and unknown)
+/// Passenger seats per kind of vehicle. The backend sends no seat count for
+/// a vehicle type, so the app states the usual one. A type it does not
+/// recognise is taken to be a car.
+int seatCapacityFor(VehicleKind? kind) => switch (kind) {
+      VehicleKind.moto => 1,
+      VehicleKind.tukTuk => 3,
+      VehicleKind.miniVan => 7,
+      VehicleKind.vip => 5,
+      VehicleKind.car || VehicleKind.suv || null => 4,
+    };
+
+/// "1 Seat", "3 Seats" — a moto carries one, and "1 Seats" is not English.
+String seatsLabel(VehicleKind? kind) {
+  final seats = seatCapacityFor(kind);
+  return '$seats ${(seats == 1 ? AppLocale.seat : AppLocale.seatCapacity).tr}';
 }
 
-/// C2 (docs/roadmap) — Display ETA per vehicle class (minutes) used by the
+/// C2 (docs/roadmap) — Display ETA per kind of vehicle (minutes) used by the
 /// home vehicle list. The backend provides no ETA per vehicle type, so this
-/// follows the same deterministic-lookup pattern as [seatCapacityForVehicleId]:
-/// a practical placeholder until the API exposes a real ETA.
-const Map<int, int> _etaByVehicleId = {
-  1: 2,  // tuk tuk
-  2: 3,  // classic car
-  3: 4,  // mini van
-  4: 4,  // suv
-};
+/// is a practical placeholder until the API exposes a real one: the smaller
+/// the vehicle, the more of them are near.
+int etaMinutesFor(VehicleKind? kind) => switch (kind) {
+      VehicleKind.moto || VehicleKind.tukTuk => 2,
+      VehicleKind.car => 3,
+      VehicleKind.miniVan || VehicleKind.suv => 4,
+      VehicleKind.vip || null => 5,
+    };
 
-int etaMinutesForVehicleId(int? vehicleId) {
-  return _etaByVehicleId[vehicleId] ?? 5; // default (alphard/vip)
-}
-
-String formatEtaMinutes(int? vehicleId) {
-  return '~${etaMinutesForVehicleId(vehicleId)} min';
-}
+String formatEtaMinutes(VehicleKind? kind) => '~${etaMinutesFor(kind)} min';

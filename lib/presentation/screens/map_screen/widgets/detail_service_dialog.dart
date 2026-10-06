@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import 'package:com.tara.passenger/core/utils/app_ext.dart';
+import 'package:com.tara.passenger/core/utils/money.dart';
+import 'package:com.tara.passenger/core/utils/vehicle_kind.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_seat_capacity.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:com.tara.passenger/presentation/widgets/ta_minimax_sheet.dart';
@@ -11,25 +12,20 @@ import 'package:com.tara.passenger/translations/app_locale.dart';
 /// bottom sheet. Replaces the old `DetailServiceDialog` modal with the shared
 /// `TaMinMaxSheet` presentation — min fee, price/km and seats as KV rows.
 ///
-/// Formatting stays with today's formatter + KHR currency (PDD-01, `D15`
-/// superseded), matching the vehicle rows.
+/// Amounts are dollars through [formatMoney], matching the vehicle rows.
 Future<void> openTariffSheet(
   BuildContext context, {
   required SingleVehical? vehicle,
 }) {
   if (vehicle == null) return Future.value();
-  final pricePerKm = '${vehicle.price.toMoneyFormat()} '
-      '${AppLocale.khmerCurrency.tr}/${AppLocale.km.tr}';
-  final minFee = vehicle.miniMunFare == null
-      ? '—'
-      : '${vehicle.miniMunFare!.toMoneyFormat()} '
-          '${AppLocale.khmerCurrency.tr}';
+  final pricePerKm = '${formatMoney(vehicle.price)}/${AppLocale.km.tr}';
+  final minFee =
+      vehicle.miniMunFare == null ? '—' : formatMoney(vehicle.miniMunFare!);
   return TaMinMaxSheet.open(
     context,
     vehicleName: vehicle.name,
     minFee: minFee,
     pricePerKm: pricePerKm,
-    seats:
-        '${seatCapacityForVehicleId(vehicle.id)} ${AppLocale.seatCapacity.tr}',
+    seats: seatsLabel(vehicleKindFromName(vehicle.name)),
   );
 }

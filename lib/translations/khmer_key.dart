@@ -149,6 +149,7 @@ get khmerKey => {
       AppLocale.enterUrDestination: "បញ្ចូលទីតាំងគោលដៅ",
       AppLocale.serviceType: "ប្រភេទយានយន្ដ",
       AppLocale.seatCapacity: "ចំនួនកៅអី",
+      AppLocale.seat: "ចំនួនកៅអី",
       AppLocale.pleaseTryAgain: "សូមព្យាយាមម្ដងទៀត",
       AppLocale.driverNotFound: "មិនមានអ្នកបើកបរនៅជិតទីនេះ",
       AppLocale.close: "បិទ",
@@ -159,7 +160,6 @@ get khmerKey => {
       AppLocale.pricePerKM: "តម្លៃក្នុង ១គីឡូ",
       AppLocale.minFee: "តម្លៃអប្បបរមា",
       AppLocale.normal: "តម្លៃធម្មតា",
-      AppLocale.khmerCurrency: "៛",
       AppLocale.bookingNow: "កក់ឥឡូវនេះ",
 
       AppLocale.yes: "បាទ/ចាស",

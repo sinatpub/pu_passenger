@@ -18,10 +18,16 @@ void main() {
       expect(fee, 9000.0);
     });
 
-    test('rounds the final fare to the nearest whole unit', () {
-      // (2.5 - 1) * 333 + 1000 = 1499.5 -> rounds to 1500
-      final fee = estimateFare(distanceKm: 2.5, pricePerKm: 333, minimumFare: 1000);
-      expect(fee, 1500.0);
+    test('dollar rates keep their cents', () {
+      // (5 - 1) * 0.30 + 0.50 = 1.70. Rounding to a whole unit made it 2.
+      final fee = estimateFare(distanceKm: 5, pricePerKm: 0.30, minimumFare: 0.50);
+      expect(fee, 1.70);
+    });
+
+    test('rounds the final fare to the cent', () {
+      // (3.257 - 1) * 0.80 + 1.50 = 3.3056 -> 3.31
+      final fee = estimateFare(distanceKm: 3.257, pricePerKm: 0.80, minimumFare: 1.50);
+      expect(fee, 3.31);
     });
 
     test('zero distance still returns the minimum fare', () {

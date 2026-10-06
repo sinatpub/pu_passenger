@@ -80,7 +80,7 @@ class MockRide {
   DateTime? completedAt;
   LatLng? endPoint;
   double? distanceKm;
-  int? fare;
+  double? fare;
 
   LatLng get pickUpPoint => pickup ?? MockPlaces.passengerStart.latLng;
 
@@ -119,7 +119,7 @@ class MockRide {
         completedAt: _dateOrNull(json['completedAt']),
         endPoint: _latLngFromJson(json['endPoint']),
         distanceKm: (json['distanceKm'] as num?)?.toDouble(),
-        fare: json['fare'] as int?,
+        fare: (json['fare'] as num?)?.toDouble(),
       );
 }
 

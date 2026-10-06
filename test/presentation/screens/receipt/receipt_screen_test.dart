@@ -165,7 +165,7 @@ void main() {
         (tester) async {
       final logic = await _pump(tester);
 
-      final amount = find.text('12,000 ${AppLocale.khmerCurrency}');
+      final amount = find.text('\$12,000.00');
       expect(amount, findsOneWidget);
       expect(find.text('${AppLocale.paid} · Cash'), findsOneWidget);
       expect(
@@ -209,7 +209,7 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      expect(find.text('12,000 ${AppLocale.khmerCurrency}'), findsOneWidget);
+      expect(find.text('\$12,000.00'), findsOneWidget);
       _close(logic);
     });
 

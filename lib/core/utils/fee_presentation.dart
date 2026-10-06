@@ -1,6 +1,5 @@
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
-import 'package:com.tara.passenger/translations/app_locale.dart';
-import 'package:get/get.dart';
+import 'package:com.tara.passenger/core/utils/money.dart';
 
 /// Screen 10 (Fee) display formatting, kept pure and out of the widget so the
 /// degrade rules below are testable — the same split as `vehicle_cell_data.dart`
@@ -12,19 +11,18 @@ import 'package:get/get.dart';
 /// number. Distance, duration and date are display-only, so a missing or
 /// malformed value degrades to an em dash.
 
-/// The fare, formatted through today's formatter (`PDD-01`: keep the existing
-/// currency treatment — KHR via `toMoneyFormat()` + `khmerCurrency`, not `D15`'s
-/// USD, which is superseded for this app).
+/// The fare in dollars, through the app's one money formatter
+/// ([formatMoney]).
 ///
 /// Returns null when `payment.amount` is absent or not a number. A fare is
-/// money: rendering "0 ៛" or the raw string for an unparseable amount would
+/// money: rendering "$0.00" or the raw string for an unparseable amount would
 /// tell the passenger something false about what they owe.
 String? feeAmount(String? amount) {
   final raw = amount?.trim();
   if (raw == null || raw.isEmpty) return null;
   final value = num.tryParse(raw);
   if (value == null) return null;
-  return '${value.toMoneyFormat()} ${AppLocale.khmerCurrency.tr}';
+  return formatMoney(value);
 }
 
 /// A display-only value, or an em dash when the backend did not send one.

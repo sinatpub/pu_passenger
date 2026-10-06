@@ -44,6 +44,7 @@ get englishKey => {
       AppLocale.enterUrDestination: AppLocale.enterUrDestination,
       AppLocale.serviceType: AppLocale.serviceType,
       AppLocale.seatCapacity: AppLocale.seatCapacity,
+      AppLocale.seat: AppLocale.seat,
       AppLocale.pleaseTryAgain: AppLocale.pleaseTryAgain,
       AppLocale.driverNotFound: AppLocale.driverNotFound,
       AppLocale.driverNotFoundDes: AppLocale.driverNotFoundDes,
@@ -62,7 +63,6 @@ get englishKey => {
       AppLocale.pricePerKM: AppLocale.pricePerKM,
       AppLocale.minFee: AppLocale.minFee,
       AppLocale.normal: AppLocale.normal,
-      AppLocale.khmerCurrency: AppLocale.khmerCurrency,
       AppLocale.bookingNow: AppLocale.bookingNow,
 
       AppLocale.driverAcceptedBooking: AppLocale.driverAcceptedBooking,

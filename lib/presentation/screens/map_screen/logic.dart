@@ -7,14 +7,18 @@ import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/core/utils/fare_estimate.dart';
 import 'package:com.tara.passenger/core/utils/load_custom_marker.dart';
 import 'package:com.tara.passenger/core/utils/trip_marker.dart';
+import 'package:com.tara.passenger/core/utils/vehicle_art.dart';
+import 'package:com.tara.passenger/core/utils/vehicle_kind.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_seat_capacity.dart';
 import 'package:com.tara.passenger/mock/mock_fixtures.dart';
 import 'package:com.tara.passenger/mock/mock_mode.dart';
 import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
+import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
 import 'package:com.tara.passenger/data/datasources/driver_around_api.dart';
 import 'package:com.tara.passenger/data/datasources/request_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/update_passenger_location_api.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
+import 'package:com.tara.passenger/presentation/screens/home/booking_redirect.dart';
 import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/map_presentation.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
@@ -23,7 +27,6 @@ import 'package:com.tara.passenger/presentation/shared/ride_dialogs.dart';
 import 'package:com.tara.passenger/services/location_imp.dart';
 import 'package:com.tara.passenger/services/booking_session.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
-import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -31,7 +34,6 @@ import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:logger/logger.dart';
 
-import '../../../core/resources/asset_resource.dart';
 
 /// How the booking flow surfaces a failure to the passenger. Injectable so
 /// the controller does not reach into `EasyLoading` directly — the Definition
@@ -50,6 +52,18 @@ Future<bool> _defaultBookingErrorPresenter(BookingFailure failure) async {
   return showBookingFailedDialog(context, failure);
 }
 
+/// How often the wait for a driver asks the server what became of the
+/// booking. See [MapLogic.checkAwaitedBooking].
+const Duration kAwaitDriverPollInterval = Duration(seconds: 5);
+
+/// Leaves the map for the screen a booking has moved on to. Injectable
+/// because `Get.offNamed` needs a live navigator.
+typedef BookingRouteOpener = void Function(String route);
+
+void _defaultBookingRouteOpener(String route) {
+  if (Get.currentRoute != route) Get.offNamed(route);
+}
+
 class MapLogic extends GetxController {
   /// P-08 (docs/12) — constructor injection with `Get.find` defaults, the
   /// pattern already used by `BookingMapLogic`. Previously every dependency
@@ -66,8 +80,14 @@ class MapLogic extends GetxController {
     UpdatePassengerLocationApi? updatePassengerLocationApi,
     BookingErrorPresenter? errorPresenter,
     BookingSession? bookingSession,
+    CheckBookingApi? checkBookingApi,
+    Duration awaitDriverPollInterval = kAwaitDriverPollInterval,
+    BookingRouteOpener? openBookingRoute,
   })  : _presentError = errorPresenter ?? _defaultBookingErrorPresenter,
         _injectedBookingSession = bookingSession,
+        _checkBookingApi = checkBookingApi,
+        _awaitDriverPollInterval = awaitDriverPollInterval,
+        _openBookingRoute = openBookingRoute ?? _defaultBookingRouteOpener,
         _homeLogic = homeLogic,
         _requestBookingApi = requestBookingApi,
         _cancelBookingRepo = cancelBookingRepo,
@@ -106,6 +126,15 @@ class MapLogic extends GetxController {
 
   final BookingErrorPresenter _presentError;
 
+  final CheckBookingApi? _checkBookingApi;
+  late final CheckBookingApi checkBookingApi =
+      _checkBookingApi ?? CheckBookingApi();
+  final Duration _awaitDriverPollInterval;
+  final BookingRouteOpener _openBookingRoute;
+
+  Timer? _awaitDriverTimer;
+  bool _checkingAwaitedBooking = false;
+
   final BookingSession? _injectedBookingSession;
 
   /// P-08: the booking attempt lives here, not in `state`, so it survives
@@ -123,6 +152,7 @@ class MapLogic extends GetxController {
 
   @override
   void onClose() {
+    _stopWatchingForDriver();
     noteController.dispose();
     super.onClose();
   }
@@ -153,7 +183,9 @@ class MapLogic extends GetxController {
     state.sourceIcon = await tripMarkerIcon(TripMarker.pickup);
     state.destinationIcon = await tripMarkerIcon(TripMarker.dropOff);
     final Uint8List driverBytes = await getBytesFromAsset(
-        driverMarkerImage(id: state.vehicleTypeSelection?.id ?? 0), 25);
+        driverMarkerAsset(
+            vehicleKindFromName(state.vehicleTypeSelection?.name)),
+        25);
     state.driverIcon = BitmapDescriptor.bytes(driverBytes);
     update([MapUpdate.mapID]);
   }
@@ -454,7 +486,7 @@ class MapLogic extends GetxController {
 
   String getVehicleSet() {
     var data = state.vehicleTypeSelection;
-    return "${seatCapacityForVehicleId(data?.id)} ${AppLocale.seatCapacity.tr}";
+    return seatsLabel(vehicleKindFromName(data?.name));
   }
 
   /// P-08 (docs/12) — the booking-request lifecycle.
@@ -488,6 +520,7 @@ class MapLogic extends GetxController {
     String logMessage, {
     BookingFailure failure = BookingFailure.requestFailed,
   }) async {
+    _stopWatchingForDriver();
     setBookingLoading(false);
     session.markFailed(logMessage);
     xPrettyLog(message: "requestBooking failed: $logMessage");
@@ -500,6 +533,69 @@ class MapLogic extends GetxController {
   /// showed an idle screen while a booking was still running.
   void restoreFromSession() {
     setBookingLoading(session.isBusy);
+    if (session.status == BookingRequestStatus.awaitingDriver) {
+      _watchForDriver();
+    }
+  }
+
+  /// The wait for a driver, asked of the server as well as heard from the
+  /// socket.
+  ///
+  /// The overlay used to come down only on the `rideAccepted` socket push.
+  /// That push is not the server's own: it is relayed when the *driver app*
+  /// emits `acceptRide` after its accept call returns. A driver app that
+  /// accepted the ride and then failed to emit (seen 2026-10-06: it could not
+  /// read the accept response) left the passenger searching for a driver who
+  /// was already on the way, with only Cancel to press.
+  ///
+  /// The booking's status is the server's own record, so it is asked every
+  /// [kAwaitDriverPollInterval] while the overlay is up. The socket push still
+  /// wins when it arrives; this only bounds how long its absence can last.
+  void _watchForDriver() {
+    _awaitDriverTimer?.cancel();
+    _awaitDriverTimer = Timer.periodic(
+      _awaitDriverPollInterval,
+      (_) => checkAwaitedBooking(),
+    );
+  }
+
+  void _stopWatchingForDriver() {
+    _awaitDriverTimer?.cancel();
+    _awaitDriverTimer = null;
+  }
+
+  /// One look at the booking being waited on. Opens the ride screen (or the
+  /// fare page) when the server says it has moved past "requested", by the
+  /// same rule Home applies on launch ([bookingRedirectRoute]).
+  @visibleForTesting
+  Future<void> checkAwaitedBooking() async {
+    if (_checkingAwaitedBooking) return;
+    if (session.status != BookingRequestStatus.awaitingDriver) {
+      _stopWatchingForDriver();
+      return;
+    }
+    _checkingAwaitedBooking = true;
+    try {
+      final booking = await checkBookingApi.checkBookingApi();
+      // Cancelled, or the socket got there first, while this was in flight.
+      if (session.status != BookingRequestStatus.awaitingDriver) return;
+      final route = bookingRedirectRoute(booking.data?.status);
+      if (route == null) return;
+      xPrettyLog(
+        message: "Booking moved on while waiting (status: "
+            "${booking.data?.status}), opening $route",
+      );
+      _stopWatchingForDriver();
+      session.markAccepted();
+      setBookingLoading(false);
+      _openBookingRoute(route);
+    } catch (e) {
+      // A check that failed is not a booking that failed: ask again on the
+      // next tick.
+      xPrettyLog(message: "Could not check the awaited booking: $e");
+    } finally {
+      _checkingAwaitedBooking = false;
+    }
   }
 
   Future<void> requestBooking() async {
@@ -557,6 +653,7 @@ class MapLogic extends GetxController {
           return;
         }
         session.markAwaitingDriver();
+        _watchForDriver();
         socket.rideRequestSocket(
           data: data,
           startLatitude: currentLat,
@@ -577,6 +674,7 @@ class MapLogic extends GetxController {
   /// The overlay's escape hatch. Clears the overlay first so a failing
   /// cancel call cannot strand the passenger behind it.
   Future<void> cancelBooking() async {
+    _stopWatchingForDriver();
     setBookingLoading(false);
     session.reset();
     await cancelBookingApi();
@@ -590,23 +688,5 @@ class MapLogic extends GetxController {
       },
       err: (error) => xPrettyLog(message: error.message),
     );
-  }
-}
-
-String driverMarkerImage({required int id}) {
-  // var vehicleType = state.vehicleTypeSelection;
-  switch (id) {
-    case 1:
-      return ImageAssets.rickshawMarker;
-    case 2:
-      return ImageAssets.classicCarMarker;
-    case 3:
-      return ImageAssets.minVanCarMarker;
-    case 4:
-      return ImageAssets.suvCarMarker;
-    case 5:
-      return ImageAssets.alphardVipCarMarker;
-    default:
-      return ImageAssets.rickshawMarker;
   }
 }

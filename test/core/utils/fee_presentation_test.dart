@@ -1,20 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:com.tara.passenger/core/utils/fee_presentation.dart';
-import 'package:com.tara.passenger/translations/app_locale.dart';
 
 void main() {
   group('feeAmount — money fails loudly (payload policy, PDD-01)', () {
-    test('formats a whole amount through today\'s formatter', () {
-      expect(feeAmount('12000'), '12,000 ${AppLocale.khmerCurrency}');
+    test('formats a whole amount as dollars with cents', () {
+      expect(feeAmount('12000'), '\$12,000.00');
     });
 
     test('formats a decimal amount', () {
-      expect(feeAmount('4.85'), '4.85 ${AppLocale.khmerCurrency}');
+      expect(feeAmount('4.85'), '\$4.85');
     });
 
     test('trims surrounding whitespace', () {
-      expect(feeAmount('  7500 '), '7,500 ${AppLocale.khmerCurrency}');
+      expect(feeAmount('  7500 '), '\$7,500.00');
     });
 
     test('a null amount returns null rather than a zero', () {
@@ -26,7 +25,7 @@ void main() {
     });
 
     test('an unparseable amount returns null rather than the raw string', () {
-      // Showing "abc ៛" or silently coercing to 0 would tell the passenger
+      // Showing "\$abc" or silently coercing to 0 would tell the passenger
       // something false about what they owe.
       expect(feeAmount('abc'), isNull);
       expect(feeAmount('12,000'), isNull);

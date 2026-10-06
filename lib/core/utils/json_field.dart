@@ -71,6 +71,22 @@ int requireMoneyInt(
 }) =>
     requireMoney(value, model: model, field: field).toInt();
 
+/// A money value that may be absent, as a [num], or null when it is.
+///
+/// Absent means null or a blank string. A value that is present and is not
+/// a number still throws [MalformedPayloadException]: "the backend sent no
+/// minimum fare" and "the backend sent one this app cannot read" are
+/// different facts, and only the first is safe to show as "—".
+num? optionalMoney(
+  dynamic value, {
+  required String model,
+  required String field,
+}) {
+  if (value == null) return null;
+  if (value is String && value.trim().isEmpty) return null;
+  return requireMoney(value, model: model, field: field);
+}
+
 // ---- Display fields: degrade -------------------------------------------
 
 /// A display string, or `''` when absent. A blank label beats a dead screen.
@@ -82,6 +98,36 @@ int intOrDefault(dynamic value, {int fallback = 0}) {
   if (value is num) return value.toInt();
   if (value is String) return int.tryParse(value.trim()) ?? fallback;
   return fallback;
+}
+
+/// Text, or null when absent. A number or a flag is written out, because
+/// this backend sends some labels as numbers (`"booking_code": 1791280927`);
+/// a list or an object is not text and reads as null.
+String? stringOrNull(dynamic value) {
+  if (value is String) return value;
+  if (value is num || value is bool) return '$value';
+  return null;
+}
+
+/// A flag, or null when absent or not a flag.
+bool? boolOrNull(dynamic value) => value is bool ? value : null;
+
+/// A whole number, or null when absent or unparseable. Accepts a number or
+/// numeric text, so an id or a status sent as `"2"` reads the same as `2`.
+int? intOrNull(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value.trim());
+  return null;
+}
+
+/// A display number, or null when absent or unparseable. Accepts a number
+/// or numeric text: this backend sends coordinates and headings as text
+/// (`"heading": "89.99986267089844"`).
+double? doubleOrNull(dynamic value) {
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value.trim());
+  return null;
 }
 
 /// A flag, or [fallback] when absent.

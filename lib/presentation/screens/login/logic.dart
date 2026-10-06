@@ -1,4 +1,5 @@
 import 'package:com.tara.passenger/core/helper/phone_validate_helper.dart';
+import 'package:com.tara.passenger/core/utils/debug_auth_bypass.dart';
 import 'package:com.tara.passenger/presentation/screens/login/data/repository/auth_repository.dart';
 import 'package:com.tara.passenger/presentation/screens/login/state.dart';
 import 'package:com.tara.passenger/presentation/widgets/custom_snackbar_widget.dart';
@@ -76,6 +77,36 @@ class LoginLogic extends GetxController {
       phoneShake.currentState?.shake();
       showCustomSnackBar(title: phoneRepo.getErrorMessage(), message: "");
     }
+  }
+
+  /// The login page's debug button — see [DebugAuthBypass]. Signs in as the
+  /// account from `dart_defines.json` through `POST /taxi-passenger/login`
+  /// and goes where a verified OTP goes, skipping the phone and OTP steps.
+  /// Does nothing in a build that has not asked for the bypass, so it cannot
+  /// sign anyone in from a release.
+  Future<void> debugLogin() async {
+    if (!DebugAuthBypass.isEnabled || state.debugLoggingIn.value) return;
+
+    state.debugLoggingIn.value = true;
+    final bool ok;
+    try {
+      ok = await DebugAuthBypass.seedSession(_repository.passwordLogin);
+    } finally {
+      state.debugLoggingIn.value = false;
+    }
+
+    if (ok) {
+      Get.offAllNamed(AppRoutes.BOTTOMNAV);
+      return;
+    }
+    showErrorCustomDialog(
+      Get.context!,
+      AppLocale.pleaseTryAgain.tr,
+      DebugAuthBypass.lastError ?? 'Debug login failed. See the log.',
+      () {
+        Get.back();
+      },
+    );
   }
 
   String validatePhoneNumber(String value) {

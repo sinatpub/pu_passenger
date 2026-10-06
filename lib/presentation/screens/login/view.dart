@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
+import 'package:com.tara.passenger/core/utils/debug_auth_bypass.dart';
 import 'package:com.tara.passenger/core/utils/phone_formatter.dart';
 import 'package:com.tara.passenger/presentation/screens/login/logic.dart';
 import 'package:com.tara.passenger/presentation/widgets/shake_widget.dart';
@@ -22,8 +23,16 @@ import 'auth_language_toggle.dart';
 /// still driven by `logic.phoneShake`.
 ///
 /// `PDD-04` — the three-step indicator is built as specified.
+///
+/// A debug build that asks for the OTP bypass also gets one extra button
+/// under Next, which signs in as the account in `dart_defines.json` — see
+/// [DebugAuthBypass]. No release build shows it.
 class LoginPage extends StatelessWidget {
-  const LoginPage({super.key});
+  const LoginPage({super.key, @visibleForTesting this.showDebugLogin});
+
+  /// Null follows [DebugAuthBypass.isEnabled]. Tests set it, because that
+  /// flag is a compile-time constant they cannot switch on.
+  final bool? showDebugLogin;
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +78,8 @@ class LoginPage extends StatelessWidget {
                   child: TaTextField(
                     controller: logic.phoneTextController,
                     hint: AppLocale.enterPhoneNumber.tr,
-                    enabled: !logic.state.isLoading.value,
+                    enabled: !logic.state.isLoading.value &&
+                        !logic.state.debugLoggingIn.value,
 
                     /// Display-only prefix, exactly as before — the country
                     /// code is **not** part of the submitted value, which
@@ -96,13 +106,35 @@ class LoginPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              TaButton(
-                label: AppLocale.next.tr,
-                onTap: () => logic.phoneLogin(
-                  logic.state.phoneNumber.value,
-                  context,
+              Obx(
+                () => TaButton(
+                  label: AppLocale.next.tr,
+                  isEnabled: !logic.state.debugLoggingIn.value,
+                  onTap: () => logic.phoneLogin(
+                    logic.state.phoneNumber.value,
+                    context,
+                  ),
                 ),
               ),
+              if (showDebugLogin ?? DebugAuthBypass.isEnabled) ...[
+                const SizedBox(height: 24),
+                Obx(
+                  () => TaButton(
+                    label: DebugAuthBypass.loginLabel,
+                    variant: TaButtonVariant.ghost,
+                    size: TaButtonSize.small,
+                    isLoading: logic.state.debugLoggingIn.value,
+                    onTap: logic.debugLogin,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  DebugAuthBypass.loginCaption,
+                  textAlign: TextAlign.center,
+                  style: TaTextStyles.bodySmall
+                      .copyWith(color: TaColors.textSecondary),
+                ),
+              ],
             ],
           ),
         ),

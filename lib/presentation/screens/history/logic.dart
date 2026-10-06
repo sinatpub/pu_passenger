@@ -78,7 +78,7 @@ class HistoryLogic extends GetxController
     state.propertyPagingController.value.refresh();
   }
 
-  int getVehiclePrice({required int vehicleTypeId}) {
+  num getVehiclePrice({required int vehicleTypeId}) {
     final data = homeLogic.state.vehicleAllType?.data;
     if (data == null || data.isEmpty) return 0;
 

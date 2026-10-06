@@ -111,6 +111,52 @@ void main() {
       expect(v.updatedAt, isNull);
     });
 
+    test('the real payload parses: amounts are dollar decimals in text', () {
+      // `GET /taxi/get-type-vehicle` as the backend answered on 2026-10-06.
+      // `minimum_fare` as text is what left Home on its skeleton: the model
+      // read it as an int.
+      final m = VehicalTypeEntities.fromJson({
+        'data': [
+          {
+            'id': 1,
+            'name': 'Moto',
+            'price': '0.30',
+            'minimum_fare': '0.50',
+            'commission': '10.00',
+            'image': '',
+            'created_at': '2026-08-31 14:41:13',
+            'updated_at': '2026-08-31 14:41:13',
+          },
+        ],
+        'color': [
+          {'id': 1, 'name': 'White'},
+        ],
+        'message': 'success',
+        'status': true,
+      });
+
+      final moto = m.data.single;
+      expect(moto.name, 'Moto');
+      expect(moto.price, 0.30);
+      expect(moto.miniMunFare, 0.50);
+      expect(moto.orderKey, isNull);
+      expect(moto.createdAt, DateTime(2026, 8, 31, 14, 41, 13));
+    });
+
+    test('a minimum fare that is absent is null; one that is unreadable '
+        'refuses to parse', () {
+      expect(SingleVehical.fromJson(vehicle()).miniMunFare, isNull);
+      expect(
+        SingleVehical.fromJson(vehicle()..['minimum_fare'] = '')
+            .miniMunFare,
+        isNull,
+      );
+      expect(
+        () => SingleVehical.fromJson(vehicle()..['minimum_fare'] = 'free'),
+        throwsA(isA<MalformedPayloadException>()),
+      );
+    });
+
     test('the wrapper degrades even when the payload omits everything', () {
       final m = VehicalTypeEntities.fromJson({});
       expect(m.data, isEmpty);

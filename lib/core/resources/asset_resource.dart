@@ -33,6 +33,7 @@ class ImageAssets {
 
   /// Service art, one per vehicle type — see `vehicle_art.dart`.
   static const String vehicleTukTuk = '$IMAGE_SVG_PATH/vehicle_tuk_tuk.svg';
+  static const String vehicleMoto = '$IMAGE_SVG_PATH/vehicle_moto.svg';
   static const String vehicleClassic = '$IMAGE_SVG_PATH/vehicle_classic.svg';
   static const String vehicleMiniVan = '$IMAGE_SVG_PATH/vehicle_mini_van.svg';
   static const String vehicleSuv = '$IMAGE_SVG_PATH/vehicle_suv.svg';
@@ -54,6 +55,7 @@ class ImageAssets {
   static const String passengerMarker = "assets/marker/passenger_marker.png";
   static const String destinationMarker = "assets/marker/destination_icon.png";
 
+  static const String motoMarker = "assets/marker/moto_marker.png";
   static const String rickshawMarker = "assets/marker/rickshaw_marker.png";
   static const String classicCarMarker = "assets/marker/classic_marker.png";
   static const String alphardVipCarMarker = "assets/marker/alphard_marker.png";

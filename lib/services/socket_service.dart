@@ -348,7 +348,12 @@ PassengerSocketService._internal();
   void addSocketListeners(Map<SocketEvent, Function(dynamic)> listeners) {
     listeners.forEach((event, handler) {
       try {
-        _socket?.on(event.eventName, handler);
+        // Logged on arrival: without it the log could show a ride request
+        // going out and nothing about whether an answer ever came back.
+        _socket?.on(event.eventName, (data) {
+          tlog("Socket push received: ${event.eventName}");
+          handler(data);
+        });
         tlog("Listener added for event: ${event.eventName}");
       } catch (e) {
         tlog("Error adding listener for event ${event.eventName}: $e");

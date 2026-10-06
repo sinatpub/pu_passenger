@@ -126,7 +126,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(FeeContent), findsOneWidget);
-      expect(find.text('17,800 ${AppLocale.khmerCurrency}'), findsOneWidget);
+      expect(find.text('\$17,800.00'), findsOneWidget);
       expect(find.text('Wallet'), findsOneWidget);
     });
 
@@ -148,7 +148,7 @@ void main() {
       await tester.pump();
 
       expect(find.byType(FeeErrorView), findsNothing);
-      expect(find.text('17,800 ${AppLocale.khmerCurrency}'), findsOneWidget);
+      expect(find.text('\$17,800.00'), findsOneWidget);
     });
 
     testWidgets('an answer with no booking in it is a failed load too',

@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:com.tara.passenger/core/network/api_exception.dart';
 import 'package:com.tara.passenger/core/network/result.dart';
+import 'package:com.tara.passenger/core/utils/status_util.dart';
 import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
+import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
 import 'package:com.tara.passenger/data/datasources/request_booking_api.dart';
 import 'package:com.tara.passenger/data/models/request_booking_model.dart';
 import 'package:com.tara.passenger/data/datasources/update_passenger_location_api.dart';
@@ -12,8 +14,10 @@ import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
 import 'package:com.tara.passenger/presentation/shared/ride_dialogs.dart';
+import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/services/booking_session.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -87,6 +91,25 @@ class _FakeCancelBookingApi extends CancelBookingApi {
   }
 }
 
+/// What the server says the awaited booking's status is, one answer per
+/// check; the last one repeats. A null status is a booking still waiting.
+class _FakeCheckBookingApi extends CheckBookingApi {
+  _FakeCheckBookingApi(this.statuses);
+
+  final List<int?> statuses;
+  int calls = 0;
+  bool failing = false;
+
+  @override
+  Future<RequestBookingModel> checkBookingApi() async {
+    calls++;
+    if (failing) throw 'SOMETHING_WRONG';
+    final status =
+        statuses.length > 1 ? statuses.removeAt(0) : statuses.single;
+    return RequestBookingModel(data: Data(id: 1, status: status));
+  }
+}
+
 /// A booking the server accepted. `data` non-null is the success signal
 /// `requestBooking()` keys off.
 RequestBookingModel _booking() => RequestBookingModel(data: Data(id: 1));
@@ -121,31 +144,50 @@ void main() {
   /// being disposed and re-entered.
   MapLogic buildLogicWith(BookingSession existing,
       {_FakeRequestBookingApi? api}) {
-    return MapLogic(
+    final logic = MapLogic(
       requestBookingApi: api ?? _FakeRequestBookingApi(),
       socket: _FakeSocket(),
       updatePassengerLocationApi: _FakeUpdateLocationApi(),
       errorPresenter: presentError,
       bookingSession: existing,
+      checkBookingApi: _FakeCheckBookingApi([BookingStatus.request]),
+      openBookingRoute: (_) {},
     );
+    // Stops the wait's timer, which restoring an awaited booking starts.
+    addTearDown(logic.onClose);
+    return logic;
   }
 
-  MapLogic buildLogic(_FakeRequestBookingApi api) {
+  /// The routes the wait for a driver opened.
+  late List<String> openedRoutes;
+
+  MapLogic buildLogic(
+    _FakeRequestBookingApi api, {
+    _FakeCheckBookingApi? checkBooking,
+  }) {
     socket = _FakeSocket();
     updateLocation = _FakeUpdateLocationApi();
     shownErrors = <BookingFailure>[];
     retryAnswers = <bool>[];
+    openedRoutes = <String>[];
     session = BookingSession();
     // Only the collaborators `requestBooking()` actually reaches are supplied.
     // The rest stay unresolved — which is the point of the lazy fields.
-    return MapLogic(
+    final logic = MapLogic(
       requestBookingApi: api,
       socket: socket,
       updatePassengerLocationApi: updateLocation,
       errorPresenter: presentError,
       bookingSession: session,
       cancelBookingRepo: _FakeCancelBookingApi(),
+      // Still "requested" unless a test says otherwise.
+      checkBookingApi:
+          checkBooking ?? _FakeCheckBookingApi([BookingStatus.request]),
+      openBookingRoute: openedRoutes.add,
     );
+    // Stops the wait's timer, which a successful request starts.
+    addTearDown(logic.onClose);
+    return logic;
   }
 
   group('setBookingLoading', () {
@@ -362,6 +404,154 @@ void main() {
       expect(api.callCount, 2, reason: 'retry after failure must be allowed');
       api.completers[1].complete(Result.ok(_booking()));
       await second;
+    });
+  });
+
+  group('waiting for a driver asks the server too', () {
+    /// A request the server took: the overlay is up and the wait has begun.
+    Future<MapLogic> awaiting(_FakeCheckBookingApi checkBooking) async {
+      final api = _FakeRequestBookingApi();
+      final logic = buildLogic(api, checkBooking: checkBooking)
+        ..state.currentLatLng = const LatLng(11.5, 104.9);
+      final pending = logic.requestBooking();
+      api.completers.single.complete(Result.ok(_booking()));
+      await pending;
+      expect(session.status, BookingRequestStatus.awaitingDriver);
+      return logic;
+    }
+
+    test('an accepted booking opens the ride screen with no socket push',
+        () async {
+      // What happened on 2026-10-06: the driver app accepted the ride and
+      // never emitted `acceptRide`, so `rideAccepted` never came.
+      final logic =
+          await awaiting(_FakeCheckBookingApi([BookingStatus.accepted]));
+
+      await logic.checkAwaitedBooking();
+
+      expect(openedRoutes, [AppRoutes.BOOKING]);
+      expect(logic.state.isBookingLoading, isFalse);
+      expect(session.status, BookingRequestStatus.accepted);
+      expect(session.isBusy, isFalse, reason: 'the next booking can start');
+    });
+
+    test('a driver already at the pickup, or driving, opens it as well',
+        () async {
+      for (final status in [BookingStatus.arrival, BookingStatus.onGoing]) {
+        final logic = await awaiting(_FakeCheckBookingApi([status]));
+        await logic.checkAwaitedBooking();
+        expect(openedRoutes, [AppRoutes.BOOKING], reason: 'status $status');
+      }
+    });
+
+    test('a booking still requested keeps the overlay up', () async {
+      final checkBooking = _FakeCheckBookingApi([BookingStatus.request]);
+      final logic = await awaiting(checkBooking);
+
+      await logic.checkAwaitedBooking();
+      await logic.checkAwaitedBooking();
+
+      expect(checkBooking.calls, 2);
+      expect(openedRoutes, isEmpty);
+      expect(logic.state.isBookingLoading, isTrue);
+      expect(session.status, BookingRequestStatus.awaitingDriver);
+    });
+
+    test('a check that fails is not a booking that failed', () async {
+      final checkBooking = _FakeCheckBookingApi([BookingStatus.accepted])
+        ..failing = true;
+      final logic = await awaiting(checkBooking);
+
+      await logic.checkAwaitedBooking();
+
+      expect(openedRoutes, isEmpty);
+      expect(shownErrors, isEmpty);
+      expect(logic.state.isBookingLoading, isTrue);
+
+      // The next look succeeds.
+      checkBooking.failing = false;
+      await logic.checkAwaitedBooking();
+      expect(openedRoutes, [AppRoutes.BOOKING]);
+    });
+
+    test('the server is asked on a timer, and no longer once it answers',
+        () {
+      fakeAsync((async) {
+        final checkBooking = _FakeCheckBookingApi(
+            [BookingStatus.request, BookingStatus.request, BookingStatus.accepted]);
+        final api = _FakeRequestBookingApi();
+        final logic = buildLogic(api, checkBooking: checkBooking)
+          ..state.currentLatLng = const LatLng(11.5, 104.9);
+        logic.requestBooking();
+        api.completers.single.complete(Result.ok(_booking()));
+        async.flushMicrotasks();
+
+        async.elapse(kAwaitDriverPollInterval * 2);
+        expect(checkBooking.calls, 2);
+        expect(openedRoutes, isEmpty);
+
+        async.elapse(kAwaitDriverPollInterval);
+        expect(openedRoutes, [AppRoutes.BOOKING]);
+
+        async.elapse(kAwaitDriverPollInterval * 5);
+        expect(checkBooking.calls, 3, reason: 'the timer was stopped');
+        expect(openedRoutes, hasLength(1));
+      });
+    });
+
+    test('cancelling stops the asking', () {
+      fakeAsync((async) {
+        final checkBooking = _FakeCheckBookingApi([BookingStatus.accepted]);
+        final api = _FakeRequestBookingApi();
+        final logic = buildLogic(api, checkBooking: checkBooking)
+          ..state.currentLatLng = const LatLng(11.5, 104.9);
+        logic.requestBooking();
+        api.completers.single.complete(Result.ok(_booking()));
+        async.flushMicrotasks();
+
+        logic.cancelBooking();
+        async.flushMicrotasks();
+        async.elapse(kAwaitDriverPollInterval * 3);
+
+        expect(checkBooking.calls, 0);
+        expect(openedRoutes, isEmpty);
+      });
+    });
+
+    test('an answer that arrives after a cancel opens nothing', () async {
+      final logic =
+          await awaiting(_FakeCheckBookingApi([BookingStatus.accepted]));
+
+      final check = logic.checkAwaitedBooking();
+      await logic.cancelBooking();
+      await check;
+
+      expect(openedRoutes, isEmpty);
+      expect(session.status, BookingRequestStatus.idle);
+    });
+
+    test('a rebuilt map picks the wait up again', () {
+      fakeAsync((async) {
+        final existing = BookingSession()
+          ..beginRequest(pickup: const LatLng(11.5, 104.9))
+          ..markAwaitingDriver();
+        final checkBooking = _FakeCheckBookingApi([BookingStatus.accepted]);
+        final opened = <String>[];
+        final logic = MapLogic(
+          requestBookingApi: _FakeRequestBookingApi(),
+          socket: _FakeSocket(),
+          updatePassengerLocationApi: _FakeUpdateLocationApi(),
+          bookingSession: existing,
+          checkBookingApi: checkBooking,
+          openBookingRoute: opened.add,
+        );
+
+        logic.restoreFromSession();
+        async.elapse(kAwaitDriverPollInterval);
+
+        expect(opened, [AppRoutes.BOOKING]);
+        logic.onClose();
+      });
     });
   });
 

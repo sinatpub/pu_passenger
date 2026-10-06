@@ -109,9 +109,10 @@ class MockData {
   /// integers, so a `MOCK-` prefix is impossible — a 99xxxx id is the tell.
   static const int firstBookingId = 990001;
 
-  static const int vehicleTypeId = 2; // Classic car — see `typeVehicle()`.
-  static const int pricePerKm = 1500; // riel
-  static const int minimumFare = 6000; // riel
+  static const int vehicleTypeId = 3; // Car — see `vehicleTypes()`.
+  static const String vehicleTypeName = 'Car';
+  static const double pricePerKm = 0.80; // dollars
+  static const double minimumFare = 1.50; // dollars
 
   /// The role_id the backend grants a passenger. `AppLogic.initSocket()`
   /// derives the socket identity from the legacy auth blob, not this, but
@@ -188,7 +189,7 @@ class MockData {
   static Map<String, dynamic> vehicle({int? typeVehicleId}) => {
         'id': 88,
         'type_vehicle_id': typeVehicleId ?? vehicleTypeId,
-        'vehicle_price': pricePerKm,
+        'vehicle_price': pricePerKm.toStringAsFixed(2),
         'model': 'Prius',
         'manufacturer': 'Toyota',
         'year_of_manufacture': 2016,
@@ -237,25 +238,31 @@ class MockData {
           {double heading = 0}) =>
       {...loc, 'heading': heading};
 
+  /// `GET /taxi/get-type-vehicle`, in the shape the real backend answered
+  /// on 2026-10-06: ids 1 to 3 with these names, amounts as dollar decimals
+  /// in text, an empty `image`, no `order_key`. The three larger types are
+  /// the mock's own, kept so their drawings and markers can be seen.
   static List<Map<String, dynamic>> vehicleTypes() {
-    const created = '2025-01-01T00:00:00.000000Z';
-    Map<String, dynamic> type(int id, String name, int price, int minimum) =>
+    const created = '2026-08-31 14:41:13';
+    Map<String, dynamic> type(
+            int id, String name, double price, double minimum) =>
         {
           'id': id,
           'name': name,
-          'price': price,
-          'minimum_fare': minimum,
-          'image': null,
-          'order_key': id,
+          'price': price.toStringAsFixed(2),
+          'minimum_fare': minimum.toStringAsFixed(2),
+          'commission': '10.00',
+          'image': '',
           'created_at': created,
           'updated_at': created,
         };
     return [
-      type(1, 'Tuk Tuk', 1000, 4000),
-      type(2, 'Classic Car', pricePerKm, minimumFare),
-      type(3, 'Mini Van', 2000, 8000),
-      type(4, 'SUV', 2500, 10000),
-      type(5, 'Alphard VIP', 5000, 20000),
+      type(1, 'Moto', 0.30, 0.50),
+      type(2, 'Tuktuk', 0.50, 1.00),
+      type(vehicleTypeId, vehicleTypeName, pricePerKm, minimumFare),
+      type(4, 'Mini Van', 1.00, 2.00),
+      type(5, 'SUV', 1.20, 2.50),
+      type(6, 'Alphard VIP', 2.00, 5.00),
     ];
   }
 
@@ -282,7 +289,7 @@ class MockData {
       item(
           3,
           'Pchum Ben holiday bonus',
-          'Complete 20 trips between 20 and 24 September and earn a 30,000 riel travel credit.',
+          'Complete 20 trips between 20 and 24 September and earn a \$7.50 travel credit.',
           '2026-09-15'),
       item(
           2,

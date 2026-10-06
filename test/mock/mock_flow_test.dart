@@ -80,6 +80,15 @@ void main() {
     expect(login.data?.token, MockData.token);
     expect(login.data?.user?.name, 'Sreymom Chan');
 
+    // The debug login (`DebugAuthBypass`) answers with the same session.
+    final debugLogin = value(await auth.passwordLogin(
+        phone: '098765432',
+        password: 'not-a-real-password',
+        deviceToken: 'device-1',
+        platform: 'android'));
+    expect(debugLogin.data?.token, MockData.token);
+    expect(debugLogin.data?.user?.id, login.data?.user?.id);
+
     final registered =
         value(await auth.register(fullName: 'Sreymom Chan',
             phoneNumber: '098765432', profileImage: null, platform: 'android'));
@@ -90,8 +99,13 @@ void main() {
         (await backend.handle(
                 const MockRequest(method: 'GET', path: '/taxi/get-type-vehicle')))
             .data as Map<String, dynamic>);
-    expect(vehicles.data.map((v) => v.name), contains('Classic Car'));
-    expect(vehicles.data.firstWhere((v) => v.id == 2).price,
+    // The first three are the real backend's, with its dollar decimals.
+    expect(vehicles.data.take(3).map((v) => v.name),
+        ['Moto', 'Tuktuk', 'Car']);
+    expect(vehicles.data.first.price, 0.30);
+    expect(vehicles.data.first.miniMunFare, 0.50);
+    expect(
+        vehicles.data.firstWhere((v) => v.id == MockData.vehicleTypeId).price,
         MockData.pricePerKm);
 
     final drivers = value(await GetDriverAroundDataSource(apiClient: api)
@@ -124,7 +138,8 @@ void main() {
     expect(data.status, BookingStatus.request);
     expect(data.id, greaterThanOrEqualTo(MockData.firstBookingId));
     expect(data.driver?.id, MockData.driverId);
-    expect(data.typeVehicle?.name, 'Classic Car');
+    expect(data.typeVehicle?.name, MockData.vehicleTypeName);
+    expect(data.typeVehicle?.price, MockData.pricePerKm);
     expect(data.startAddress, contains('Central Market'));
     expect(data.endAddress, contains('Airport'));
     expect(data.fare, isNull, reason: 'no fare until the trip is paid');

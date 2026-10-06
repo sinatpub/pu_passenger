@@ -5,6 +5,7 @@ import 'package:com.tara.passenger/core/utils/fee_presentation.dart';
 import 'package:com.tara.passenger/core/utils/initials.dart';
 import 'package:com.tara.passenger/core/utils/status_util.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_art.dart';
+import 'package:com.tara.passenger/core/utils/vehicle_kind.dart';
 import 'package:com.tara.passenger/data/models/history_booking_model.dart';
 import 'package:com.tara.passenger/presentation/widgets/ta_history_card.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
@@ -21,8 +22,10 @@ import 'package:intl/intl.dart';
 /// The payload policy holds: the amount is money and fails loudly; everything
 /// else degrades to an em dash.
 ///
-/// [vehicleName] is the trip's vehicle type as the app currently names it;
-/// the caller looks it up, and without one the booking's own record is used.
+/// [vehicleName] is the trip's vehicle type as Home names it today. The
+/// caller looks it up by the type id: a past trip records only that id, and
+/// what an id means is the backend's to say. Without a name the card shows
+/// no vehicle rather than a guessed one.
 /// [now] decides whether the card's date needs its year.
 HistoryItem historyCellData(
   Datum? data, {
@@ -32,7 +35,7 @@ HistoryItem historyCellData(
   final driverName = data?.driver?.name;
   final completed = isCompletedHistory(data?.status);
   final fare = feeAmount(data?.payment?.amount);
-  final art = vehicleArtAsset(data?.driver?.vehicle?.typeVehicleId);
+  final art = vehicleArtAsset(vehicleKindFromName(vehicleName));
   return HistoryItem(
     invoice: historyInvoice(data?.payment?.invoiceId),
     driver: driverName ?? AppLocale.unKnown.tr,
@@ -45,7 +48,7 @@ HistoryItem historyCellData(
     duration: historyDuration(data?.payment?.duration),
     cardDate: historyCardDate(data?.createdAt, now: now),
     subtitle: historySubtitle(
-      vehicleName: vehicleName ?? historyVehicleName(data),
+      vehicleName: vehicleName,
       driverName: driverName,
     ),
 
@@ -78,15 +81,6 @@ String historyCardDate(String? createdAt, {DateTime? now}) {
   final sameYear = parsed.year == (now ?? DateTime.now()).year;
   return DateFormat(sameYear ? 'd MMM, h:mm a' : 'd MMM yyyy, h:mm a')
       .format(parsed);
-}
-
-/// The vehicle type recorded on the booking, or null when it has none — a
-/// trip cancelled before a driver took it.
-String? historyVehicleName(Datum? data) {
-  final vehicle = data?.driver?.vehicle;
-  if (vehicle?.typeVehicleId == null) return null;
-  final name = vehicle!.vehicleTypeName;
-  return name == 'Unknown' ? null : name;
 }
 
 /// `Classic Car · Sok Dara` — whichever parts the booking has, or null.
@@ -205,7 +199,7 @@ String historyVehicleInfo(Datum? data, {String? vehicleName}) {
     manufacturer: vehicle?.manufacturer,
     model: vehicle?.model,
     color: vehicle?.color,
-    typeName: vehicleName ?? historyVehicleName(data),
+    typeName: vehicleName,
   );
 }
 

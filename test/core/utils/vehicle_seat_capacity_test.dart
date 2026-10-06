@@ -1,50 +1,48 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:com.tara.passenger/core/utils/vehicle_kind.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_seat_capacity.dart';
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('seatCapacityForVehicleId', () {
-    test('rickshaw (id 1) seats 3', () {
-      expect(seatCapacityForVehicleId(1), 3);
+  group('seatCapacityFor', () {
+    test('a moto carries one passenger', () {
+      expect(seatCapacityFor(VehicleKind.moto), 1);
     });
 
-    test('classic car (id 2) seats 4', () {
-      expect(seatCapacityForVehicleId(2), 4);
+    test('a tuk tuk carries three', () {
+      expect(seatCapacityFor(VehicleKind.tukTuk), 3);
     });
 
-    test('mini van (id 3) seats 7', () {
-      expect(seatCapacityForVehicleId(3), 7);
+    test('a car and an SUV carry four', () {
+      expect(seatCapacityFor(VehicleKind.car), 4);
+      expect(seatCapacityFor(VehicleKind.suv), 4);
     });
 
-    test('suv (id 4) seats 4', () {
-      expect(seatCapacityForVehicleId(4), 4);
+    test('a mini van carries seven, a VIP van five', () {
+      expect(seatCapacityFor(VehicleKind.miniVan), 7);
+      expect(seatCapacityFor(VehicleKind.vip), 5);
     });
 
-    test('unrecognized id defaults to 5 seats', () {
-      expect(seatCapacityForVehicleId(5), 5);
-      expect(seatCapacityForVehicleId(99), 5);
-    });
-
-    test('null id defaults to 5 seats', () {
-      expect(seatCapacityForVehicleId(null), 5);
+    test('a type the app does not recognise is taken to be a car', () {
+      expect(seatCapacityFor(null), 4);
     });
   });
 
-  group('etaMinutesForVehicleId (C2 home vehicle list)', () {
-    test('rickshaw ~2 min, classic ~3, mini van ~4, suv ~4', () {
-      expect(etaMinutesForVehicleId(1), 2);
-      expect(etaMinutesForVehicleId(2), 3);
-      expect(etaMinutesForVehicleId(3), 4);
-      expect(etaMinutesForVehicleId(4), 4);
+  group('etaMinutesFor (C2 home vehicle list)', () {
+    test('the smaller the vehicle, the sooner one is near', () {
+      expect(etaMinutesFor(VehicleKind.moto), 2);
+      expect(etaMinutesFor(VehicleKind.tukTuk), 2);
+      expect(etaMinutesFor(VehicleKind.car), 3);
+      expect(etaMinutesFor(VehicleKind.miniVan), 4);
+      expect(etaMinutesFor(VehicleKind.suv), 4);
+      expect(etaMinutesFor(VehicleKind.vip), 5);
     });
 
-    test('unknown id and alphard/vip default to 5 min', () {
-      expect(etaMinutesForVehicleId(5), 5);
-      expect(etaMinutesForVehicleId(99), 5);
-      expect(etaMinutesForVehicleId(null), 5);
+    test('an unrecognised type gets the longest wait', () {
+      expect(etaMinutesFor(null), 5);
     });
 
     test('formatEtaMinutes renders the display string', () {
-      expect(formatEtaMinutes(1), '~2 min');
+      expect(formatEtaMinutes(VehicleKind.moto), '~2 min');
       expect(formatEtaMinutes(null), '~5 min');
     });
   });

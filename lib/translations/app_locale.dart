@@ -42,6 +42,7 @@ class AppLocale {
   static var enterUrDestination = "Enter your destination";
   static var serviceType = "Vehicle Type";
   static var seatCapacity = "Seats";
+  static var seat = "Seat";
   static var yes = "Yes";
   static var no = "No";
   static var ok = "Okay";
@@ -103,7 +104,6 @@ class AppLocale {
       "Price per km"; // P2: km is the SI unit, and 03 §D7 writes it lowercase
   static var minFee = "Minimum Fare";
   static var normal = "Normal";
-  static var khmerCurrency = "៛";
 
   // Bottom Nav
   static var home = 'Home';

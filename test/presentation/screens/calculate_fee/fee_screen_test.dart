@@ -142,7 +142,7 @@ void main() {
         (tester) async {
       await _pump(tester, FeeContent(data: _data()));
 
-      final fare = find.text('12,000 ${AppLocale.khmerCurrency}');
+      final fare = find.text('\$12,000.00');
       expect(fare, findsOneWidget);
       expect(find.text('Cash'), findsOneWidget);
 
@@ -164,7 +164,7 @@ void main() {
         (tester) async {
       await _pump(tester, FeeContent(data: _data(method: null)));
 
-      expect(find.text('12,000 ${AppLocale.khmerCurrency}'), findsOneWidget);
+      expect(find.text('\$12,000.00'), findsOneWidget);
       expect(find.text('Cash'), findsNothing);
     });
 
@@ -172,7 +172,7 @@ void main() {
         (tester) async {
       await _pump(tester, FeeContent(data: _data(amount: 'abc')));
 
-      expect(find.textContaining(AppLocale.khmerCurrency), findsNothing);
+      expect(find.textContaining('\$'), findsNothing);
       expect(find.text(AppLocale.fareUnavailable), findsOneWidget);
     });
 
@@ -180,7 +180,7 @@ void main() {
         (tester) async {
       await _pump(tester, FeeContent(data: _data(amount: null)));
 
-      expect(find.textContaining(AppLocale.khmerCurrency), findsNothing);
+      expect(find.textContaining('\$'), findsNothing);
       expect(find.text(AppLocale.fareUnavailable), findsOneWidget);
     });
 

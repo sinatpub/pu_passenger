@@ -41,6 +41,29 @@ Datum _trip({
       ),
     );
 
+/// Registers a Home that knows vehicle type 2 as [name]. A past trip records
+/// only the type id; its name, and with it the drawing, come from Home.
+void _homeNamesTheType(String name) {
+  final home = _HomeLogicHarness()
+    ..state.vehicleAllType = VehicalTypeEntities(
+      data: [
+        SingleVehical(
+          id: 2,
+          name: name,
+          price: 0.5,
+          orderKey: null,
+          miniMunFare: 1,
+          image: '',
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+      ],
+      message: '',
+      status: true,
+    );
+  Get.put<HomeLogic>(home);
+}
+
 Future<void> _pump(WidgetTester tester, Widget child) async {
   await tester.pumpWidget(
     GetMaterialApp(
@@ -71,10 +94,11 @@ void main() {
   group('HistoryRow (03 §Screen 13)', () {
     testWidgets('a completed trip: when, what it cost, who drove, how far',
         (tester) async {
+      _homeNamesTheType('Classic Car');
       await _pump(tester, HistoryRow(data: _trip()));
 
       expect(find.textContaining('11 Sep'), findsOneWidget);
-      expect(find.text('12,000 ${AppLocale.khmerCurrency}'), findsOneWidget);
+      expect(find.text('\$12,000.00'), findsOneWidget);
       expect(find.text('Classic Car · Sok Dara'), findsOneWidget);
       expect(find.text('No. 128, St. 271'), findsOneWidget);
       expect(find.text('Aeon Mall'), findsOneWidget);
@@ -83,6 +107,7 @@ void main() {
 
     testWidgets('the vehicle is drawn, and the invoice and status are not '
         'on the card', (tester) async {
+      _homeNamesTheType('Classic Car');
       await _pump(tester, HistoryRow(data: _trip()));
 
       expect(find.byType(SvgPicture), findsOneWidget);
@@ -94,12 +119,13 @@ void main() {
 
     testWidgets('a cancelled trip shows no fare and no distance',
         (tester) async {
+      _homeNamesTheType('Classic Car');
       await _pump(
         tester,
         HistoryRow(data: _trip(status: BookingStatus.cancel)),
       );
 
-      expect(find.textContaining(AppLocale.khmerCurrency), findsNothing);
+      expect(find.textContaining('\$'), findsNothing);
       expect(find.textContaining('km'), findsNothing);
       expect(find.text(AppLocale.cancelled), findsNothing);
       // What was booked is still there.
@@ -130,28 +156,22 @@ void main() {
     });
 
     testWidgets('the vehicle is named as Home names it today', (tester) async {
-      final home = _HomeLogicHarness()
-        ..state.vehicleAllType = VehicalTypeEntities(
-          data: [
-            SingleVehical(
-              id: 2,
-              name: 'Sedan',
-              price: 1500,
-              orderKey: 2,
-              miniMunFare: 6000,
-              image: null,
-              createdAt: DateTime(2026),
-              updatedAt: DateTime(2026),
-            ),
-          ],
-          message: '',
-          status: true,
-        );
-      Get.put<HomeLogic>(home);
+      _homeNamesTheType('Sedan');
 
       await _pump(tester, HistoryRow(data: _trip()));
 
       expect(find.text('Sedan · Sok Dara'), findsOneWidget);
+    });
+
+    testWidgets('a type Home does not list is not named or drawn by its id',
+        (tester) async {
+      // Type id 2 was a car on one backend and is a tuk tuk on another, so
+      // the id alone says nothing.
+      await _pump(tester, HistoryRow(data: _trip()));
+
+      expect(find.text('Sok Dara'), findsOneWidget);
+      expect(find.byType(SvgPicture), findsNothing);
+      expect(find.byIcon(Icons.directions_car), findsOneWidget);
     });
 
     testWidgets('tapping anywhere on the card opens the detail screen',
@@ -302,7 +322,7 @@ void main() {
         (tester) async {
       await _pump(tester, HistoryDetailCard(data: detailed()));
 
-      final fare = find.text('19,900 ${AppLocale.khmerCurrency}');
+      final fare = find.text('\$19,900.00');
       expect(fare, findsOneWidget);
       final badge = tester.widget<TaBadge>(find.byType(TaBadge));
       expect(badge.variant, TaBadgeVariant.success);
@@ -369,7 +389,7 @@ void main() {
       expect(badge.label, AppLocale.cancelled);
       expect(find.textContaining(AppLocale.paid), findsNothing);
       expect(find.text(AppLocale.noFareCharged), findsOneWidget);
-      expect(find.textContaining(AppLocale.khmerCurrency), findsNothing);
+      expect(find.textContaining('\$'), findsNothing);
       // No distance or duration for a trip that did not happen.
       expect(find.text(AppLocale.distance), findsNothing);
       expect(find.text(AppLocale.duration), findsNothing);
@@ -384,7 +404,7 @@ void main() {
         ),
       );
 
-      expect(find.text('2,000 ${AppLocale.khmerCurrency}'), findsOneWidget);
+      expect(find.text('\$2,000.00'), findsOneWidget);
       expect(find.text(AppLocale.noFareCharged), findsNothing,
           reason: 'the page does not say "no fare" over an amount');
       expect(find.text(AppLocale.cancelled), findsOneWidget);

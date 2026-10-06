@@ -6,7 +6,7 @@ import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 /// booking screen call the same vehicle the same thing.
 ///
 /// Null when the types are not loaded or [typeId] is not among them; the
-/// trip's own record is then used.
+/// trip is then shown without a vehicle name.
 String? currentVehicleTypeName(int? typeId) {
   if (typeId == null || !Get.isRegistered<HomeLogic>()) return null;
   return Get.find<HomeLogic>()

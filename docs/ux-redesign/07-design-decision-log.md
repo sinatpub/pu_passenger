@@ -207,6 +207,8 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 - USD is widely used in Cambodia for ride-hailing pricing
 - Riel can be shown as an alternative in a future update
 
+**Status:** In effect since D38. The app formatted riel until then (`PDD-01` default).
+
 ---
 
 ## D16: No Dark Mode
@@ -414,6 +416,8 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 - On Home the name is whatever the server sends for the vehicle type; the app's own data (mock, history) says "Tuk Tuk", but the production record has to be renamed on the server
 - Map markers are unchanged: a tuk tuk on the map is still the old top-down three-wheeler
 
+**Status:** The drawing is chosen by the type's name since D39, not by its id, and there is a sixth drawing for Moto.
+
 ---
 
 ## D30: "Your Ride Did Not Happen" — Two Real Dialogs
@@ -561,6 +565,49 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 
 ---
 
+## D38: Amounts Are US Dollars With Cents
+
+**Decision:** Every amount is written by one formatter, `formatMoney` (`lib/core/utils/money.dart`): `$0.30/km`, `from $0.50`, `$1.70`. The fare estimate is rounded to the cent. This answers `PDD-01` in favour of D15.
+
+**Rationale:**
+- User decision
+- The backend prices in dollar decimals sent as text: `GET /taxi/get-type-vehicle` answers `"price": "0.30"`, `"minimum_fare": "0.50"`
+- The app read both as whole numbers, so the vehicle list failed to parse and Home stayed on its skeleton; read as whole riel, `0.30` would have shown as `0 ៛`
+- One formatter, so the currency cannot differ between the vehicle list, the booking sheet, the fare page, the receipt and the history
+
+**What changed:**
+- `SingleVehical.price` and `miniMunFare` are `num`, parsed from a number or from text; a missing or unreadable price still refuses to parse (money fails loudly)
+- `estimateFare` rounds to the cent, not to a whole unit
+- `toMoneyFormat()` and the `khmerCurrency` label are gone
+- The mock serves the same dollar amounts, and its saved state key is `.v2`, so riel amounts saved earlier are not shown as dollars
+
+**Tradeoffs:**
+- Only the vehicle-type payload was seen from the real backend. The fare, receipt and history amounts are assumed to be dollars too
+- Riel is not shown anywhere
+
+---
+
+## D39: A Vehicle Type Is Recognised by Its Name
+
+**Decision:** The drawing, seat count, wait time and map marker of a vehicle type follow the kind of vehicle its name describes (`vehicleKindFromName`, `lib/core/utils/vehicle_kind.dart`): moto, tuk tuk, car, mini van, SUV, VIP. The type id decides nothing. Replaces the id table of D29.
+
+**Rationale:**
+- User decision
+- The ids are the backend's own and differ between backends: the real one numbers Moto 1, Tuktuk 2, Car 3, while the app assumed Tuk Tuk 1, Classic Car 2, Mini Van 3. Moto was drawn as a tuk tuk, Tuktuk as a car, Car as a van
+- A type called "Tuktuk" is a tuk tuk wherever it comes from, in English or Khmer
+
+**What changed:**
+- A Moto drawing (`vehicle_moto.svg`) and a Moto map marker (`moto_marker.png`), both drawn for the app
+- A name the app does not recognise gets the neutral placeholder, car seats and a car marker, not another vehicle's drawing
+- A past trip records only the type id; its name comes from the list Home loaded. The fixed id-to-name table in the history model is removed, so a trip whose type Home does not list shows the driver without a vehicle name
+- The mock serves the real backend's three types first (Moto, Tuktuk, Car), then Mini Van, SUV and Alphard VIP so their drawings can still be seen
+
+**Tradeoffs:**
+- A backend rename to something unrecognised ("Standard") loses the drawing until the keyword list is extended
+- Seat counts and wait times are the app's own, per kind; the backend sends neither
+
+---
+
 ## Decision Summary
 
 | # | Decision | Impact | Risk |
@@ -579,7 +626,7 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 | D12 | Segmented controls | Low | None |
 | D13 | Rating + Receipt screens | Medium | Low |
 | D14 | Demo vs production behaviors | Medium | Medium |
-| D15 | USD currency | Low | None |
+| D15 | USD currency (in effect since D38) | Low | None |
 | D16 | No dark mode | Low | None |
 | D17 | Keep .d extension | Low | None |
 | D18 | Minimal AppBar | Low | None |
@@ -602,3 +649,5 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 | D35 | Home: no "Where to?" card | Low | None |
 | D36 | Home header: brand bar | Low | None |
 | D37 | Khmer is the default language | Medium | Low |
+| D38 | Amounts are US dollars with cents | High | Medium |
+| D39 | Vehicle type recognised by name | Medium | Low |

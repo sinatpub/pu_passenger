@@ -30,10 +30,15 @@ class VehicalTypeEntities {
 class SingleVehical {
   int id;
   String name;
-  int price;
+  /// The per-km rate, in the amount the backend sends. A [num], not an int:
+  /// the backend prices in decimals (`"0.30"`), and an int would turn that
+  /// rate into 0.
+  num price;
   String? image;
   int? orderKey;
-  int? miniMunFare;
+
+  /// The fare floor, with decimals kept like [price]. Null when not sent.
+  num? miniMunFare;
   DateTime? createdAt;
   DateTime? updatedAt;
 
@@ -54,13 +59,18 @@ class SingleVehical {
         name: stringOrEmpty(json["name"]),
         // Money fails loudly: `price` is the per-km rate feeding
         // estimateFare(), so a silent 0 is a wrong fare shown as if right.
-        price: requireMoneyInt(json["price"],
+        // The backend sends it as a decimal string ("0.30").
+        price: requireMoney(json["price"],
             model: "SingleVehical", field: "price"),
-        image: json["image"],
-        orderKey: json["order_key"],
+        image: json["image"] is String ? json["image"] : null,
+        orderKey: json["order_key"] == null
+            ? null
+            : intOrDefault(json["order_key"]),
         // Nullable already, and the fare-floor quirk in .agent/RULES.md means
-        // a null is handled by the caller rather than defaulted here.
-        miniMunFare: json["minimum_fare"],
+        // a null is handled by the caller rather than defaulted here. A
+        // decimal string like `price`.
+        miniMunFare: optionalMoney(json["minimum_fare"],
+            model: "SingleVehical", field: "minimum_fare"),
         createdAt: dateOrNull(json["created_at"]),
         updatedAt: dateOrNull(json["updated_at"]),
       );

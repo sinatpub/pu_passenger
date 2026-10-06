@@ -85,7 +85,7 @@ void main() {
       expect(item.invoice, 'INV-2041');
       expect(item.driver, 'Sok Dara');
       expect(item.initials, 'SD');
-      expect(item.amount, '12,000 ${AppLocale.khmerCurrency}');
+      expect(item.amount, '\$12,000.00');
       expect(item.from, 'No. 128, St. 271');
       expect(item.to, 'Aeon Mall');
       expect(item.distance, '6.1 km');
@@ -195,7 +195,7 @@ void main() {
     });
   });
 
-  group('historySubtitle and historyVehicleName', () {
+  group('historySubtitle', () {
     test('vehicle then driver, skipping what is missing', () {
       expect(historySubtitle(vehicleName: 'Tuk Tuk', driverName: 'Sok Dara'),
           'Tuk Tuk · Sok Dara');
@@ -204,24 +204,6 @@ void main() {
       expect(historySubtitle(), isNull);
     });
 
-    test('the booking names its own vehicle type', () {
-      Datum trip(int? typeId) => Datum(
-          driver: Driver(vehicle: Vehicle(typeVehicleId: typeId)));
-
-      expect(historyVehicleName(trip(1)), 'Tuk Tuk');
-      expect(historyVehicleName(trip(4)), 'SUV');
-      expect(historyVehicleName(trip(5)), 'Alphard VIP');
-    });
-
-    test('no vehicle, or a type the app does not know, has no name', () {
-      expect(historyVehicleName(Datum()), isNull);
-      expect(historyVehicleName(null), isNull);
-      expect(
-        historyVehicleName(
-            Datum(driver: Driver(vehicle: Vehicle(typeVehicleId: 42)))),
-        isNull,
-      );
-    });
   });
 
   group('historyCellData — the list card', () {
@@ -242,12 +224,12 @@ void main() {
         );
 
     test('a completed trip carries its fare, summary and meter note', () {
-      final item = historyCellData(trip(amount: '9600'),
-          now: DateTime(2026, 10, 6));
+      final item = historyCellData(trip(amount: '2.40'),
+          vehicleName: 'Tuktuk', now: DateTime(2026, 10, 6));
 
       expect(item.cardDate, '5 Oct, 2:59 PM');
-      expect(item.subtitle, 'Tuk Tuk · Sok Dara');
-      expect(item.fare, '9,600 ${AppLocale.khmerCurrency}');
+      expect(item.subtitle, 'Tuktuk · Sok Dara');
+      expect(item.fare, '\$2.40');
       expect(item.summary, '3.4 km · 9 min');
       expect(item.noDropOffText, AppLocale.noDropOffMeter);
       expect(item.art, isNotNull);
@@ -262,10 +244,22 @@ void main() {
       expect(item.noDropOffText, isNull);
     });
 
-    test('the caller can name the vehicle as the app names it now', () {
-      final item = historyCellData(trip(), vehicleName: 'Remorque');
+    test('the caller names the vehicle, and the drawing follows the name',
+        () {
+      final item = historyCellData(trip(), vehicleName: 'Moto');
 
-      expect(item.subtitle, 'Remorque · Sok Dara');
+      expect(item.subtitle, 'Moto · Sok Dara');
+      expect(item.art, isNotNull);
+    });
+
+    test('a type id alone names no vehicle: what an id means is the '
+        'backend\'s to say', () {
+      // The record holds `type_vehicle_id: 1`, which was a tuk tuk on one
+      // backend and is a moto on another.
+      final item = historyCellData(trip());
+
+      expect(item.subtitle, 'Sok Dara');
+      expect(item.art, isNull);
     });
   });
 
@@ -306,7 +300,7 @@ void main() {
           Datum(driver: Driver(vehicle: Vehicle(typeVehicleId: 1)));
 
       expect(historyVehicleInfo(withModel), 'Toyota Prius · White');
-      expect(historyVehicleInfo(typeOnly), 'Tuk Tuk');
+      expect(historyVehicleInfo(typeOnly), '---');
       expect(historyVehicleInfo(typeOnly, vehicleName: 'Remorque'), 'Remorque');
       expect(historyVehicleInfo(null), '---');
     });

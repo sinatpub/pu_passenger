@@ -43,6 +43,32 @@ class AuthDatasource {
     );
   }
 
+  /// `POST /taxi-passenger/login` — sign in with a phone and a password.
+  /// Expected to answer with the same body as `verify-phone-otp` (the user
+  /// and a token), like the driver's `POST /taxi-driver/login`.
+  ///
+  /// The app's own sign-in is by OTP; this one is used only by the debug
+  /// login (`DebugAuthBypass`), which no release build can reach.
+  Future<Result<UserResponseModel>> passwordLogin({
+    required String phone,
+    required String password,
+    required String deviceToken,
+    required String platform,
+  }) {
+    return _apiClient.request<UserResponseModel>(
+      path: '/taxi-passenger/login',
+      method: 'POST',
+      requiresToken: false,
+      body: {
+        'phone': phone,
+        'password': password,
+        'device_token': deviceToken,
+        'platform': platform,
+      },
+      decode: (response) => UserResponseModel.fromJson(response.data),
+    );
+  }
+
   Future<Result<RegisterModel>> register({
     required String fullName,
     required String phoneNumber,

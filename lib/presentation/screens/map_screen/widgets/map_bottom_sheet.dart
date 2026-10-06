@@ -9,6 +9,7 @@ import 'package:com.tara.passenger/core/theme/ta_radius.dart';
 import 'package:com.tara.passenger/core/theme/ta_shadow.dart';
 import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
+import 'package:com.tara.passenger/core/utils/money.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_cell_data.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
@@ -153,7 +154,7 @@ class MapBottomSheet extends StatelessWidget {
         AppLocale.bookVehicle.trParams({'name': vehicle.name});
     final fare = logic.fareFor(vehicle);
     if (fare == null) return label;
-    return '$label · ${fare.toMoneyFormat()} ${AppLocale.khmerCurrency.tr}';
+    return '$label · ${formatMoney(fare)}';
   }
 }
 
@@ -362,12 +363,11 @@ class _VehicleChips extends StatelessWidget {
           final v = vehicles[i];
           final selected = v.id == selectedId;
           final fare = logic.fareFor(v);
-          final currency = AppLocale.khmerCurrency.tr;
           final fareText = fare != null
-              ? '${fare.toMoneyFormat()} $currency'
+              ? formatMoney(fare)
               : v.miniMunFare == null
                   ? '—'
-                  : 'from ${v.miniMunFare!.toMoneyFormat()} $currency';
+                  : 'from ${formatMoney(v.miniMunFare!)}';
           return TaPressable(
             onTap: () => logic.selectVehicle(v),
             child: Container(

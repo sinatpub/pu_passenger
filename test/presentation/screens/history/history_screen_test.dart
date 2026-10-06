@@ -110,13 +110,13 @@ void main() {
   testWidgets('switching to Cancelled reloads the list without fares',
       (tester) async {
     await pumpScreen(tester);
-    expect(find.textContaining(AppLocale.khmerCurrency), findsWidgets);
+    expect(find.textContaining('\$'), findsWidgets);
 
     await tester.tap(find.text(AppLocale.cancelled));
     await tester.pumpAndSettle();
 
     expect(logic.requestedFilters.last, 5);
-    expect(find.textContaining(AppLocale.khmerCurrency), findsNothing);
+    expect(find.textContaining('\$'), findsNothing);
     expect(find.byType(TaHistoryCard), findsWidgets);
   });
 }

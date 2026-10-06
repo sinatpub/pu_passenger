@@ -84,18 +84,19 @@ class OtpLogic extends GetxController {
   }
 
   void verifyOtp(String otpCode) async {
-    // Debug-only shortcut — see [DebugAuthBypass] for the three conditions
-    // that must all hold. Compiled out of release builds entirely.
+    // Debug-only shortcut — see [DebugAuthBypass] for the conditions that
+    // must all hold. Compiled out of release builds entirely.
     if (DebugAuthBypass.accepts(otpCode)) {
       loading.value = true;
       try {
-        final ok = await DebugAuthBypass.seedSession();
+        final ok =
+            await DebugAuthBypass.seedSession(_repository.passwordLogin);
         if (!ok) {
           forceErrorPinPut.value = true;
           showErrorCustomDialog(
             Get.context!,
             AppLocale.pleaseTryAgain.tr,
-            'Debug bypass could not obtain a session — see the log.',
+            DebugAuthBypass.lastError ?? 'Debug login failed. See the log.',
             () {
               Get.back();
             },

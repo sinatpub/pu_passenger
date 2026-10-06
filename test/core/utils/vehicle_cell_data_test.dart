@@ -4,18 +4,18 @@ import 'package:flutter_svg/svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 SingleVehical _vehicle({
-  int id = 1,
-  String name = 'Rickshaw',
-  int price = 1500,
-  int? miniMunFare = 4000,
+  int id = 2,
+  String name = 'Tuktuk',
+  num price = 0.5,
+  num? miniMunFare = 1,
 }) {
   return SingleVehical(
     id: id,
     name: name,
     price: price,
-    orderKey: 1,
+    orderKey: null,
     miniMunFare: miniMunFare,
-    image: null,
+    image: '',
     createdAt: DateTime(2026),
     updatedAt: DateTime(2026),
   );
@@ -26,38 +26,42 @@ void main() {
     test('masks model fields into presentational VehicleData', () {
       final data = vehicleCellData(_vehicle());
 
-      expect(data.name, 'Rickshaw');
-      expect(data.seats, '3 Seats'); // P-06: id 1 → 3 seats
-      expect(data.pricePerKm, '1,500 ៛/km'); // PDD-01: formatter + KHR
-      expect(data.priceFrom, 'from 4,000 ៛');
+      expect(data.name, 'Tuktuk');
+      expect(data.seats, '3 Seats');
+      expect(data.pricePerKm, '\$0.50/km');
+      expect(data.priceFrom, 'from \$1.00');
       expect(data.eta, '~2 min'); // deterministic lookup placeholder
     });
 
-    test('a known vehicle type carries its drawing; an unknown one has none',
-        () {
-      expect(vehicleCellData(_vehicle(id: 1)).art, isA<SvgPicture>());
-      expect(vehicleCellData(_vehicle(id: 99)).art, isNull);
+    test('drawing, seats and wait follow the name, whatever the id', () {
+      // The real backend numbers Moto 1, Tuktuk 2, Car 3; an earlier one
+      // numbered a tuk tuk 1. The id decides nothing here.
+      final moto = vehicleCellData(_vehicle(id: 1, name: 'Moto'));
+      final car = vehicleCellData(_vehicle(id: 1, name: 'Car'));
+
+      expect(moto.seats, '1 Seat');
+      expect(car.seats, '4 Seats');
+      expect(moto.art, isA<SvgPicture>());
+      expect(car.art, isA<SvgPicture>());
     });
 
     test('the name shown is the one the server sent', () {
-      // The app draws the vehicle and counts its seats by id, but does not
-      // rename it: the vehicle type's name is the backend's to set.
+      // The app draws the vehicle and counts its seats from the name, but
+      // does not rename it: the name is the backend's to set.
       expect(vehicleCellData(_vehicle(name: 'Tuk Tuk')).name, 'Tuk Tuk');
     });
 
-    test('unknown vehicle id falls back to default seats/eta', () {
-      final data = vehicleCellData(
-        _vehicle(id: 99, name: 'Alphard', price: 3000, miniMunFare: null),
-      );
+    test('a type the app does not recognise has no drawing and car seats',
+        () {
+      final data = vehicleCellData(_vehicle(name: 'Standard'));
 
-      expect(data.seats, '5 Seats'); // P-06 default
+      expect(data.art, isNull);
+      expect(data.seats, '4 Seats');
       expect(data.eta, '~5 min');
     });
 
     test('no min fare → "from —"', () {
-      final data = vehicleCellData(
-        _vehicle(id: 2, name: 'Classic Car', price: 2000, miniMunFare: null),
-      );
+      final data = vehicleCellData(_vehicle(miniMunFare: null));
 
       expect(data.priceFrom, 'from —');
     });

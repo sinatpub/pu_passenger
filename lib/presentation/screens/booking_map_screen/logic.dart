@@ -3,6 +3,9 @@ import 'dart:typed_data';
 import 'dart:ui';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
+import 'package:com.tara.passenger/core/utils/vehicle_art.dart';
+import 'package:com.tara.passenger/core/utils/vehicle_kind.dart';
+import 'package:com.tara.passenger/presentation/screens/history/vehicle_type_name.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
 import 'package:com.tara.passenger/data/datasources/cancel_booking_api.dart';
 
@@ -21,7 +24,6 @@ import '../../../core/utils/load_custom_marker.dart';
 import '../../../core/utils/pretty_logger.dart';
 import '../../../core/utils/status_util.dart';
 import '../../../core/utils/trip_marker.dart';
-import '../map_screen/logic.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
 import 'poll_policy.dart';
 
@@ -169,11 +171,18 @@ class BookingMapLogic extends GetxController {
 
     // Driver
     final Uint8List driverBytes = await getBytesFromAsset(
-        driverMarkerImage(
-            id: state.bookingRequestData?.data?.typeVehicleId ?? 0),
-        25);
+        driverMarkerAsset(_bookedVehicleKind()), 25);
     state.driverIcon = BitmapDescriptor.bytes(driverBytes);
     update();
+  }
+
+  /// The kind of vehicle that was booked: by the type the booking names, or
+  /// by the name Home has for its type id when the booking names none.
+  VehicleKind? _bookedVehicleKind() {
+    final data = state.bookingRequestData?.data;
+    return vehicleKindFromName(
+      data?.typeVehicle?.name ?? currentVehicleTypeName(data?.typeVehicleId),
+    );
   }
 
   Future<void> refreshMarkers() async {

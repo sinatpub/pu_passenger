@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:dio/dio.dart';
-import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
+import 'package:com.tara.passenger/core/network/curl_log_interceptor.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/mock/mock_http_interceptor.dart';
 import 'package:com.tara.passenger/mock/mock_mode.dart';
@@ -19,16 +20,12 @@ class BaseHttpClient {
       }
     );
 
-    dio = Dio()
-      ..options = options
-      ..interceptors.add(PrettyDioLogger(
-          requestHeader: true,
-          requestBody: true,
-          responseBody: true,
-          responseHeader: false,
-          compact: false,
-          error: true,
-          request: true));
+    dio = Dio()..options = options;
+
+    // Each call as a copyable `curl` line and its response. Not in a release
+    // build: an entry holds the bearer token and the request body. It goes
+    // first so it also sees what the mock backend below answers.
+    if (!kReleaseMode) dio.interceptors.add(CurlLogInterceptor());
 
     // QA mock mode (`lib/mock/`). `MockMode.enabled` is a compile-time
     // constant that is false in every release build, so this is dead code

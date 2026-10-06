@@ -49,7 +49,10 @@ class MockBackend {
 
   static final MockBackend instance = MockBackend();
 
-  static const _stateKey = 'qa_mock.backend_state';
+  /// `.v2`: amounts are dollars and the vehicle types follow the real
+  /// backend. State saved before that holds riel amounts and other type ids,
+  /// and would be shown as dollars, so it is left behind unread.
+  static const _stateKey = 'qa_mock.backend_state.v2';
 
   final DateTime Function() _now;
   final MockSettings Function() _settings;
@@ -112,7 +115,7 @@ class MockBackend {
     if (path.endsWith('/taxi-passenger/register')) {
       return _ok(MockData.registerPayload());
     }
-    if (path.endsWith('/taxi/login')) return _debugLogin();
+    if (path.endsWith('/taxi-passenger/login')) return _debugLogin();
     if (path.endsWith('/taxi-passenger/push-device-token')) {
       return _ok({'status': true, 'message': 'Device token saved'});
     }
@@ -181,8 +184,8 @@ class MockBackend {
     return _ok(MockData.authPayload());
   }
 
-  /// `POST /taxi/login` — how `DebugAuthBypass` seeds a session (screen the
-  /// passenger app does not otherwise use). Same `UserResponseModel` shape as
+  /// `POST /taxi-passenger/login` — how `DebugAuthBypass` seeds a session (an
+  /// endpoint the passenger app does not otherwise use). Same `UserResponseModel` shape as
   /// `verify-phone-otp`, which is what `AppLogic.initSocket()` and the legacy
   /// token bridge read.
   MockResponse _debugLogin() => _ok(MockData.authPayload());
@@ -448,11 +451,11 @@ class MockBackend {
       ..completedAt = _now()
       ..endPoint = current.driveTarget
       ..distanceKm = km < 0.4 ? 0.4 : km
-      ..fare = _roundToHundred(estimateFare(
+      ..fare = estimateFare(
         distanceKm: km < 0.4 ? 0.4 : km,
         pricePerKm: MockData.pricePerKm,
         minimumFare: MockData.minimumFare,
-      ));
+      );
     _push('driverDropDrive', _bookingJson(current));
     _paymentTimer = Timer(_scale(MockTimings.paymentDelay), _collectPayment);
     _changed();
@@ -557,8 +560,6 @@ class MockBackend {
         _ => 'Unknown',
       };
 
-  static int _roundToHundred(double riel) => (riel / 100).round() * 100;
-
   /// One shape for every booking payload (`RequestBookingModel`'s data, the
   /// socket pushes, history) — the models read the same keys.
   Map<String, dynamic> _bookingJson(MockRide r,
@@ -609,8 +610,8 @@ class MockBackend {
 
   Map<String, dynamic> _typeVehicleJson() => {
         'id': MockData.vehicleTypeId,
-        'name': 'Classic Car',
-        'price': MockData.pricePerKm,
+        'name': MockData.vehicleTypeName,
+        'price': MockData.pricePerKm.toStringAsFixed(2),
         'image': null,
         'created_at': '2025-01-01T00:00:00.000000Z',
         'updated_at': '2025-01-01T00:00:00.000000Z',
@@ -635,7 +636,7 @@ class MockBackend {
       'duration': seconds >= 3600
           ? '${seconds ~/ 3600} hours ${(seconds % 3600) ~/ 60} mins'
           : '${seconds ~/ 60} mins ${seconds % 60} seconds',
-      'amount': '${r.fare ?? 0}',
+      'amount': (r.fare ?? 0).toStringAsFixed(2),
       'payment_method': r.paymentMethod,
       'status': paid ? 1 : (cancelled ? 2 : 0),
       'status_name': paid ? 'Paid' : (cancelled ? 'Cancelled' : 'Pending'),
@@ -679,10 +680,10 @@ class MockBackend {
       if (status == BookingStatus.completed) {
         r
           ..distanceKm = km
-          ..fare = _roundToHundred(estimateFare(
+          ..fare = estimateFare(
               distanceKm: km,
               pricePerKm: MockData.pricePerKm,
-              minimumFare: MockData.minimumFare));
+              minimumFare: MockData.minimumFare);
       }
       return r;
     }
