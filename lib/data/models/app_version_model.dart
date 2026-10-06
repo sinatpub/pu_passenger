@@ -1,8 +1,11 @@
+import 'package:com.tara.passenger/core/utils/json_field.dart';
 import 'dart:convert';
 
-AppVersionModel appVersionModelFromJson(String str) => AppVersionModel.fromJson(json.decode(str));
+AppVersionModel appVersionModelFromJson(String str) =>
+    AppVersionModel.fromJson(json.decode(str));
 
-String appVersionModelToJson(AppVersionModel data) => json.encode(data.toJson());
+String appVersionModelToJson(AppVersionModel data) =>
+    json.encode(data.toJson());
 
 class AppVersionModel {
   Data? data;
@@ -11,13 +14,16 @@ class AppVersionModel {
     this.data,
   });
 
-  factory AppVersionModel.fromJson(Map<String, dynamic> json) => AppVersionModel(
-    data: json["data"] == null ? null : Data.fromJson(json["data"]),
-  );
+  factory AppVersionModel.fromJson(Map<String, dynamic> json) =>
+      AppVersionModel(
+        data: json["data"] is Map<String, dynamic>
+            ? Data.fromJson(json["data"])
+            : null,
+      );
 
   Map<String, dynamic> toJson() => {
-    "data": data?.toJson(),
-  };
+        "data": data?.toJson(),
+      };
 }
 
 class Data {
@@ -46,17 +52,17 @@ class Data {
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
-    id: json["id"],
-    appType: json["app_type"],
-    releaseDate: json["release_date"] == null ? null : DateTime.parse(json["release_date"]),
-    releaseDateIos: json["release_date_ios"] == null ? null : DateTime.parse(json["release_date_ios"]),
-    versionAndroid: json["version_android"],
-    versionIos: json["version_ios"],
-    playStoreLink: json["play_store_link"],
-    appStoreLink: json["app_store_link"],
-    featuresRelease: json["features_release"],
-    isActive: _asBool(json["is_active"]),
-  );
+        id: intOrNull(json["id"]),
+        appType: intOrNull(json["app_type"]),
+        releaseDate: dateOrNull(json["release_date"]),
+        releaseDateIos: dateOrNull(json["release_date_ios"]),
+        versionAndroid: stringOrNull(json["version_android"]),
+        versionIos: stringOrNull(json["version_ios"]),
+        playStoreLink: stringOrNull(json["play_store_link"]),
+        appStoreLink: stringOrNull(json["app_store_link"]),
+        featuresRelease: stringOrNull(json["features_release"]),
+        isActive: _asBool(json["is_active"]),
+      );
 
   /// The API sends `is_active` as `1`/`0`; accept a real bool too.
   static bool? _asBool(Object? value) => switch (value) {
@@ -67,15 +73,17 @@ class Data {
       };
 
   Map<String, dynamic> toJson() => {
-    "id": id,
-    "app_type": appType,
-    "release_date": "${releaseDate!.year.toString().padLeft(4, '0')}-${releaseDate!.month.toString().padLeft(2, '0')}-${releaseDate!.day.toString().padLeft(2, '0')}",
-    "release_date_ios": "${releaseDateIos!.year.toString().padLeft(4, '0')}-${releaseDateIos!.month.toString().padLeft(2, '0')}-${releaseDateIos!.day.toString().padLeft(2, '0')}",
-    "version_android": versionAndroid,
-    "version_ios": versionIos,
-    "play_store_link": playStoreLink,
-    "app_store_link": appStoreLink,
-    "features_release": featuresRelease,
-    "is_active": isActive,
-  };
+        "id": id,
+        "app_type": appType,
+        "release_date":
+            "${releaseDate!.year.toString().padLeft(4, '0')}-${releaseDate!.month.toString().padLeft(2, '0')}-${releaseDate!.day.toString().padLeft(2, '0')}",
+        "release_date_ios":
+            "${releaseDateIos!.year.toString().padLeft(4, '0')}-${releaseDateIos!.month.toString().padLeft(2, '0')}-${releaseDateIos!.day.toString().padLeft(2, '0')}",
+        "version_android": versionAndroid,
+        "version_ios": versionIos,
+        "play_store_link": playStoreLink,
+        "app_store_link": appStoreLink,
+        "features_release": featuresRelease,
+        "is_active": isActive,
+      };
 }

@@ -30,6 +30,7 @@ class VehicalTypeEntities {
 class SingleVehical {
   int id;
   String name;
+
   /// The per-km rate, in the amount the backend sends. A [num], not an int:
   /// the backend prices in decimals (`"0.30"`), and an int would turn that
   /// rate into 0.
@@ -60,12 +61,11 @@ class SingleVehical {
         // Money fails loudly: `price` is the per-km rate feeding
         // estimateFare(), so a silent 0 is a wrong fare shown as if right.
         // The backend sends it as a decimal string ("0.30").
-        price: requireMoney(json["price"],
-            model: "SingleVehical", field: "price"),
+        price:
+            requireMoney(json["price"], model: "SingleVehical", field: "price"),
         image: json["image"] is String ? json["image"] : null,
-        orderKey: json["order_key"] == null
-            ? null
-            : intOrDefault(json["order_key"]),
+        orderKey:
+            json["order_key"] == null ? null : intOrDefault(json["order_key"]),
         // Nullable already, and the fare-floor quirk in .agent/RULES.md means
         // a null is handled by the caller rather than defaulted here. A
         // decimal string like `price`.
@@ -80,8 +80,8 @@ class SingleVehical {
         "name": name,
         "price": price,
         "image": image,
-        "order_key":orderKey,
-        "minimum_fare":miniMunFare,
+        "order_key": orderKey,
+        "minimum_fare": miniMunFare,
         "created_at": createdAt?.toIso8601String(),
         "updated_at": updatedAt?.toIso8601String(),
       };

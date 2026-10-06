@@ -1,3 +1,6 @@
+import 'package:com.tara.passenger/core/utils/json_field.dart';
+import 'package:com.tara.passenger/core/utils/json_list.dart';
+
 class AnnouncementModel {
   bool? status;
   List<AnnouncementDetailModel>? data;
@@ -17,15 +20,13 @@ class AnnouncementModel {
 
   factory AnnouncementModel.fromJson(Map<String, dynamic> json) =>
       AnnouncementModel(
-        status: json["status"],
-        data: json["data"] == null
-            ? []
-            : List<AnnouncementDetailModel>.from(
-                json["data"]!.map((x) => AnnouncementDetailModel.fromJson(x))),
-        currentPage: json["current_page"],
-        lastPage: json["last_page"],
-        perPage: json["per_page"],
-        total: json["total"],
+        status: boolOrNull(json["status"]),
+        data: parseJsonList<AnnouncementDetailModel>(
+            json["data"], (x) => AnnouncementDetailModel.fromJson(x)),
+        currentPage: intOrNull(json["current_page"]),
+        lastPage: intOrNull(json["last_page"]),
+        perPage: intOrNull(json["per_page"]),
+        total: intOrNull(json["total"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -69,27 +70,19 @@ class AnnouncementDetailModel {
 
   factory AnnouncementDetailModel.fromJson(Map<String, dynamic> json) =>
       AnnouncementDetailModel(
-        id: json["id"],
-        title: json["title"],
-        description: json["description"],
-        releaseDate: json["release_date"] == null
-            ? null
-            : DateTime.parse(json["release_date"]),
-        expiredDate: json["expired_date"] == null
-            ? null
-            : DateTime.parse(json["expired_date"]),
-        target: json["target"],
+        id: intOrNull(json["id"]),
+        title: stringOrNull(json["title"]),
+        description: stringOrNull(json["description"]),
+        releaseDate: dateOrNull(json["release_date"]),
+        expiredDate: dateOrNull(json["expired_date"]),
+        target: intOrNull(json["target"]),
         status: json["status"],
-        createdBy: json["created_by"],
-        createdAt: json["created_at"] == null
-            ? null
-            : DateTime.parse(json["created_at"]),
-        updatedAt: json["updated_at"] == null
-            ? null
-            : DateTime.parse(json["updated_at"]),
-        files: json["files"] == null
-            ? []
-            : List<dynamic>.from(json["files"]!.map((x) => x)),
+        createdBy: intOrNull(json["created_by"]),
+        createdAt: dateOrNull(json["created_at"]),
+        updatedAt: dateOrNull(json["updated_at"]),
+        files: json["files"] is List
+            ? List<dynamic>.from(json["files"])
+            : <dynamic>[],
       );
 
   Map<String, dynamic> toJson() => {

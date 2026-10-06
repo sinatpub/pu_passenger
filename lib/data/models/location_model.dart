@@ -1,3 +1,6 @@
+import 'package:com.tara.passenger/core/utils/json_field.dart';
+import 'package:com.tara.passenger/core/utils/json_list.dart';
+
 class LocationModel {
   List<Prediction>? predictions;
 
@@ -6,10 +9,8 @@ class LocationModel {
   });
 
   factory LocationModel.fromJson(Map<String, dynamic> json) => LocationModel(
-        predictions: json["predictions"] == null
-            ? []
-            : List<Prediction>.from(
-                json["predictions"]!.map((x) => Prediction.fromJson(x))),
+        predictions: parseJsonList<Prediction>(
+            json["predictions"], (x) => Prediction.fromJson(x)),
       );
 
   Map<String, dynamic> toJson() => {
@@ -31,9 +32,9 @@ class Prediction {
   });
 
   factory Prediction.fromJson(Map<String, dynamic> json) => Prediction(
-        description: json["description"],
-        placeId: json["place_id"],
-        reference: json["reference"],
+        description: stringOrNull(json["description"]),
+        placeId: stringOrNull(json["place_id"]),
+        reference: stringOrNull(json["reference"]),
       );
 
   Map<String, dynamic> toJson() => {

@@ -1,87 +1,93 @@
+import 'package:com.tara.passenger/core/utils/json_field.dart';
+
 class ProfileModel {
-    Data? data;
-    bool? status;
-    String? message;
+  Data? data;
+  bool? status;
+  String? message;
 
-    ProfileModel({
-        this.data,
-        this.status,
-        this.message,
-    });
+  ProfileModel({
+    this.data,
+    this.status,
+    this.message,
+  });
 
-    factory ProfileModel.fromJson(Map<String, dynamic> json) => ProfileModel(
-        data: json["data"] == null ? null : Data.fromJson(json["data"]),
-        status: json["status"],
-        message: json["message"],
-    );
+  factory ProfileModel.fromJson(Map<String, dynamic> json) => ProfileModel(
+        data: json["data"] is Map<String, dynamic>
+            ? Data.fromJson(json["data"])
+            : null,
+        status: boolOrNull(json["status"]),
+        message: stringOrNull(json["message"]),
+      );
 
-    Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson() => {
         "data": data?.toJson(),
         "status": status,
         "message": message,
-    };
+      };
 }
 
 class Data {
-    int? id;
-    String? name;
-    String? lastName;
-    String? firstName;
-    String? email;
-    int? gender;
-    String? dob;
-    String? countryCode;
-    String? phone;
-    dynamic cardType;
-    dynamic cardNumber;
-    dynamic cardImage;
-    int? status;
-    String? statusDate;
-    int? roleId;
-    String? profileImage;
-    LastLocation? lastLocation;
+  int? id;
+  String? name;
+  String? lastName;
+  String? firstName;
+  String? email;
+  int? gender;
+  String? dob;
+  String? countryCode;
+  String? phone;
+  dynamic cardType;
+  dynamic cardNumber;
+  dynamic cardImage;
+  int? status;
+  String? statusDate;
+  int? roleId;
+  String? profileImage;
+  LastLocation? lastLocation;
 
-    Data({
-        this.id,
-        this.name,
-        this.lastName,
-        this.firstName,
-        this.email,
-        this.gender,
-        this.dob,
-        this.countryCode,
-        this.phone,
-        this.cardType,
-        this.cardNumber,
-        this.cardImage,
-        this.status,
-        this.statusDate,
-        this.roleId,
-        this.profileImage,
-        this.lastLocation,
-    });
+  Data({
+    this.id,
+    this.name,
+    this.lastName,
+    this.firstName,
+    this.email,
+    this.gender,
+    this.dob,
+    this.countryCode,
+    this.phone,
+    this.cardType,
+    this.cardNumber,
+    this.cardImage,
+    this.status,
+    this.statusDate,
+    this.roleId,
+    this.profileImage,
+    this.lastLocation,
+  });
 
-    factory Data.fromJson(Map<String, dynamic> json) => Data(
-        id: json["id"],
-        name: json["name"],
-        lastName: json["last_name"],
-        firstName: json["first_name"],
-        email: json["email"],
-        gender: json["gender"],
-        dob: json["dob"],
-        countryCode: json["country_code"],
-        phone: json["phone"],
+  factory Data.fromJson(Map<String, dynamic> json) => Data(
+        id: intOrNull(json["id"]),
+        name: stringOrNull(json["name"]),
+        lastName: stringOrNull(json["last_name"]),
+        firstName: stringOrNull(json["first_name"]),
+        email: stringOrNull(json["email"]),
+        gender: intOrNull(json["gender"]),
+        dob: stringOrNull(json["dob"]),
+        countryCode: stringOrNull(json["country_code"]),
+        phone: stringOrNull(json["phone"]),
         cardType: json["card_type"],
         cardNumber: json["card_number"],
         cardImage: json["card_image"],
-        status: json["status"],
-        statusDate: json["status_date"],
-        roleId: json["role_id"],
-        profileImage: json["profile_image"],
-        lastLocation: json["last_location"] == null ? null : LastLocation.fromJson(json["last_location"]),
-    );
+        status: intOrNull(json["status"]),
+        statusDate: stringOrNull(json["status_date"]),
+        roleId: intOrNull(json["role_id"]),
+        profileImage: stringOrNull(json["profile_image"]),
+        lastLocation: json["last_location"] is Map<String, dynamic>
+            ? LastLocation.fromJson(json["last_location"])
+            : null,
+      );
 
-    Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson() => {
         "id": id,
         "name": name,
         "last_name": lastName,
@@ -99,25 +105,25 @@ class Data {
         "role_id": roleId,
         "profile_image": profileImage,
         "last_location": lastLocation?.toJson(),
-    };
+      };
 }
 
 class LastLocation {
-    String? latitude;
-    String? longitude;
+  String? latitude;
+  String? longitude;
 
-    LastLocation({
-        this.latitude,
-        this.longitude,
-    });
+  LastLocation({
+    this.latitude,
+    this.longitude,
+  });
 
-    factory LastLocation.fromJson(Map<String, dynamic> json) => LastLocation(
-        latitude: json["latitude"],
-        longitude: json["longitude"],
-    );
+  factory LastLocation.fromJson(Map<String, dynamic> json) => LastLocation(
+        latitude: stringOrNull(json["latitude"]),
+        longitude: stringOrNull(json["longitude"]),
+      );
 
-    Map<String, dynamic> toJson() => {
+  Map<String, dynamic> toJson() => {
         "latitude": latitude,
         "longitude": longitude,
-    };
+      };
 }

@@ -1,3 +1,5 @@
+import 'package:com.tara.passenger/core/utils/json_field.dart';
+
 class UpdateLocationModel {
   Data? data;
   bool? status;
@@ -11,9 +13,11 @@ class UpdateLocationModel {
 
   factory UpdateLocationModel.fromJson(Map<String, dynamic> json) =>
       UpdateLocationModel(
-        data: json["data"] == null ? null : Data.fromJson(json["data"]),
-        status: json["status"],
-        message: json["message"],
+        data: json["data"] is Map<String, dynamic>
+            ? Data.fromJson(json["data"])
+            : null,
+        status: boolOrNull(json["status"]),
+        message: stringOrNull(json["message"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -41,16 +45,12 @@ class Data {
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
-        userId: json["user_id"],
-        latitude: json["latitude"],
-        longitude: json["longitude"],
-        updatedAt: json["updated_at"] == null
-            ? null
-            : DateTime.parse(json["updated_at"]),
-        createdAt: json["created_at"] == null
-            ? null
-            : DateTime.parse(json["created_at"]),
-        id: json["id"],
+        userId: intOrNull(json["user_id"]),
+        latitude: stringOrNull(json["latitude"]),
+        longitude: stringOrNull(json["longitude"]),
+        updatedAt: dateOrNull(json["updated_at"]),
+        createdAt: dateOrNull(json["created_at"]),
+        id: intOrNull(json["id"]),
       );
 
   Map<String, dynamic> toJson() => {
