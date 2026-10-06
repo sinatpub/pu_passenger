@@ -90,6 +90,41 @@ RouteInfo parseDirectionsRoute(
   );
 }
 
+/// One address line from a geocoder's parts, most specific first, or null
+/// when it gave none.
+///
+/// Blank parts are dropped and so are repeats: the geocoder often names a
+/// place and its street the same, and has no postal code here, which used to
+/// read "Near Chip Mong, Near Chip Mong, Khan Mean Chey, Phnom Penh, , កម្ពុជា".
+String? formatAddressParts(Iterable<String?> parts) {
+  final kept = <String>[];
+  for (final part in parts) {
+    final text = part?.trim() ?? '';
+    if (text.isEmpty) continue;
+    if (kept.any((seen) => seen.toLowerCase() == text.toLowerCase())) continue;
+    kept.add(text);
+  }
+  return kept.isEmpty ? null : kept.join(', ');
+}
+
+/// Why a Directions API response carries no route, or null when it does.
+///
+/// Google answers a refused request with HTTP 200 and says so in the body:
+/// a `status` other than `OK` and, usually, an `error_message` naming the
+/// cause (the API is not enabled for the key's project, the key is
+/// restricted to an Android app and this is a plain web request, billing is
+/// off). Read as a route, that body is simply empty, so the line was missing
+/// from the map with nothing in the log to say why.
+String? directionsFailure(dynamic body) {
+  if (body is! Map) return 'unreadable response';
+  final status = body['status'];
+  if (status == 'OK') return null;
+  final message = body['error_message'];
+  return message is String && message.isNotEmpty
+      ? '$status: $message'
+      : '$status';
+}
+
 class LocationRepo implements LocationImpl {
   LocationRepo({PlacesRepository? placesRepository})
       : _injectedPlacesRepository = placesRepository;
@@ -208,10 +243,20 @@ class LocationRepo implements LocationImpl {
 
   @override
   Future<String> getAddressLocation(
-      {required LatLng latlng, bool localeKhmer = true}) async {
+          {required LatLng latlng, bool localeKhmer = true}) async =>
+      await findAddress(latlng: latlng) ?? AppLocale.addressNotFound.tr;
+
+  /// The address at [latlng], or null when the geocoder has none, failed or
+  /// did not answer in time.
+  ///
+  /// [getAddressLocation] answers "Address not found." in that case, which
+  /// is a sentence for a label. Anything that *keeps* the address — the
+  /// pickup sent with a booking — needs to tell the two apart, or the
+  /// sentence is stored as where the passenger was.
+  Future<String?> findAddress({required LatLng latlng}) async {
     if (MockMode.isActive) {
       if (MockMode.settings.scenario == MockScenario.locationError) {
-        return AppLocale.addressNotFound.tr;
+        return null;
       }
       // The mock scenery is small and the pickup dragged on it is always
       // inside; arbitrary real coordinates (a dragged location far away)
@@ -219,27 +264,26 @@ class LocationRepo implements LocationImpl {
       return MockPlaces.nameNear(latlng) ?? 'Street 271, Daun Penh, Phnom Penh';
     }
     try {
-      List<Placemark> placemarks =
-          await placemarkFromCoordinates(latlng.latitude, latlng.longitude);
-
-      if (placemarks.isNotEmpty) {
-        Placemark place = placemarks[0];
-
-        String address = '';
-        address += place.name != null ? "${place.name}, " : '';
-        address += place.street != null ? "${place.street}, " : '';
-        address += place.subLocality != null ? "${place.subLocality}, " : '';
-        address += place.locality != null ? "${place.locality}, " : '';
-        address += place.postalCode != null ? "${place.postalCode}, " : '';
-        address += place.country != null ? "${place.country}" : '';
-        return address.trim().replaceAll(RegExp(r',\s*$'), '');
-      } else {
-        return AppLocale.addressNotFound.tr;
-      }
+      final placemarks =
+          await placemarkFromCoordinates(latlng.latitude, latlng.longitude)
+              .timeout(_geocodeTimeout);
+      if (placemarks.isEmpty) return null;
+      final place = placemarks.first;
+      return formatAddressParts([
+        place.name,
+        place.street,
+        place.subLocality,
+        place.locality,
+        place.postalCode,
+        place.country,
+      ]);
     } catch (e) {
-      return AppLocale.addressNotFound.tr;
+      return null;
     }
   }
+
+  /// The device geocoder can take a long time to give up without a network.
+  static const Duration _geocodeTimeout = Duration(seconds: 8);
 
   @override
   getDistance({required LatLng start, required LatLng destination}) async {
@@ -351,10 +395,14 @@ class LocationRepo implements LocationImpl {
       var response = await Dio().get(url);
 
       if (response.statusCode == 200) {
+        final failure = directionsFailure(response.data);
+        if (failure != null) {
+          Logger().e("Directions API gave no route — $failure");
+        }
         return parseDirectionsRoute(response.data, _decodePolyline);
       }
     } catch (e) {
-      print("Directions API Error: $e");
+      Logger().e("Directions API Error: $e");
     }
 
     return const RouteInfo();

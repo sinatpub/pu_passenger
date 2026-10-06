@@ -304,16 +304,19 @@ class MapLogic extends GetxController {
       return;
     }
 
+    String? address;
     try {
-      state.currentAddress =
-          await _locationRepo.getAddressLocation(latlng: latLng);
-      state.addressFailed = false;
+      address = await _locationRepo.findAddress(latlng: latLng);
     } catch (e) {
-      // Surface the failure rather than leaving a stale address on screen.
-      state.currentAddress = null;
-      state.addressFailed = true;
       xPrettyLog(message: "getCurrentAddress failed: $e");
     }
+    // The pin moved on while this was in flight: the answer describes a
+    // point it has left, and that move started its own lookup.
+    if (state.currentLatLng != latLng) return;
+    // No address is said to be none, rather than leaving a stale one — or
+    // the "Address not found." sentence — to be sent with the booking.
+    state.currentAddress = address;
+    state.addressFailed = address == null;
     update([MapUpdate.mapID]);
   }
 
@@ -614,9 +617,20 @@ class MapLogic extends GetxController {
 
     setBookingLoading(true);
 
+    // The address is looked up after the pin settles, so a quick tap on
+    // Book can get here first. A booking sent without it has no pickup
+    // address on the ride screen, the fare page, the receipt or the history,
+    // so it is looked up now. Still none after that: the booking goes
+    // without, and the ride screen finds one from the coordinates.
+    if ((state.currentAddress ?? '').trim().isEmpty) {
+      await getCurrentAddress();
+    }
+
     double currentLat = state.currentLatLng?.latitude ?? 0.0;
     double currentLng = state.currentLatLng?.longitude ?? 0.0;
-    String? currentAddress = state.currentAddress;
+    String? currentAddress = (state.currentAddress ?? '').trim().isEmpty
+        ? null
+        : state.currentAddress;
 
     // Destination
     double? destinationLat = state.destinationLatLng?.latitude;

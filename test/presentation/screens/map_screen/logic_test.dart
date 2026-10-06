@@ -16,6 +16,7 @@ import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
 import 'package:com.tara.passenger/presentation/shared/ride_dialogs.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/services/booking_session.dart';
+import 'package:com.tara.passenger/services/location_imp.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,6 +35,9 @@ class _FakeRequestBookingApi extends RequestBookingApi {
   final List<Completer<Result<RequestBookingModel>>> completers = [];
   int callCount = 0;
 
+  /// The pickup address each request carried.
+  final List<String?> addresses = [];
+
   @override
   Future<Result<RequestBookingModel>> requestBookingApi({
     required double startLatitude,
@@ -44,9 +48,26 @@ class _FakeRequestBookingApi extends RequestBookingApi {
     int? typeVehicleId,
   }) {
     callCount++;
+    addresses.add(address);
     final c = Completer<Result<RequestBookingModel>>();
     completers.add(c);
     return c.future;
+  }
+}
+
+/// A geocoder that answers what the test tells it to, at once or when the
+/// test completes [pending].
+class _FakeLocationRepo extends LocationRepo {
+  _FakeLocationRepo(this.address);
+
+  String? address;
+  Completer<String?>? pending;
+  final List<LatLng> lookups = [];
+
+  @override
+  Future<String?> findAddress({required LatLng latlng}) {
+    lookups.add(latlng);
+    return pending?.future ?? Future.value(address);
   }
 }
 
@@ -140,6 +161,10 @@ void main() {
   }
   late BookingSession session;
 
+  /// The pickup's address as the map has found it by the time Book is
+  /// tapped — the usual case.
+  const knownAddress = 'Street 271, Phnom Penh';
+
   /// Builds a controller over an *existing* session, to simulate the route
   /// being disposed and re-entered.
   MapLogic buildLogicWith(BookingSession existing,
@@ -152,7 +177,7 @@ void main() {
       bookingSession: existing,
       checkBookingApi: _FakeCheckBookingApi([BookingStatus.request]),
       openBookingRoute: (_) {},
-    );
+    )..state.currentAddress = knownAddress;
     // Stops the wait's timer, which restoring an awaited booking starts.
     addTearDown(logic.onClose);
     return logic;
@@ -164,6 +189,8 @@ void main() {
   MapLogic buildLogic(
     _FakeRequestBookingApi api, {
     _FakeCheckBookingApi? checkBooking,
+    _FakeLocationRepo? locationRepo,
+    String? currentAddress = knownAddress,
   }) {
     socket = _FakeSocket();
     updateLocation = _FakeUpdateLocationApi();
@@ -184,7 +211,8 @@ void main() {
       checkBookingApi:
           checkBooking ?? _FakeCheckBookingApi([BookingStatus.request]),
       openBookingRoute: openedRoutes.add,
-    );
+      locationRepo: locationRepo,
+    )..state.currentAddress = currentAddress;
     // Stops the wait's timer, which a successful request starts.
     addTearDown(logic.onClose);
     return logic;
@@ -404,6 +432,87 @@ void main() {
       expect(api.callCount, 2, reason: 'retry after failure must be allowed');
       api.completers[1].complete(Result.ok(_booking()));
       await second;
+    });
+  });
+
+  group('the pickup address goes with the booking', () {
+    const pickup = LatLng(11.55, 104.91);
+
+    test('an address already found is sent as it is', () async {
+      final api = _FakeRequestBookingApi();
+      final geocoder = _FakeLocationRepo('never asked');
+      final logic = buildLogic(api, locationRepo: geocoder)
+        ..state.currentLatLng = pickup;
+
+      final pending = logic.requestBooking();
+      api.completers.single.complete(Result.ok(_booking()));
+      await pending;
+
+      expect(api.addresses, [knownAddress]);
+      expect(geocoder.lookups, isEmpty);
+    });
+
+    test('Book tapped before the address arrived: it is looked up first',
+        () async {
+      // The lookup runs after the pin settles. A booking sent ahead of it
+      // had no pickup address anywhere later: the ride screen showed "---".
+      final api = _FakeRequestBookingApi();
+      final geocoder = _FakeLocationRepo('National Road 6, Phnom Penh');
+      final logic =
+          buildLogic(api, locationRepo: geocoder, currentAddress: null)
+            ..state.currentLatLng = pickup;
+
+      final pending = logic.requestBooking();
+      await pumpEventQueue();
+      api.completers.single.complete(Result.ok(_booking()));
+      await pending;
+
+      expect(geocoder.lookups, [pickup]);
+      expect(api.addresses, ['National Road 6, Phnom Penh']);
+      expect(session.pickupAddress, 'National Road 6, Phnom Penh');
+    });
+
+    test('no address to be had: the booking still goes, without one',
+        () async {
+      // Not with "Address not found." as where the passenger is.
+      final api = _FakeRequestBookingApi();
+      final logic = buildLogic(api,
+          locationRepo: _FakeLocationRepo(null), currentAddress: null)
+        ..state.currentLatLng = pickup;
+
+      final pending = logic.requestBooking();
+      await pumpEventQueue();
+      api.completers.single.complete(Result.ok(_booking()));
+      await pending;
+
+      expect(api.addresses, [null]);
+      expect(logic.state.addressFailed, isTrue);
+      expect(session.status, BookingRequestStatus.awaitingDriver);
+    });
+
+    test('an answer for a point the pin has left is dropped', () async {
+      final geocoder = _FakeLocationRepo(null)..pending = Completer<String?>();
+      final logic = buildLogic(_FakeRequestBookingApi(),
+          locationRepo: geocoder, currentAddress: null)
+        ..state.currentLatLng = pickup;
+
+      final lookup = logic.getCurrentAddress();
+      logic.state.currentLatLng = const LatLng(11.60, 104.95);
+      geocoder.pending!.complete('Where the pin was');
+      await lookup;
+
+      expect(logic.state.currentAddress, isNull);
+    });
+
+    test('a lookup that finds nothing clears the address it had', () async {
+      final logic = buildLogic(_FakeRequestBookingApi(),
+          locationRepo: _FakeLocationRepo(null))
+        ..state.currentLatLng = pickup;
+
+      await logic.getCurrentAddress();
+
+      expect(logic.state.currentAddress, isNull);
+      expect(logic.state.addressFailed, isTrue);
     });
   });
 

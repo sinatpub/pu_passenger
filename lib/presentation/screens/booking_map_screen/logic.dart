@@ -420,6 +420,7 @@ class BookingMapLogic extends GetxController {
         // Update the local state
         state.bookingRequestData = response;
         _bookingInfo(); // Updates UI Text/Titles
+        unawaited(resolveMissingPickupAddress());
 
         // 2. Always refresh markers (This makes the car move every 30s)
         await refreshMarkers();
@@ -431,6 +432,46 @@ class BookingMapLogic extends GetxController {
     } finally {
       if (!isSilent) EasyLoading.dismiss();
     }
+  }
+
+  /// The booking id the pickup address was last looked up for, so a booking
+  /// without one costs a single lookup, not one per poll.
+  int? _pickupLookedUpFor;
+
+  /// Looks the pickup address up from the booking's coordinates when the
+  /// booking carries none.
+  ///
+  /// A booking has no address when the passenger booked before theirs had
+  /// been found, or when the geocoder had none then. The sheet showed `---`
+  /// where they were being picked up; the coordinates were there all along.
+  Future<void> resolveMissingPickupAddress() async {
+    final data = state.bookingRequestData?.data;
+    if (data == null) return;
+    if ((data.startAddress ?? '').trim().isNotEmpty) {
+      state.pickupAddress = null;
+      return;
+    }
+    if (_pickupLookedUpFor == data.id && _pickupLookedUpFor != null) return;
+
+    final lat = double.tryParse(data.startLatitude ?? '');
+    final lng = double.tryParse(data.startLongitude ?? '');
+    if (lat == null || lng == null) return;
+
+    _pickupLookedUpFor = data.id;
+    String? address;
+    try {
+      address = await _locationRepo.findAddress(latlng: LatLng(lat, lng));
+    } catch (e) {
+      tlog("Pickup address lookup failed: $e");
+    }
+    if (address == null) {
+      // Asked again on a later refresh rather than never.
+      _pickupLookedUpFor = null;
+      return;
+    }
+    if (state.bookingRequestData?.data?.id != data.id) return;
+    state.pickupAddress = address;
+    update();
   }
 
   _bookingInfo() {

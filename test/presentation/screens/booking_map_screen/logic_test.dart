@@ -49,6 +49,16 @@ class _FakeLocationRepo extends LocationRepo {
     requests.add((start, end));
     return pending?.future ?? Future.value(route);
   }
+
+  /// What the geocoder answers, and the points it was asked about.
+  String? address = 'National Road 6, Phnom Penh';
+  final List<LatLng> addressLookups = [];
+
+  @override
+  Future<String?> findAddress({required LatLng latlng}) async {
+    addressLookups.add(latlng);
+    return address;
+  }
 }
 
 /// A booking with a pickup, a driver somewhere else and, optionally, a
@@ -343,6 +353,85 @@ void main() {
 
       // Reaching the field must not consult Get at all.
       expect(() => logic.socketConnected, returnsNormally);
+    });
+  });
+
+  group('a booking that came without a pickup address', () {
+    RequestBookingModel booking({String? startAddress, int id = 7}) =>
+        RequestBookingModel(
+          data: Data(
+            id: id,
+            status: BookingStatus.arrival,
+            startAddress: startAddress,
+            startLatitude: '11.5600',
+            startLongitude: '104.9300',
+          ),
+        );
+
+    BookingMapLogic logicWith(_FakeLocationRepo geocoder) =>
+        BookingMapLogic(
+          checkBookingApi: _FakeCheckBookingApi(),
+          locationRepo: geocoder,
+        );
+
+    test('gets one from its coordinates', () async {
+      // The sheet showed "---" where the passenger was being picked up.
+      final geocoder = _FakeLocationRepo();
+      final logic = logicWith(geocoder)
+        ..state.bookingRequestData = booking();
+
+      await logic.resolveMissingPickupAddress();
+
+      expect(geocoder.addressLookups, [const LatLng(11.56, 104.93)]);
+      expect(logic.state.pickupAddress, 'National Road 6, Phnom Penh');
+    });
+
+    test('is looked up once, not on every refresh', () async {
+      final geocoder = _FakeLocationRepo();
+      final logic = logicWith(geocoder)
+        ..state.bookingRequestData = booking();
+
+      await logic.resolveMissingPickupAddress();
+      await logic.resolveMissingPickupAddress();
+      await logic.resolveMissingPickupAddress();
+
+      expect(geocoder.addressLookups, hasLength(1));
+    });
+
+    test('a lookup that found nothing is tried again later', () async {
+      final geocoder = _FakeLocationRepo()..address = null;
+      final logic = logicWith(geocoder)
+        ..state.bookingRequestData = booking();
+
+      await logic.resolveMissingPickupAddress();
+      expect(logic.state.pickupAddress, isNull);
+
+      geocoder.address = 'National Road 6, Phnom Penh';
+      await logic.resolveMissingPickupAddress();
+      expect(logic.state.pickupAddress, 'National Road 6, Phnom Penh');
+      expect(geocoder.addressLookups, hasLength(2));
+    });
+
+    test('a booking with its own address is left alone', () async {
+      final geocoder = _FakeLocationRepo();
+      final logic = logicWith(geocoder)
+        ..state.bookingRequestData = booking(startAddress: 'Street 271');
+
+      await logic.resolveMissingPickupAddress();
+
+      expect(geocoder.addressLookups, isEmpty);
+      expect(logic.state.pickupAddress, isNull);
+    });
+
+    test('no coordinates, no lookup', () async {
+      final geocoder = _FakeLocationRepo();
+      final logic = logicWith(geocoder)
+        ..state.bookingRequestData =
+            RequestBookingModel(data: Data(id: 7));
+
+      await logic.resolveMissingPickupAddress();
+
+      expect(geocoder.addressLookups, isEmpty);
     });
   });
 }

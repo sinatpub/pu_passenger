@@ -157,7 +157,7 @@ class BookingSheet extends StatelessWidget {
   String? _subtitle(Data? data, int phase) {
     switch (phase) {
       case 1:
-        final pickup = splitPlaceDescription(_text(data?.startAddress)).primary;
+        final pickup = splitPlaceDescription(_pickup(data)).primary;
         return pickup == null
             ? null
             : AppLocale.meetAt.trParams({'place': pickup});
@@ -184,12 +184,17 @@ class BookingSheet extends StatelessWidget {
     );
   }
 
+  /// Where the passenger is picked up: the booking's own address, or the
+  /// one looked up from its coordinates when it has none.
+  String? _pickup(Data? data) =>
+      _text(data?.startAddress) ?? _text(logic.state.pickupAddress);
+
   /// Pickup over drop-off. A trip booked without a drop-off says so, and
   /// that the fare is metered.
   Widget _tripCard(Data? data) {
     return TaTripCard(
       pickupLabel: AppLocale.pickup.tr,
-      pickup: _text(data?.startAddress) ?? '---',
+      pickup: _pickup(data) ?? AppLocale.pinnedLocation.tr,
       dropOffLabel: AppLocale.destination.tr,
       dropOff: _text(data?.endAddress),
       noDropOffText: AppLocale.noDropOffMeter.tr,

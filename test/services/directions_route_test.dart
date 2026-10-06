@@ -78,4 +78,33 @@ void main() {
       expect(route.duration, isNull);
     }
   });
+
+  group('directionsFailure', () {
+    test('a route that came back is no failure', () {
+      expect(directionsFailure({'status': 'OK', 'routes': []}), isNull);
+    });
+
+    test('a refused request says why, in Google\'s own words', () {
+      // Sent with HTTP 200, so it reads as a route with nothing in it.
+      expect(
+        directionsFailure({
+          'status': 'REQUEST_DENIED',
+          'error_message': 'This API project is not authorized to use '
+              'this API.',
+          'routes': [],
+        }),
+        'REQUEST_DENIED: This API project is not authorized to use this API.',
+      );
+    });
+
+    test('a status with no message is still named', () {
+      expect(directionsFailure({'status': 'ZERO_RESULTS', 'routes': []}),
+          'ZERO_RESULTS');
+    });
+
+    test('a body that is not a directions answer', () {
+      expect(directionsFailure('not json'), 'unreadable response');
+      expect(directionsFailure(null), 'unreadable response');
+    });
+  });
 }

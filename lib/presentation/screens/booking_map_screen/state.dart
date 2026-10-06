@@ -15,6 +15,11 @@ class BookingMapState {
   Duration? pickupEta;
   double? pickupDistanceMeters;
 
+  /// The pickup's address, looked up from its coordinates because the
+  /// booking came without one. Null while the booking has its own, and until
+  /// the lookup answers.
+  String? pickupAddress;
+
   BitmapDescriptor? driverIcon;
   BitmapDescriptor? passengerIcon;
   BitmapDescriptor? destinationIcon;
