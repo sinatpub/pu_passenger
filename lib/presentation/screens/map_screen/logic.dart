@@ -18,6 +18,9 @@ import 'package:com.tara.passenger/data/datasources/driver_around_api.dart';
 import 'package:com.tara.passenger/data/datasources/request_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/update_passenger_location_api.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/invite_feature.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/invite_presentation.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/home/booking_redirect.dart';
 import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/map_presentation.dart';
@@ -601,6 +604,29 @@ class MapLogic extends GetxController {
     }
   }
 
+  // ── Ride credit (D40) ────────────────────────────────────────────────────
+
+  void setUseRideCredit(bool use) {
+    state.useRideCredit = use;
+    update([MapUpdate.mapID]);
+  }
+
+  /// Null is "all of it".
+  void setRideCreditAmount(double? amount) {
+    state.rideCreditAmount = amount;
+    update([MapUpdate.mapID]);
+  }
+
+  /// What goes out with the booking. Zero while the feature is off.
+  double _rideCreditToAsk() {
+    if (!inviteFeatureEnabled || !Get.isRegistered<InviteLogic>()) return 0;
+    return rideCreditToAsk(
+      use: state.useRideCredit,
+      chosen: state.rideCreditAmount,
+      balance: Get.find<InviteLogic>().creditBalance,
+    );
+  }
+
   Future<void> requestBooking() async {
     // Re-entrancy guard. A second tap while a request is in flight is a
     // no-op, not a second booking. Asks the session, not local state, so a
@@ -656,6 +682,7 @@ class MapLogic extends GetxController {
       destinationLatitude: destinationLat,
       destinationLongitude: destinationLng,
       typeVehicleId: vehicleId,
+      rideCredit: _rideCreditToAsk(),
     );
 
     await result.when(

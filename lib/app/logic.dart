@@ -1,3 +1,4 @@
+import 'package:com.tara.passenger/presentation/screens/invite/logic.dart';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
@@ -133,6 +134,8 @@ class AppLogic extends GetxController with keyStoragePref {
         // alone left the token in place, and the next launch opened Home as
         // the account that had just logged out.
         await SessionService.instance.clear();
+        // D40: the next passenger must not see this one's ride credit.
+        if (Get.isRegistered<InviteLogic>()) Get.find<InviteLogic>().clear();
         await 1.delay();
         Get.offAllNamed(AppRoutes.LOGIN);
         EasyLoading.dismiss();

@@ -608,6 +608,34 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 
 ---
 
+## D40: Invite, Ride Credit and Rewards (Mock Only)
+
+**Decision:** The passenger app has the invite feature the driver app has, by the same rules, with one difference: a passenger's reward is ride credit. Built on the QA mock backend only (`inviteFeatureEnabled`, `lib/presentation/screens/invite/invite_feature.dart`); against the real API every entry point is hidden.
+
+**Rationale:**
+- User decisions of 2026-10-13: credit is chosen with a switch whose amount can be changed (1b), and rewards live on Profile (2a). The rules themselves were settled on 2026-10-01 to 10-03 and are in the driver app's decision log (DD-45 to DD-51)
+- The backend has none of the routes. They are specified in "PU Taxi backend spec: invite, rewards, wallet, transfer", section 5
+
+**What was built:**
+- **Sign-up:** an optional "Invite code" field with a scan button. The code is checked while it is typed and shows "Invited by …". A refused code, or one still being checked, blocks Create; a check that could not be made does not, because the server checks again. It is sent as `invite_code`
+- **Home:** a floating QR button opens "My invite QR": the QR, the code, copy, share, the two rates and what was earned so far
+- **Profile:** a "Ride credit" card with the balance opens "Invite rewards": credit, total earned, used on trips, and two tabs, Rewards and People
+- **Booking sheet:** "Use ride credit", shown only when there is credit. Off by default. On, it offers the whole balance, "Up to $2.07"; "Change" opens a sheet to type a part, with "All". It is sent as `ride_credit`, the most to use
+- **Fare page, receipt, trip detail:** a trip that used credit shows "Paid by ride credit" and the cash that is left. A trip without credit looks as before
+- **Mock backend:** `GET /taxi-passenger/referral`, `GET /taxi-passenger/referral/check-code`, `invite_code` on sign-up, `ride_credit` on a booking, and `payment.ride_credit`. Credit is taken at drop-off: the smallest of what was asked, the fare and the balance. "Reset all" gives it back
+
+**Mock data:** OTP `1111` opens the sign-up form; own code `PS4N7Q`; credit $2.07 from two invited people; sign-up accepts `PU7K2M` (the driver app's mock code), `SOKHA88` and `BOPHA21`.
+
+**Tradeoffs:**
+- **When the passenger chooses credit is a proposal.** The product rule says "at payment"; the app has no payment step, and the driver must know the cash to collect at drop-off, so the choice is made with the booking. The backend developer still has to confirm it
+- The amount is "up to": the fare is not known before drop-off
+- Credit expiry and a limit per trip are not decided
+- The Khmer strings are a first draft for the product owner to review
+- Not seen on a device. `mobile_scanner`, `qr_flutter` and `share_plus` are new dependencies
+- Rewards are fixed fixtures in the mock: nothing there makes a new reward appear
+
+---
+
 ## Decision Summary
 
 | # | Decision | Impact | Risk |
@@ -651,3 +679,4 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 | D37 | Khmer is the default language | Medium | Low |
 | D38 | Amounts are US dollars with cents | High | Medium |
 | D39 | Vehicle type recognised by name | Medium | Low |
+| D40 | Invite, ride credit and rewards, mock only | High | Medium |

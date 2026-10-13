@@ -6,6 +6,9 @@ import 'package:com.tara.passenger/core/utils/app_version.dart';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
 import 'package:com.tara.passenger/core/utils/initials.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/invite_feature.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/logic.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/widgets/ride_credit_card.dart';
 import 'package:com.tara.passenger/presentation/screens/login/auth_language_toggle.dart';
 import 'package:com.tara.passenger/presentation/screens/profile/logic.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
@@ -39,6 +42,11 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 14),
               ProfileCard(logic: logic),
               const SizedBox(height: 14),
+              // D40: a passenger has no wallet, so ride credit lives here.
+              if (inviteFeatureEnabled) ...[
+                RideCreditCard(logic: Get.find<InviteLogic>()),
+                const SizedBox(height: 14),
+              ],
               _menu(context, appLogic),
               const SizedBox(height: 14),
               const ProfileVersionLabel(),

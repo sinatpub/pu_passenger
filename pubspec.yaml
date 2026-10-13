@@ -72,6 +72,10 @@ dependencies:
   flutter_arc_text: ^0.6.0
   # local storage
   shared_preferences: ^2.3.2
+  # D40: invite QR, scanning a code at sign-up, sharing the invite link.
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^7.0.0
+  share_plus: ^12.0.0
   # get version from pubspec.yaml
   package_info_plus: ^8.1.2
   # launcher url

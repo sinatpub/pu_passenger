@@ -76,6 +76,22 @@ class MockBackend {
   int _nextBookingId = MockData.firstBookingId;
   final List<Map<String, dynamic>> _history = [];
 
+  /// D40: one row per completed trip that used ride credit. The rewards are
+  /// fixed fixtures; what moves the balance in the mock is using it.
+  final List<Map<String, dynamic>> _creditUses = [];
+
+  /// Ride credit the passenger can use now: earned minus used.
+  double get rideCreditBalance {
+    double cents = 0;
+    for (final reward in MockData.rewards(_now())) {
+      cents += (reward['amount'] as num) * 100;
+    }
+    for (final use in _creditUses) {
+      cents -= (use['amount'] as num) * 100;
+    }
+    return cents.round() / 100;
+  }
+
   Timer? _acceptTimer;
   Timer? _expiryTimer;
   Timer? _arrivalTimer;
@@ -113,8 +129,12 @@ class MockBackend {
       return _verifyOtp(request);
     }
     if (path.endsWith('/taxi-passenger/register')) {
-      return _ok(MockData.registerPayload());
+      return _register(request);
     }
+    if (path.endsWith('/taxi-passenger/referral/check-code')) {
+      return _checkInviteCode(request);
+    }
+    if (path.endsWith('/taxi-passenger/referral')) return _referral();
     if (path.endsWith('/taxi-passenger/login')) return _debugLogin();
     if (path.endsWith('/taxi-passenger/push-device-token')) {
       return _ok({'status': true, 'message': 'Device token saved'});
@@ -181,6 +201,15 @@ class MockBackend {
     if (request.body['otp_code']?.toString() == '9999') {
       return _ok({'status': false, 'message': 'OTP not correct', 'data': null});
     }
+    // D40: a phone with no account yet. The app opens the sign-up form,
+    // where the invite code is entered.
+    if (request.body['otp_code']?.toString() == '1111') {
+      return _ok({
+        'status': true,
+        'message': 'Success',
+        'data': {'user': null, 'token': null},
+      });
+    }
     return _ok(MockData.authPayload());
   }
 
@@ -195,6 +224,46 @@ class MockBackend {
   /// `request-booking` — creates the booking and starts the sim. Under
   /// `BOOKING_FAILED` it returns a 2xx with no booking, which `MapLogic`
   /// treats as the "can't confirm" failure and shows its retry toast.
+  // ── Invite and ride credit (D40) ─────────────────────────────────────────
+
+  static String _inviteCodeOf(Object? raw) =>
+      (raw?.toString() ?? '').replaceAll(' ', '').toUpperCase();
+
+  /// Sign-up refuses a code nobody has; no code at all is fine.
+  MockResponse _register(MockRequest request) {
+    final code = _inviteCodeOf(request.body['invite_code']);
+    if (code.isNotEmpty && !MockData.inviteCodes.containsKey(code)) {
+      return const MockResponse(
+          422, {'status': false, 'message': 'Unknown invite code'});
+    }
+    return _ok(MockData.registerPayload());
+  }
+
+  MockResponse _checkInviteCode(MockRequest request) {
+    final inviter = MockData.inviteCodes[_inviteCodeOf(request.query['code'])];
+    return _ok({
+      'status': true,
+      'message': 'Success',
+      'data': {'valid': inviter != null, 'inviter_name': inviter},
+    });
+  }
+
+  MockResponse _referral() => _ok({
+        'status': true,
+        'message': 'Success',
+        'data': {
+          'code': MockData.inviteCode,
+          'link': MockData.inviteLink,
+          'currency': 'USD',
+          'driver_top_up_rate': MockData.driverTopUpRate,
+          'passenger_commission_rate': MockData.passengerCommissionRate,
+          'reward_balance': rideCreditBalance,
+          'invitees': MockData.invitees(_now()),
+          'rewards': MockData.rewards(_now()),
+          'uses': _creditUses,
+        },
+      });
+
   MockResponse _requestBooking(MockRequest request) {
     if (settings.scenario == MockScenario.bookingFailed) {
       return _ok({
@@ -210,6 +279,15 @@ class MockBackend {
     final destination =
         _latLngFromRequest(body, 'end_latitude', 'end_longitude');
 
+    // D40: the passenger may ask for ride credit with the booking. Nothing
+    // is taken yet: the fare is not known until drop-off.
+    final creditAsked =
+        double.tryParse(body['ride_credit']?.toString() ?? '') ?? 0;
+    if (creditAsked > rideCreditBalance) {
+      return const MockResponse(
+          422, {'status': false, 'message': 'More than your ride credit'});
+    }
+
     passengerPosition = pickup;
 
     final next = MockRide(
@@ -220,6 +298,7 @@ class MockBackend {
       destination: destination,
       createdAt: _now(),
       paymentMethod: settings.paymentMethod.label,
+      rideCreditAsked: creditAsked > 0 ? creditAsked : 0,
     );
     ride = next;
 
@@ -456,9 +535,27 @@ class MockBackend {
         pricePerKm: MockData.pricePerKm,
         minimumFare: MockData.minimumFare,
       );
+    _applyRideCredit(current);
     _push('driverDropDrive', _bookingJson(current));
     _paymentTimer = Timer(_scale(MockTimings.paymentDelay), _collectPayment);
     _changed();
+  }
+
+  /// D40: the credit used is the smallest of what was asked, the fare and
+  /// the balance now. Taken here, at drop-off, so a cancelled trip costs
+  /// none.
+  void _applyRideCredit(MockRide r) {
+    final fare = r.fare ?? 0;
+    final used = [r.rideCreditAsked, fare, rideCreditBalance]
+        .reduce((a, b) => a < b ? a : b);
+    r.rideCredit = used > 0 ? (used * 100).round() / 100 : 0;
+    if ((r.rideCredit ?? 0) <= 0) return;
+    _creditUses.insert(0, {
+      'id': _creditUses.length + 1,
+      'booking_id': r.id,
+      'amount': r.rideCredit,
+      'created_at': MockData.timestamp(_now()),
+    });
   }
 
   void _collectPayment() {
@@ -518,6 +615,7 @@ class MockBackend {
     parkedAt = MockPlaces.watPhnom.latLng;
     passengerPosition = MockPlaces.passengerStart.latLng;
     _nextBookingId = MockData.firstBookingId;
+    _creditUses.clear();
     _seedHistory();
     _changed();
   }
@@ -637,6 +735,7 @@ class MockBackend {
           ? '${seconds ~/ 3600} hours ${(seconds % 3600) ~/ 60} mins'
           : '${seconds ~/ 60} mins ${seconds % 60} seconds',
       'amount': (r.fare ?? 0).toStringAsFixed(2),
+      'ride_credit': (r.rideCredit ?? 0).toStringAsFixed(2),
       'payment_method': r.paymentMethod,
       'status': paid ? 1 : (cancelled ? 2 : 0),
       'status_name': paid ? 'Paid' : (cancelled ? 'Cancelled' : 'Pending'),
@@ -743,6 +842,7 @@ class MockBackend {
           'passengerPosition': _latLngToJson(passengerPosition),
           'nextBookingId': _nextBookingId,
           'history': _history,
+          'creditUses': _creditUses,
         }));
   }
 
@@ -766,6 +866,10 @@ class MockBackend {
       _history
         ..clear()
         ..addAll((json['history'] as List).cast<Map<String, dynamic>>());
+      _creditUses
+        ..clear()
+        ..addAll((json['creditUses'] as List? ?? const [])
+            .cast<Map<String, dynamic>>());
     } catch (e) {
       debugPrint('[MockBackend] discarding unreadable saved state: $e');
       resetAll();

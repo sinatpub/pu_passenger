@@ -154,15 +154,30 @@ Then drop the `MockMode` lines from `main.dart`, `app/root_main.dart`,
 `presentation/screens/map_screen/logic.dart`.
 The `PositionSource` seam is ordinary code and can stay.
 
+## Invite and ride credit (D40)
+
+Only in mock mode; the real backend has no routes for it.
+
+| Where | What to try |
+|---|---|
+| Sign-up | Sign in with OTP `1111` to reach it. Type `PU7K2M`, `SOKHA88` or `BOPHA21`: "Invited by …". Any other code is refused and Create is blocked. The scan button reads the driver app's mock QR |
+| Home | The round QR button: "My invite QR", code `PS4N7Q`, copy and share |
+| Profile | "Ride credit $2.07" opens "Invite rewards", tabs Rewards and People |
+| Booking sheet | "Use ride credit". Turn it on, then "Change" to use a part. Book and ride to the end |
+| Fare page, receipt, trip detail | "Paid by ride credit" and the cash left. The credit on Profile is lower afterwards |
+| MOCK tab | "Reset all" gives the credit back |
+
+A cancelled trip takes no credit: it is taken at drop-off.
+
 ## Known limits
 
 - **Not simulated because the passenger app has no such screen or data:**
   driver-side steps (accepting, navigating to pickup, starting the trip),
   tips, driver rating from the driver side, and a remaining-distance or ETA
   readout during the trip.
-- **Registration** (`/register`) returns a signed-in passenger. Because mock
-  OTP never reports a new user, the register screen is only reachable by
-  navigating to it directly.
+- **Registration** (`/register`) returns a signed-in passenger. OTP `1111`
+  reports a new user and opens the register screen (D40); any other code
+  signs in.
 - **Push notifications (FCM)** are not mocked. Ride events come through the
   socket path, which is what the app uses while in the foreground.
 - **App update prompt** is not simulated (the version endpoint matches the

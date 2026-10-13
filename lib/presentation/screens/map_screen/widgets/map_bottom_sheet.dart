@@ -12,6 +12,9 @@ import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/core/utils/money.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_cell_data.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/invite_feature.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/logic.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/widgets/ride_credit_row.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/state.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/detail_service_dialog.dart';
@@ -112,6 +115,23 @@ class MapBottomSheet extends StatelessWidget {
                         ),
                       ),
                     SizedBox(height: 12.d),
+
+                    // D40: shown only to a passenger who has credit to use.
+                    if (inviteFeatureEnabled)
+                      Obx(() {
+                        final balance = Get.find<InviteLogic>().creditBalance;
+                        if (balance <= 0) return const SizedBox.shrink();
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: 12.d),
+                          child: RideCreditRow(
+                            balance: balance,
+                            use: logic.state.useRideCredit,
+                            chosen: logic.state.rideCreditAmount,
+                            onUseChanged: logic.setUseRideCredit,
+                            onChosen: logic.setRideCreditAmount,
+                          ),
+                        );
+                      }),
 
                     /// Book — live without a destination; only a missing
                     /// vehicle type disables it.

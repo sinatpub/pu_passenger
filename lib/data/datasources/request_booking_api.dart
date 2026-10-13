@@ -23,6 +23,7 @@ class RequestBookingApi {
     double? destinationLongitude,
     String? address,
     int? typeVehicleId,
+    double? rideCredit,
   }) {
     final body = <String, dynamic>{
       "start_latitude": startLatitude.toString(),
@@ -40,6 +41,11 @@ class RequestBookingApi {
     }
     if (typeVehicleId != null) {
       body["type_vehicle_id"] = typeVehicleId;
+    }
+    // D40: the most ride credit to use on this trip. Left out when none,
+    // so a booking without credit is the request it always was.
+    if (rideCredit != null && rideCredit > 0) {
+      body["ride_credit"] = rideCredit.toStringAsFixed(2);
     }
 
     return _apiClient.request<RequestBookingModel>(

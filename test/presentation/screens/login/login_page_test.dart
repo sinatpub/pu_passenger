@@ -65,6 +65,7 @@ class _CountingAuthRepository implements AuthRepository {
     required String phoneNumber,
     File? profileImage,
     required String platform,
+    String? inviteCode,
   }) {
     calls++;
     throw UnimplementedError();

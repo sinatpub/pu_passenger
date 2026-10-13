@@ -119,6 +119,74 @@ class MockData {
   /// the profile screen and the register payload carry it.
   static const int passengerRoleId = 3;
 
+  // ── Invite and ride credit (D40) ─────────────────────────────────────────
+
+  /// The mock passenger's own invite code.
+  static const String inviteCode = 'PS4N7Q';
+  static const String inviteLink = 'https://putaxi.example/i/$inviteCode';
+
+  /// Codes sign-up accepts, with the inviter's name. `PU7K2M` is the driver
+  /// app's mock code, so its QR can be scanned from this app.
+  static const Map<String, String> inviteCodes = <String, String>{
+    'PU7K2M': 'Dara Sok',
+    'SOKHA88': 'Sokha Vann',
+    'BOPHA21': 'Bopha Kim',
+  };
+
+  static const double driverTopUpRate = 1; // percent
+  static const double passengerCommissionRate = 10; // percent
+
+  static List<Map<String, dynamic>> invitees(DateTime now) => [
+        {
+          'id': 1,
+          'name': 'Sokha Vann',
+          'profile_image': '',
+          'role': 'driver',
+          'joined_at': timestamp(now.subtract(const Duration(days: 21))),
+          'earned': 2.00,
+        },
+        {
+          'id': 2,
+          'name': 'Chenda Ros',
+          'profile_image': '',
+          'role': 'passenger',
+          'joined_at': timestamp(now.subtract(const Duration(days: 9))),
+          'earned': 0.07,
+        },
+      ];
+
+  /// 1% of four $50 top-ups by the invited driver, and 10% of the commission
+  /// on three trips by the invited passenger. Newest first.
+  static List<Map<String, dynamic>> rewards(DateTime now) => [
+        _reward(7, 2, 'Chenda Ros', 'passenger', 0.02, now, hours: 5),
+        _reward(6, 1, 'Sokha Vann', 'driver', 0.50, now, days: 2),
+        _reward(5, 2, 'Chenda Ros', 'passenger', 0.03, now, days: 3),
+        _reward(4, 1, 'Sokha Vann', 'driver', 0.50, now, days: 6),
+        _reward(3, 2, 'Chenda Ros', 'passenger', 0.02, now, days: 8),
+        _reward(2, 1, 'Sokha Vann', 'driver', 0.50, now, days: 12),
+        _reward(1, 1, 'Sokha Vann', 'driver', 0.50, now, days: 19),
+      ];
+
+  static Map<String, dynamic> _reward(
+    int id,
+    int inviteeId,
+    String name,
+    String role,
+    double amount,
+    DateTime now, {
+    int days = 0,
+    int hours = 0,
+  }) =>
+      {
+        'id': id,
+        'invitee_id': inviteeId,
+        'invitee_name': name,
+        'invitee_role': role,
+        'amount': amount,
+        'created_at':
+            timestamp(now.subtract(Duration(days: days, hours: hours))),
+      };
+
   static String timestamp(DateTime t) {
     String two(int n) => n.toString().padLeft(2, '0');
     return '${t.year}-${two(t.month)}-${two(t.day)} '

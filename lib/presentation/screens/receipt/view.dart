@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'package:com.tara.passenger/presentation/screens/invite/widgets/payment_split_rows.dart';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/utils/motion.dart';
 import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
@@ -193,6 +194,10 @@ class ReceiptCard extends StatelessWidget {
       ),
       child: Column(
         children: [
+          ...paymentSplitRows(
+            amount: booking?.payment?.amount,
+            rideCredit: booking?.payment?.rideCredit,
+          ),
           if (invoice != null)
             TaKVRow(label: AppLocale.invoice.tr, value: invoice),
           TaKVRow(

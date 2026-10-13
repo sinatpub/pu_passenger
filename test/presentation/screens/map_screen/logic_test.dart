@@ -46,6 +46,7 @@ class _FakeRequestBookingApi extends RequestBookingApi {
     double? destinationLongitude,
     String? address,
     int? typeVehicleId,
+    double? rideCredit,
   }) {
     callCount++;
     addresses.add(address);

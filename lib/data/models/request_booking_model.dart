@@ -517,6 +517,10 @@ class Payment {
   String? duration;
   String? amount;
   String? paymentMethod;
+
+  /// D40: the part of [amount] paid with ride credit; the rest is cash.
+  /// Not sent by the real backend yet.
+  String? rideCredit;
   int? status;
   String? statusName;
   String? createdAt;
@@ -530,6 +534,7 @@ class Payment {
     this.duration,
     this.amount,
     this.paymentMethod,
+    this.rideCredit,
     this.status,
     this.statusName,
     this.createdAt,
@@ -544,6 +549,7 @@ class Payment {
         duration: stringOrNull(json["duration"]),
         amount: stringOrNull(json["amount"]),
         paymentMethod: stringOrNull(json["payment_method"]),
+        rideCredit: json["ride_credit"]?.toString(),
         status: intOrNull(json["status"]),
         statusName: stringOrNull(json["status_name"]),
         createdAt: stringOrNull(json["created_at"]),
@@ -558,6 +564,7 @@ class Payment {
         "duration": duration,
         "amount": amount,
         "payment_method": paymentMethod,
+        "ride_credit": rideCredit,
         "status": status,
         "status_name": statusName,
         "created_at": createdAt,

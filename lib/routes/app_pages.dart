@@ -4,6 +4,7 @@ import 'package:com.tara.passenger/presentation/screens/announcement/view.dart';
 import 'package:com.tara.passenger/presentation/screens/announcement_detail/view.dart';
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/binding.dart';
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/booking_map_screen.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/rewards_view.dart';
 import 'package:com.tara.passenger/presentation/screens/bottom_nav/binding.dart';
 import 'package:com.tara.passenger/presentation/screens/bottom_nav/view.dart';
 import 'package:com.tara.passenger/presentation/screens/calculate_fee/binding.dart';
@@ -54,6 +55,7 @@ abstract class AppRoutes {
   static const DRAGMAP = "/dragMap";
   static const TERMCONDITION = "/termcondition";
   static const CONTACTUS = "/contactus";
+  static const INVITE_REWARDS = "/invite-rewards";
   static const HISTORYDETAIL = "/historydetail";
   static const ANNOUNCEMENT = "/announcement";
   static const ANNOUNCEMENTDETAIL = "/announcement_detail";
@@ -134,6 +136,11 @@ class AppPages {
       name: AppRoutes.CONTACTUS,
       page: () => const ContactUsPage(),
       binding: ContactUsBinding(),
+    ),
+    // D40: its logic is app-lifetime (`app/service.dart`), so no binding.
+    GetPage(
+      name: AppRoutes.INVITE_REWARDS,
+      page: () => const InviteRewardsPage(),
     ),
     GetPage(
       name: AppRoutes.HISTORYDETAIL,

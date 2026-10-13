@@ -34,11 +34,13 @@ class AuthRepository {
     required String phoneNumber,
     File? profileImage,
     required String platform,
+    String? inviteCode,
   }) =>
       _datasource.register(
         fullName: fullName,
         phoneNumber: phoneNumber,
         profileImage: profileImage,
         platform: platform,
+        inviteCode: inviteCode,
       );
 }

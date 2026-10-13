@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:com.tara.passenger/app/logic.dart';
 import 'package:com.tara.passenger/core/helper/local_notification_helper.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
@@ -5,6 +7,7 @@ import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
 import 'package:com.tara.passenger/data/datasources/get_vehical_remote_data_source.dart';
 import 'package:com.tara.passenger/presentation/screens/home/booking_redirect.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/home/state.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
 import 'package:com.tara.passenger/services/location_imp.dart';
@@ -53,6 +56,10 @@ class HomeLogic extends GetxController {
     await getVehicleType();
     await Get.find<AppLogic>().getAppUpdate();
     await pushFcmToken();
+    // D40: the ride credit, for the QR sheet and the booking sheet.
+    if (Get.isRegistered<InviteLogic>()) {
+      unawaited(Get.find<InviteLogic>().fetch());
+    }
     super.onInit();
   }
 

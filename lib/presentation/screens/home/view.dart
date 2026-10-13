@@ -5,6 +5,8 @@ import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_cell_data.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/invite_feature.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/widgets/invite_fab.dart';
 import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/login/auth_language_toggle.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
@@ -28,6 +30,8 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: TaColors.background,
+      // D40: the invite QR, one tap from Home.
+      floatingActionButton: inviteFeatureEnabled ? const InviteFab() : null,
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(

@@ -59,6 +59,8 @@ class MockRide {
     this.endPoint,
     this.distanceKm,
     this.fare,
+    this.rideCreditAsked = 0,
+    this.rideCredit,
   });
 
   final int id;
@@ -82,6 +84,13 @@ class MockRide {
   double? distanceKm;
   double? fare;
 
+  /// D40: the most ride credit the passenger asked to use (`ride_credit`
+  /// on the booking request).
+  final double rideCreditAsked;
+
+  /// D40: the credit used, known once the fare is, at drop-off.
+  double? rideCredit;
+
   LatLng get pickUpPoint => pickup ?? MockPlaces.passengerStart.latLng;
 
   /// Where the simulated car drives once the trip starts. A ride with no
@@ -103,6 +112,8 @@ class MockRide {
         'endPoint': endPoint == null ? null : _latLngToJson(endPoint!),
         'distanceKm': distanceKm,
         'fare': fare,
+        'rideCreditAsked': rideCreditAsked,
+        'rideCredit': rideCredit,
       };
 
   factory MockRide.fromJson(Map<String, dynamic> json) => MockRide(
@@ -120,6 +131,8 @@ class MockRide {
         endPoint: _latLngFromJson(json['endPoint']),
         distanceKm: (json['distanceKm'] as num?)?.toDouble(),
         fare: (json['fare'] as num?)?.toDouble(),
+        rideCreditAsked: (json['rideCreditAsked'] as num?)?.toDouble() ?? 0,
+        rideCredit: (json['rideCredit'] as num?)?.toDouble(),
       );
 }
 

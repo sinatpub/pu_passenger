@@ -73,6 +73,13 @@ class MapState {
 
   // booking loading
   bool isBookingLoading = false;
+
+  /// D40: "Use ride credit" on the booking sheet. Off until the passenger
+  /// turns it on: credit is never used without being asked for.
+  bool useRideCredit = false;
+
+  /// The amount set with "Change"; null means the whole balance.
+  double? rideCreditAmount;
 }
 
 enum MapUpdate {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
+import 'package:com.tara.passenger/presentation/screens/invite/widgets/payment_split_rows.dart';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/theme/ta_radius.dart';
 import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
@@ -199,6 +200,10 @@ class HistoryDetailCard extends StatelessWidget {
               TaKVRow(
                 label: AppLocale.dateTime.tr,
                 value: historyDate(data?.createdAt),
+              ),
+              ...paymentSplitRows(
+                amount: data?.payment?.amount,
+                rideCredit: data?.payment?.rideCredit,
               ),
               if (distance != null)
                 TaKVRow(label: AppLocale.distance.tr, value: distance),

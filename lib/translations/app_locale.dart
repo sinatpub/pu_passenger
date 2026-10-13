@@ -365,4 +365,61 @@ class AppLocale {
   static var fareByMeterHint =
       "Fare is by meter. Add a drop-off to see an estimate";
   static var cantFindAddress = "Can't find your address. Tap to retry";
+
+  // Invite and ride credit (D40)
+  static var inviteCodeOptional = "Invite code (optional)";
+  static var enterInviteCode = "Enter invite code";
+  static var inviteCodeNote =
+      "From the person who invited you. It cannot be added later.";
+  static var invitedBy = "Invited by @name";
+  static var inviteCodeUnknown = "We don't know this code. Check it and try again.";
+  static var inviteCodeCheckFailed = "Couldn't check the code. Check your connection.";
+  static var scanInviteQr = "Scan invite QR";
+  static var scanInviteHint = "Point the camera at an invite QR";
+  static var scanNotInvite = "This is not an invite QR";
+  static var cameraDenied = "Camera permission is off";
+  static var cameraDeniedHint = "Allow the camera in settings to scan a QR.";
+  static var openSettings = "Open settings";
+  static var myInviteQr = "My invite QR";
+  static var myInviteQrHint =
+      "Friends scan this when they sign up, as a passenger or a driver.";
+  static var inviteCode = "Invite code";
+  static var copyCode = "Copy code";
+  static var codeCopied = "Code copied";
+  static var shareInvite = "Share invite";
+  static var shareInviteText = "Join PU Taxi with my invite code @code: @link";
+  static var inviteRuleDriver = "@rate% of every top-up by a driver you invite";
+  static var inviteRulePassenger =
+      "@rate% of our commission on every trip by a passenger you invite";
+  static var inviteRuleCredit = "Rewards are ride credit. Use it to pay for trips.";
+  static var earnedSoFar = "Earned so far: @amount";
+  static var rideCredit = "Ride credit";
+  static var rideCreditCardSub = "From people you invited";
+  static var inviteRewards = "Invite rewards";
+  static var rewardsTab = "Rewards";
+  static var peopleTab = "People";
+  static var totalEarnedLabel = "Total earned";
+  static var usedOnTrips = "Used on trips";
+  static var noRewardsYet = "No rewards yet";
+  static var noRewardsHint =
+      "Share your QR. You earn when the people you invite top up or ride.";
+  static var noPeopleYet = "Nobody has joined with your code yet";
+  static var earnedFromPerson = "Earned @amount";
+  static var usedOnATrip = "Used on a trip";
+  static var rewardFromName = "From @name";
+  static var showMyQr = "Show my QR";
+  static var couldntLoadRewards = "Couldn't load your rewards";
+  static var useRideCredit = "Use ride credit";
+  static var upToAmount = "Up to @amount";
+  static var changeAmount = "Change";
+  static var rideCreditForTrip = "Ride credit for this trip";
+  static var amountAvailable = "@amount available";
+  static var useAllCredit = "All";
+  static var creditMoreThanBalance = "More than your ride credit";
+  static var creditAboveZero = "Enter an amount above zero";
+  static var creditSheetNote =
+      "The fare is known at drop-off. You never use more credit than the fare.";
+  static var paidByRideCredit = "Paid by ride credit";
+  static var payInCash = "Pay in cash";
+  static var paidInCash = "Paid in cash";
 }

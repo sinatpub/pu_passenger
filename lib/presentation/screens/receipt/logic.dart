@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 
+import 'package:com.tara.passenger/presentation/screens/invite/logic.dart';
 import 'package:com.tara.passenger/data/models/request_booking_model.dart';
 import 'package:com.tara.passenger/presentation/screens/rating/rating_dialog.dart';
 import 'package:com.tara.passenger/presentation/screens/rating/rating_recorder.dart';
@@ -44,6 +45,8 @@ class ReceiptLogic extends GetxController {
   void onReady() {
     super.onReady();
     _startCountdown();
+    // D40: a trip that used ride credit has changed the balance.
+    if (Get.isRegistered<InviteLogic>()) Get.find<InviteLogic>().fetch();
     final context = Get.context;
     if (state.promptRating && context != null) promptForRating(context);
   }

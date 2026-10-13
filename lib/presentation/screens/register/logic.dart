@@ -1,6 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:com.tara.passenger/presentation/screens/invite/data/datasource/referral_datasource.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/data/repository/referral_repository.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/invite_presentation.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/scan_view.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/widgets/invite_code_field.dart';
 import 'package:com.tara.passenger/presentation/screens/login/data/repository/auth_repository.dart';
 import 'package:com.tara.passenger/presentation/screens/login/logic.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
@@ -29,11 +34,20 @@ class RegisterLogic extends GetxController {
   RegisterLogic({
     AuthRepository? repository,
     LoginLogic? loginLogic,
+    ReferralRepository? referralRepository,
+    Duration inviteCheckDelay = const Duration(milliseconds: 450),
   })  : _injectedRepository = repository,
-        _injectedLoginLogic = loginLogic;
+        _injectedLoginLogic = loginLogic,
+        _injectedReferralRepository = referralRepository,
+        _inviteCheckDelay = inviteCheckDelay;
 
   final AuthRepository? _injectedRepository;
   final LoginLogic? _injectedLoginLogic;
+  final ReferralRepository? _injectedReferralRepository;
+  final Duration _inviteCheckDelay;
+
+  late final ReferralRepository _referralRepository =
+      _injectedReferralRepository ?? ReferralRepository(ReferralDatasource());
 
   late final AuthRepository _repository =
       _injectedRepository ?? Get.find<AuthRepository>();
@@ -44,6 +58,52 @@ class RegisterLogic extends GetxController {
   final ImagePicker _picker = ImagePicker();
 
   TextEditingController controllerName = TextEditingController();
+
+  // ── Invite code (D40) ────────────────────────────────────────────────────
+
+  final TextEditingController controllerInviteCode = TextEditingController();
+  Timer? _inviteCheckTimer;
+
+  /// The code is checked a moment after the person stops typing, so the form
+  /// can say whose it is before they submit. The server checks it again at
+  /// sign-up; this is the early answer, not the rule.
+  void onInviteCodeChanged(String text) {
+    final String code = text.replaceAll(' ', '').toUpperCase();
+    _inviteCheckTimer?.cancel();
+    state
+      ..inviteCode = code
+      ..inviterName = null
+      ..inviteStatus =
+          code.isEmpty ? InviteCodeStatus.idle : InviteCodeStatus.checking;
+    update();
+    if (code.isEmpty) return;
+    _inviteCheckTimer = Timer(_inviteCheckDelay, () => _checkInviteCode(code));
+  }
+
+  Future<void> _checkInviteCode(String code) async {
+    final result = await _referralRepository.checkCode(code);
+    // An answer for a code the person has since changed says nothing.
+    if (isClosed || state.inviteCode != code) return;
+    result.when(
+      ok: (check) {
+        state
+          ..inviteStatus =
+              check.valid ? InviteCodeStatus.valid : InviteCodeStatus.invalid
+          ..inviterName = check.valid ? check.inviterName : null;
+      },
+      err: (_) => state.inviteStatus = InviteCodeStatus.failed,
+    );
+    update();
+  }
+
+  /// Opens the scanner and puts the scanned code in the field.
+  Future<void> scanInviteCode() async {
+    final String? code =
+        parseInviteCode(await Get.to<String>(() => const InviteScanPage()));
+    if (code == null) return;
+    controllerInviteCode.text = code;
+    onInviteCodeChanged(code);
+  }
   void passengerRegister() async {
     EasyLoading.show();
     try {
@@ -56,6 +116,7 @@ class RegisterLogic extends GetxController {
         phoneNumber: loginLogic.state.phoneNumber.value,
         platform: Platform.isAndroid ? "android" : "ios",
         profileImage: state.profileImage,
+        inviteCode: state.inviteCode,
       );
       await result.when<FutureOr<void>>(
         ok: (data) async {
@@ -69,7 +130,15 @@ class RegisterLogic extends GetxController {
             _showRegisterError();
           }
         },
-        err: (_) => _showRegisterError(),
+        err: (error) {
+          // D40: the server is the last word on an invite code.
+          if (error.statusCode == 422 && state.inviteCode.isNotEmpty) {
+            state.inviteStatus = InviteCodeStatus.invalid;
+            update();
+            return;
+          }
+          _showRegisterError();
+        },
       );
     } finally {
       EasyLoading.dismiss();
@@ -184,6 +253,8 @@ class RegisterLogic extends GetxController {
 
   @override
   void onClose() {
+    _inviteCheckTimer?.cancel();
+    controllerInviteCode.dispose();
     super.onClose();
     _removePref.removePhonePref();
     _removePref.removeRegisterPref();

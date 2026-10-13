@@ -74,6 +74,7 @@ class AuthDatasource {
     required String phoneNumber,
     File? profileImage,
     required String platform,
+    String? inviteCode,
   }) async {
     final formData = FormData.fromMap({
       'fullname': fullName,
@@ -86,6 +87,10 @@ class AuthDatasource {
       // not something to invent a fix for during a network-stack port.
       'device_token': '1234',
       'gender': '1',
+      // D40: optional. Left out when there is none, so the request is
+      // unchanged for a passenger nobody invited.
+      if (inviteCode != null && inviteCode.isNotEmpty)
+        'invite_code': inviteCode,
     });
 
     // Dio sets the multipart/form-data content-type (with boundary)

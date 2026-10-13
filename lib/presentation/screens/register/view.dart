@@ -4,6 +4,8 @@ import 'package:get/get.dart';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/theme/ta_shadow.dart';
 import 'package:com.tara.passenger/core/theme/ta_text_styles.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/invite_feature.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/widgets/invite_code_field.dart';
 import 'package:com.tara.passenger/presentation/screens/login/auth_language_toggle.dart';
 import 'package:com.tara.passenger/presentation/screens/register/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/register/state.dart';
@@ -21,8 +23,15 @@ import 'package:com.tara.passenger/translations/app_locale.dart';
 /// The timestamp name auto-generation in `RegisterLogic.passengerRegister`
 /// therefore stays what it is today: a defensive path at submit time that this
 /// rule makes unreachable through the UI.
+///
+/// D40: an invite code is optional, but one that is typed has to be a real
+/// one. A code the server refused, or is still checking, blocks Create. A
+/// check that could not be made does not: the server checks again at sign-up.
 bool canSubmitRegistration(RegisterState state) =>
-    state.passengerName != '' && state.profileImage != null;
+    state.passengerName != '' &&
+    state.profileImage != null &&
+    state.inviteStatus != InviteCodeStatus.invalid &&
+    state.inviteStatus != InviteCodeStatus.checking;
 
 /// Screen 4 — Register.
 ///
@@ -110,6 +119,16 @@ class RegisterPage extends StatelessWidget {
                             logic.update();
                           },
                         ),
+                        if (inviteFeatureEnabled) ...[
+                          const SizedBox(height: 18),
+                          InviteCodeField(
+                            controller: logic.controllerInviteCode,
+                            status: logic.state.inviteStatus,
+                            inviterName: logic.state.inviterName,
+                            onChanged: logic.onInviteCodeChanged,
+                            onScan: logic.scanInviteCode,
+                          ),
+                        ],
                       ],
                     ),
                   ),

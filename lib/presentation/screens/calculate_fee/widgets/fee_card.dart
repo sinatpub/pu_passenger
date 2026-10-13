@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
+import 'package:com.tara.passenger/presentation/screens/invite/widgets/payment_split_rows.dart';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/utils/booking_vehicle_info.dart';
 import 'package:com.tara.passenger/core/utils/fee_presentation.dart';
@@ -58,6 +59,12 @@ class FeeCard extends StatelessWidget {
           ),
           child: Column(
             children: [
+              // D40: what the passenger still hands the driver.
+              ...paymentSplitRows(
+                amount: data?.payment?.amount,
+                rideCredit: data?.payment?.rideCredit,
+                settled: false,
+              ),
               TaKVRow(
                 label: AppLocale.distance.tr,
                 value: feeDisplayValue(data?.payment?.distance),
