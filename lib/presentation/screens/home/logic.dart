@@ -2,7 +2,6 @@ import 'package:com.tara.passenger/app/logic.dart';
 import 'package:com.tara.passenger/core/helper/local_notification_helper.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
-import 'package:com.tara.passenger/storages/get_storage.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
 import 'package:com.tara.passenger/data/datasources/get_vehical_remote_data_source.dart';
 import 'package:com.tara.passenger/presentation/screens/home/booking_redirect.dart';
@@ -88,13 +87,15 @@ class HomeLogic extends GetxController {
   }
 
   /// 2. Push FCM TOKEN
+  ///
+  /// Sent on every start of Home, not only the first one on this phone. The
+  /// server keeps the token per account and sign-in by OTP does not carry
+  /// it, so sending it once per install left every later sign-in (another
+  /// account, or the same one after a log out) without notifications.
   Future<void> pushFcmToken() async {
     try {
-      var fcmToke = await GetStoragePref().getFcmTokenLocal();
-      if (fcmToke == null || fcmToke.isEmpty) {
-        var result = await deviceInfoRepo.deviceCreateOrUpdate();
-        tlog("Device Info: $result");
-      }
+      var result = await deviceInfoRepo.deviceCreateOrUpdate();
+      tlog("Device Info: $result");
     } catch (e) {
       xPrettyLog(message: "Error get FCM token: $e");
     }

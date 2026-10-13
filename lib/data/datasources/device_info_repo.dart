@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:com.tara.passenger/storages/get_storage.dart';
 import 'package:com.tara.passenger/storages/save_storage.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -16,8 +17,12 @@ class DeviceInfoRepo extends IDeviceInfo {
   @override
   Future<bool> deviceCreateOrUpdate() async {
     var platform = Platform.isAndroid ? "android" : "ios";
-    var deviceToken = await getFCMToken();
-    await SaveStoragePref().setFcmToken(deviceToken!);
+    final String? deviceToken = await getFCMToken();
+    // No token yet (iOS before APNs has answered, or no Play services):
+    // there is nothing to register, and Home asks again on its next start.
+    if (deviceToken == null || deviceToken.isEmpty) return false;
+    final String? previousToken = await GetStoragePref().getFcmTokenLocal();
+    await SaveStoragePref().setFcmToken(deviceToken);
     var bodyParse = {'device_token': deviceToken, "platform": platform};
     var result = await BaseApiService().onRequest(
         path: "/taxi-passenger/push-device-token",
@@ -27,8 +32,11 @@ class DeviceInfoRepo extends IDeviceInfo {
           return true;
         });
 
-    String? message = "Passenger - $platform :: $deviceToken";
-    await sendToTelegram(message);
+    // Home registers on every start; only a new token is worth a message.
+    if (previousToken != deviceToken) {
+      String? message = "Passenger - $platform :: $deviceToken";
+      await sendToTelegram(message);
+    }
 
     return result;
   }

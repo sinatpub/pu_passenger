@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -19,18 +20,19 @@ class NotificationLogic {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     await registerNotification();
+    await showIOSForegroundBanner();
     await initializeNotification();
-    // await disableIOSForegroundBanner();
   }
 
-  // Android: As Default it is not display banner in foreground
-  // iOS: It is automatic display banner in any life cycle of app
-  static Future<void> disableIOSForegroundBanner() async {
+  // Neither platform shows a message that arrives while the app is open.
+  // iOS does once it is asked to here; Android never does, so the foreground
+  // listener below raises the notification itself.
+  static Future<void> showIOSForegroundBanner() async {
     await FirebaseMessaging.instance
         .setForegroundNotificationPresentationOptions(
-      alert: false,
+      alert: true,
       badge: true,
-      sound: false,
+      sound: true,
     );
   }
 
@@ -56,7 +58,9 @@ class NotificationLogic {
             '\nNotification: ${message.notification}'
             '\nMessage data: ${message.data.toString()}',
       );
-      // TaxiNotification.shared.onNotificationType();
+      // iOS shows its own banner (showIOSForegroundBanner); raising one here
+      // as well would show the message twice.
+      if (Platform.isAndroid) showNotificationMessage(message);
     });
 
     // Handle background messages | not running but still alive
@@ -74,13 +78,15 @@ class NotificationLogic {
     });
 
     // Request permission for iOS
+    //
+    // Not provisional: iOS grants a provisional request without asking and
+    // then delivers every notification quietly, with no banner and no sound.
     try {
       await firebaseMessaging.requestPermission(
         alert: true,
         announcement: true,
         badge: true,
         carPlay: true,
-        provisional: true,
         criticalAlert: true,
         sound: true,
         providesAppNotificationSettings: true,
@@ -166,7 +172,6 @@ class NotificationLogic {
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestCriticalPermission: true,
-      requestProvisionalPermission: true,
       requestSoundPermission: true,
     );
     //
@@ -177,8 +182,11 @@ class NotificationLogic {
     flutterLocalNotificationsPlugin.initialize(
       initSetting,
       onDidReceiveNotificationResponse: (message) {
-        Map<String, dynamic> payload = jsonDecode(message.payload!);
-        handleOnNotificationPress(payload);
+        // A notification raised while the app is open carries no payload:
+        // the passenger is already on the screen it is about.
+        final String? payload = message.payload;
+        if (payload == null || payload.isEmpty) return;
+        handleOnNotificationPress(jsonDecode(payload));
       },
     );
   }
