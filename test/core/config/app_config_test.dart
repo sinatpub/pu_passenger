@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:com.tara.passenger/core/config/app_config.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -55,6 +57,20 @@ void main() {
       // This test runs without --dart-define, which is the shape of a
       // release build. It must be false here or the gate is not a gate.
       expect(AppConfig.debugOtpBypass, isFalse);
+    });
+
+    test('the debug login stays out of a release build unless asked for', () {
+      // Its own flag, for a test APK. Off without --dart-define, like the
+      // bypass itself, so a release build needs both to carry the login.
+      expect(AppConfig.debugLoginInRelease, isFalse);
+    });
+
+    test('the template for dart_defines.json carries neither flag', () {
+      // Every build reads that file. A flag in the template would reach a
+      // store build through a copy of it.
+      final template = File('dart_defines.example.json').readAsStringSync();
+      expect(template, isNot(contains('DEBUG_OTP_BYPASS')));
+      expect(template, isNot(contains('DEBUG_LOGIN_IN_RELEASE')));
     });
 
     test('requiredKeys covers the keys the app cannot work without', () {
