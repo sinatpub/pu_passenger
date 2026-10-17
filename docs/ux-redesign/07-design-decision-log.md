@@ -652,6 +652,35 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 
 ---
 
+## D45: Each Service Has Its Own Thumbnail Shape
+
+**Decision:** Four of the six service thumbnails (`assets/image/svg/vehicle_*.svg`) are redrawn so each is told apart by its shape and one cue: Car a low saloon with a taxi light, Mini Van long and tall with four side windows and a sliding door, SUV high and boxy with roof rails and a spare wheel, Alphard VIP a dark body with a chrome window line, an orange pinstripe and a crown. Car, Mini Van and SUV are brand orange like their map markers (D44). Moto and Tuk Tuk keep their D29 drawings; the Tuk Tuk carriage, yellow until now, takes its marker's orange (`#FF4500`, the trim under the roof `#D93B00`).
+
+**Rationale:**
+- User request of 2026-10-17: thumbnails "different and clear to understand". Car, SUV and VIP shared one side profile
+- The user picked per service from a mock of the current and the new thumbnails: the new ones for Car, Mini Van, SUV and Alphard VIP, the current ones for Moto and Tuk Tuk. Then, from a mock of each thumbnail beside its marker, the Tuk Tuk thumbnail in its marker's colour
+- The files keep their names and the 96x56 canvas, so the Home list, the map sheet and ride history take them with no code change
+- Flat shapes only, which flutter_svg draws (`test/core/utils/vehicle_art_test.dart` renders each)
+
+**Tradeoffs:**
+- Car, Mini Van and SUV are all orange; they are told apart by shape alone
+- Moto and Tuk Tuk keep their D29 style, without a rider
+
+---
+
+## D46: The Car Marker Carries a Taxi Light
+
+**Decision:** The Car driver marker (`assets/marker/vehicle_classic_car.png`) has the taxi light of its thumbnail (D45): seen from above, a dark bar with a yellow light on the roof, between the windscreen and the rear window. Its source, `docs/markers/vehicle_classic_car.svg`, carries it too, and the PNG is exported from it at 120x200 like the rest.
+
+**Rationale:**
+- User request of 2026-10-17, from a mock of each service's thumbnail beside its marker
+- The taxi light is what tells the Car thumbnail apart from the SUV and the van; the marker now has the same cue
+
+**Tradeoffs:**
+- pu_driver draws a driver's own car with the D44 file, without the light, until it takes this one too
+
+---
+
 ## Decision Summary
 
 | # | Decision | Impact | Risk |
@@ -697,3 +726,5 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 | D39 | Vehicle type recognised by name | Medium | Low |
 | D40 | Invite, ride credit and rewards, mock only | High | Medium |
 | D44 | Driver markers are pu_driver's set | Medium | Low |
+| D45 | Each service has its own thumbnail shape | Medium | Low |
+| D46 | Car marker carries a taxi light | Low | None |
