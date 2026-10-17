@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:com.tara.passenger/core/resources/asset_resource.dart';
+import 'package:com.tara.passenger/core/utils/load_custom_marker.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_art.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_kind.dart';
 import 'package:flutter/material.dart';
@@ -49,15 +51,39 @@ void main() {
       }
     });
 
-    test('a moto is not drawn as a tuk tuk, nor a tuk tuk as a car', () {
-      expect(driverMarkerAsset(VehicleKind.moto), ImageAssets.motoMarker);
-      expect(
-          driverMarkerAsset(VehicleKind.tukTuk), ImageAssets.rickshawMarker);
-      expect(driverMarkerAsset(VehicleKind.car), ImageAssets.classicCarMarker);
+    test('each kind of vehicle has its own marker', () {
+      const markers = {
+        VehicleKind.moto: ImageAssets.motorMarker,
+        VehicleKind.tukTuk: ImageAssets.tukTukMarker,
+        VehicleKind.car: ImageAssets.classicCarMarker,
+        VehicleKind.miniVan: ImageAssets.miniVanMarker,
+        VehicleKind.suv: ImageAssets.suvMarker,
+        VehicleKind.vip: ImageAssets.alphardVipMarker,
+      };
+      expect(markers.keys, VehicleKind.values);
+      for (final entry in markers.entries) {
+        expect(driverMarkerAsset(entry.key), entry.value);
+      }
+      expect(markers.values.toSet(), hasLength(VehicleKind.values.length));
     });
 
     test('a type the app does not recognise is drawn as a car', () {
       expect(driverMarkerAsset(null), ImageAssets.classicCarMarker);
+    });
+
+    // The marker is drawn in a 30x50 box; an image of any other shape is
+    // stretched to fit it (the old ones were about 1:2).
+    test('every marker image is 3:5, the shape of the box it is drawn in', () {
+      expect(driverMarkerSize, const Size(30, 50));
+      for (final kind in VehicleKind.values) {
+        final path = driverMarkerAsset(kind);
+        final header =
+            ByteData.sublistView(File(path).readAsBytesSync(), 0, 24);
+        // PNG: 8-byte signature, then the IHDR chunk's width and height.
+        final width = header.getUint32(16);
+        final height = header.getUint32(20);
+        expect(width * 5, height * 3, reason: '$path is ${width}x$height');
+      }
     });
   });
 

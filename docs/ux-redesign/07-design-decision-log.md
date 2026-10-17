@@ -636,6 +636,22 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 
 ---
 
+## D44: Driver Markers Are pu_driver's Set
+
+**Decision:** A driver on the map is drawn with the same top-down markers as pu_driver (its DD-60): one per kind of vehicle, Motor included, brand orange with dark glass and a white ring, the Alphard VIP the one dark body. Each is a 120x200 PNG in `assets/marker/vehicle_*.png`, exported from its source in `docs/markers/`, and is drawn whole in a 30x50 box (`driverMarkerIcon`, `lib/core/utils/load_custom_marker.dart`). Image and icon files no screen used are deleted.
+
+**Rationale:**
+- User request of 2026-10-17, from pu_driver's marker proposal
+- The old markers changed colour from the Home art (a blue SUV on the list, a green one on the map). The new ones are told apart by shape, and a passenger and a driver see the same car
+- The old images were about 1:2 and scaled to 25 px wide, so on a 3x screen they were blurry. The new ones are 3:5, the box's shape, at 4x
+- Moto now has a marker of its own; on the driver side Motor still waits for a vehicle type id, here it is picked by name (D39)
+- 33 files were never shown: older PNG service art, country flags, the old icon set, duplicate and stray markers, and a start-up loader that read three markers no screen drew
+
+**Tradeoffs:**
+- The Home art (D29) is unchanged, so a service's picture on the list and its marker on the map still differ in colour
+
+---
+
 ## Decision Summary
 
 | # | Decision | Impact | Risk |
@@ -680,3 +696,4 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 | D38 | Amounts are US dollars with cents | High | Medium |
 | D39 | Vehicle type recognised by name | Medium | Low |
 | D40 | Invite, ride credit and rewards, mock only | High | Medium |
+| D44 | Driver markers are pu_driver's set | Medium | Low |

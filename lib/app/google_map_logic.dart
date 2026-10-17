@@ -1,10 +1,7 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/app/state.dart';
-import 'package:com.tara.passenger/core/resources/asset_resource.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
-import 'package:com.tara.passenger/core/utils/load_custom_marker.dart';
 import 'package:com.tara.passenger/core/utils/pretty_logger.dart';
 import 'package:com.tara.passenger/presentation/widgets/error_dialog_widget.dart';
 import 'package:com.tara.passenger/services/location_imp.dart';
@@ -37,7 +34,6 @@ class GoogleMapLogic extends GetxController {
   void onInit() {
     super.onInit();
     requestPermissionLocation();
-    loadCustomMarkerIcon();
   }
 
   @override
@@ -243,25 +239,6 @@ class GoogleMapLogic extends GetxController {
     } catch (e) {
       Logger().e("Error Get address of location: $e");
     }
-  }
-
-  // * 11. Load Marker
-  Future<void> loadCustomMarkerIcon() async {
-    final Uint8List markerDriverImage =
-        await loadImageFromAssets('assets/marker/car_marker.png');
-    final Uint8List markerPassengerImage =
-        await loadImageFromAssets(ImageAssets.passengerIconMarker);
-
-    final Uint8List destineMarker =
-        await loadImageFromAssets('assets/marker/destination_icon.png');
-
-    parentState.passengerMarker =
-        BitmapDescriptor.bytes(markerPassengerImage, width: 84, height: 84);
-    parentState.driverMarker =
-        BitmapDescriptor.bytes(markerDriverImage, width: 84, height: 84);
-
-    parentState.destinationBitmap = BitmapDescriptor.bytes(destineMarker,
-        width: 48, height: 48, bitmapScaling: MapBitmapScaling.none);
   }
 
   // * 12 draw polyline with return value

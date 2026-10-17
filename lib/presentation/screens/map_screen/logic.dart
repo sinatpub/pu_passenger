@@ -1,13 +1,11 @@
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/core/utils/fare_estimate.dart';
 import 'package:com.tara.passenger/core/utils/load_custom_marker.dart';
 import 'package:com.tara.passenger/core/utils/trip_marker.dart';
-import 'package:com.tara.passenger/core/utils/vehicle_art.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_kind.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_seat_capacity.dart';
 import 'package:com.tara.passenger/mock/mock_fixtures.dart';
@@ -185,11 +183,8 @@ class MapLogic extends GetxController {
   Future<void> _loadMarkerIcons() async {
     state.sourceIcon = await tripMarkerIcon(TripMarker.pickup);
     state.destinationIcon = await tripMarkerIcon(TripMarker.dropOff);
-    final Uint8List driverBytes = await getBytesFromAsset(
-        driverMarkerAsset(
-            vehicleKindFromName(state.vehicleTypeSelection?.name)),
-        25);
-    state.driverIcon = BitmapDescriptor.bytes(driverBytes);
+    state.driverIcon = await driverMarkerIcon(
+        vehicleKindFromName(state.vehicleTypeSelection?.name));
     update([MapUpdate.mapID]);
   }
 

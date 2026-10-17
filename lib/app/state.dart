@@ -10,16 +10,4 @@ class GoogleMapState {
 
   final RxSet<Marker> markers = <Marker>{}.obs;
   final RxSet<Polyline> polylines = <Polyline>{}.obs;
-
-  BitmapDescriptor? passengerMarker;
-
-  BitmapDescriptor? driverMarker;
-
-  BitmapDescriptor? destinationBitmap;
-  BitmapDescriptor? currentBitmap;
-
-  BitmapDescriptor? classicBitMap;
-  BitmapDescriptor? alphardVipBitMap;
-  BitmapDescriptor? miniVanBitMap;
-  BitmapDescriptor? suvBitMap;
 }

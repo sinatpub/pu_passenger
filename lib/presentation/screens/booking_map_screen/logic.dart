@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'dart:ui';
 import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
-import 'package:com.tara.passenger/core/utils/vehicle_art.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_kind.dart';
 import 'package:com.tara.passenger/presentation/screens/history/vehicle_type_name.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
@@ -170,9 +169,7 @@ class BookingMapLogic extends GetxController {
     state.destinationIcon = await tripMarkerIcon(TripMarker.dropOff);
 
     // Driver
-    final Uint8List driverBytes = await getBytesFromAsset(
-        driverMarkerAsset(_bookedVehicleKind()), 25);
-    state.driverIcon = BitmapDescriptor.bytes(driverBytes);
+    state.driverIcon = await driverMarkerIcon(_bookedVehicleKind());
     update();
   }
 
