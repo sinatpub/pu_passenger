@@ -1,5 +1,6 @@
 import 'package:com.tara.passenger/app/root_main.dart';
 import 'package:com.tara.passenger/app/service.dart';
+import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/mock/mock_mode.dart';
 import 'package:com.tara.passenger/services/notification_logic.dart';
 import 'package:com.tara.passenger/taxi_single_ton/taxi_notification.dart';
@@ -44,19 +45,24 @@ void main() async {
   );
 }
 
+/// Audit S-9: the colours here were yellow on green behind a blue mask, but
+/// with `EasyLoadingStyle.light` none of them applied — the overlay was the
+/// package's stock white and black. It is now `custom`, on the `ta_*` tokens,
+/// as pu_driver's is (UX-redesign F1). Duration, dismissal, interaction and
+/// the custom animation are unchanged.
 void configLoading() {
   EasyLoading.instance
     ..displayDuration = const Duration(milliseconds: 2000)
     ..indicatorType = EasyLoadingIndicatorType.fadingCircle
-    ..loadingStyle = EasyLoadingStyle.light
+    ..loadingStyle = EasyLoadingStyle.custom
     ..indicatorSize = 45.0
     ..radius = 18.0
-    ..progressColor = Colors.yellow
-    ..backgroundColor = Colors.green
+    ..progressColor = TaColors.primary
+    ..backgroundColor = TaColors.surface
     ..contentPadding = EdgeInsets.zero
-    ..indicatorColor = Colors.yellow
-    ..textColor = Colors.yellow
-    ..maskColor = Colors.blue.withValues(alpha: 0.5)
+    ..indicatorColor = TaColors.primary
+    ..textColor = TaColors.textPrimary
+    ..maskColor = TaColors.overlay
     ..userInteractions = true
     ..dismissOnTap = true
     ..customAnimation = CustomAnimation();

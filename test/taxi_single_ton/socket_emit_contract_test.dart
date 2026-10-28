@@ -166,43 +166,6 @@ void main() {
     });
   });
 
-  group('rideRequestSpecificDriverSocket', () {
-    test('is rideRequest plus driver_id, on its own event', () {
-      socket.rideRequestSpecificDriverSocket(
-        driverID: 7,
-        data: _booking(),
-        startLatitude: 11.5564,
-        startLongitude: 104.9282,
-      );
-
-      expect(socket.only.event, SocketEvent.rideRequestSpecificDriver);
-
-      final payload = socket.only.data as Map<String, dynamic>;
-      expect(payload['driver_id'], 7);
-      // driver_id is the only difference from the broadcast request — if these
-      // two payloads ever diverge further, the targeted-request flow starts
-      // matching on different data than the broadcast one.
-      socket.emitted.clear();
-      socket.rideRequestSocket(
-        data: _booking(),
-        startLatitude: 11.5564,
-        startLongitude: 104.9282,
-      );
-      final broadcast = socket.only.data as Map<String, dynamic>;
-      expect(
-        {...payload}..remove('driver_id'),
-        broadcast,
-      );
-    });
-
-    test('driver_id stays an int here while other ids are stringified', () {
-      socket.rideRequestSpecificDriverSocket(driverID: 7, data: _booking());
-      final payload = socket.only.data as Map<String, dynamic>;
-      expect(payload['driver_id'], isA<int>());
-      expect(payload['booking_id'], isA<String>());
-    });
-  });
-
   group('handleCancelRide', () {
     test('cancels against the driver id, on the passengerCancelDrive event', () {
       socket.handleCancelRide(data: _booking());

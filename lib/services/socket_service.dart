@@ -27,6 +27,10 @@ enum SocketEvent {
   onDriverCancel,
   driverDropDrive,
   driverAcceptPayment,
+  /// The server's event for a request to one driver: the `rideRequest`
+  /// payload plus an int `driver_id`. Nothing sends it — the unused emit was
+  /// removed (audit S-10) — but the name stays pinned in
+  /// `socket_event_contract_test.dart` for when the feature is built.
   rideRequestSpecificDriver,
 }
 
@@ -397,35 +401,6 @@ PassengerSocketService._internal();
         }
       },
     );
-  }
-
-  void rideRequestSpecificDriverSocket({
-    int? driverID,
-    required RequestBookingModel data,
-    double? startLatitude,
-    double? startLongitude,
-    double? startDestinationLat,
-    double? startDestinationLong,
-  }) {
-    emitEvent(SocketEvent.rideRequestSpecificDriver, {
-      "booking_code": data.data?.bookingCode.toString(),
-      "booking_id": data.data?.id?.toString(),
-      "passengerId": data.data?.passenger?.id.toString(),
-      "location": {"latitude": startLatitude, "longitude": startLongitude},
-      "vehiclePrice": data.data?.typeVehicle?.price ?? 0,
-      "vehicleType": resolveVehicleTypeId(data),
-      "timeout": data.data?.timeoutParam,
-      "passenger": {
-        "name": data.data?.passenger?.name,
-        "phone": data.data?.passenger?.phone,
-        "profile": data.data?.passenger?.profileImage,
-      },
-      "destination": {
-        "latitude": startDestinationLat,
-        "longitude": startDestinationLong
-      },
-      "driver_id": driverID,
-    });
   }
 
   void handleCancelRide({RequestBookingModel? data}) {

@@ -12,7 +12,6 @@ import 'package:com.tara.passenger/presentation/screens/calculate_fee/calculate_
 import 'package:com.tara.passenger/presentation/screens/history/binding.dart';
 import 'package:com.tara.passenger/presentation/screens/history_detail/view.dart';
 import 'package:com.tara.passenger/presentation/screens/home/binding.dart';
-import 'package:com.tara.passenger/presentation/screens/home/view.dart';
 import 'package:com.tara.passenger/presentation/screens/login/binding.dart';
 import 'package:com.tara.passenger/presentation/screens/login/view.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/binding.dart';
@@ -44,14 +43,11 @@ abstract class AppRoutes {
   static const LOGIN = '/login';
   static const OTP = '/otp';
   static const REGISTER = '/register';
-  static const HOME = '/home';
   static const MAP = '/map';
   static const BOOKING = '/booking';
-  static const MYBOOKING = '/my_booking';
   static const CALCULATEFEE = '/calculatefee';
   // C7 — the only routes the redesign adds (new screens, 03 Screen 11/12).
   static const RECEIPT = '/receipt';
-  static const WHERETOGO = "/wheretogo";
   static const DRAGMAP = "/dragMap";
   static const TERMCONDITION = "/termcondition";
   static const CONTACTUS = "/contactus";
@@ -92,11 +88,6 @@ class AppPages {
       name: AppRoutes.OTP,
       page: () => const OtpPage(),
       binding: OTPBinding(),
-    ),
-    GetPage(
-      name: AppRoutes.HOME,
-      page: () => HomeScreen(),
-      binding: HomeBinding(),
     ),
     GetPage(
       name: AppRoutes.MAP,
