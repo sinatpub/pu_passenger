@@ -30,6 +30,7 @@ import 'package:com.tara.passenger/presentation/shared/ride_dialogs.dart';
 import 'package:com.tara.passenger/services/location_imp.dart';
 import 'package:com.tara.passenger/services/booking_session.dart';
 import 'package:com.tara.passenger/services/socket_service.dart';
+import 'package:com.tara.passenger/translations/app_locale.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
@@ -298,7 +299,8 @@ class MapLogic extends GetxController {
 
       state.mapController!.animateCamera(update);
     } else {
-      Get.snackbar("Error", "Could not find your location");
+      // Audit S-8: was hardcoded English in an app that defaults to Khmer.
+      Get.snackbar(AppLocale.error.tr, AppLocale.cantFindLocation.tr);
     }
   }
 

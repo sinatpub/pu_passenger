@@ -11,6 +11,7 @@ import '../data/models/request_booking_model.dart';
 import '../firebase_options.dart';
 import '../presentation/screens/home/booking_redirect.dart';
 import '../routes/app_pages.dart';
+import '../translations/app_locale.dart';
 
 class NotificationLogic {
   static FirebaseMessaging get firebaseMessaging => FirebaseMessaging.instance;
@@ -43,7 +44,8 @@ class NotificationLogic {
     final notification = message.notification;
     if (notification == null) return;
     Get.snackbar(
-      notification.title ?? "Notification",
+      // Audit S-8: the fallback was hardcoded English.
+      notification.title ?? AppLocale.announcement.tr,
       notification.body ?? "",
       snackPosition: SnackPosition.TOP,
       duration: const Duration(seconds: 3),

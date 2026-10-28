@@ -62,7 +62,8 @@ class AppLogic extends GetxController with keyStoragePref {
         context: context,
       );
     } else {
-      Get.snackbar("Not Found User ID", "Please try again!!");
+      // Audit S-8: was hardcoded English in an app that defaults to Khmer.
+      Get.snackbar(AppLocale.somethingWentWrong.tr, AppLocale.pleaseTryAgain.tr);
     }
   }
 
