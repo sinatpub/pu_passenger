@@ -85,7 +85,8 @@ These are known and not yet built or fixed. Skip them when they show up.
 | The driver marker moves in steps, up to a minute apart | The driver's position comes with the booking refresh, not as a live stream |
 | **Saved places** shows "coming soon" | Not built |
 | **Add a note for driver** is not seen by the driver | The note is kept on the phone and not sent |
-| No QR invite, no ride credit | Planned, not built in the passenger app |
+| **My invite QR**, **Invite rewards** and the **Ride credit** card show code `PS4N7Q`, $2.07 and the same two people for every account | Sample data: the backend has no invite routes yet. Nobody is really invited or credited |
+| No **Use ride credit** on the booking sheet | Sample credit cannot pay a driver. It works on the mock build |
 | Seat counts and "~N min" on the vehicle list are fixed per vehicle kind | The backend sends neither |
 | A trip booked before 2026-10-07 shows no pickup address on the fare page, receipt, or history | It was saved without one. The ride screen looks one up; the other pages show what the server has |
 | Terms and conditions text mentions "rickshaw" | Legal text not yet revised |
@@ -236,7 +237,10 @@ Run after section C.
 
 1. On Complete Profile, type a name but add no photo. Tap **Create**.
 
-- [ ] Note what happens: either the app asks for the photo, or the account is created. Report which, because the page says the photo is required.
+- [ ] The caption under the photo circle says the photo is optional.
+- [ ] **Create** is live as soon as a name is typed.
+- [ ] Home opens after **Create**.
+- [ ] The Account tab shows the name and the number, and initials in place of a photo.
 
 #### D-04 · Back from Complete Profile
 

@@ -636,6 +636,64 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 
 ---
 
+## D41: Invite Is Shown Against the Real Backend, With Made-Up Data
+
+**Decision:** The invite entry points are in every build, not only the mock one: the QR button on Home, the invite code at sign-up, the "Ride credit" card on Profile and the "Invite rewards" screen. Until the backend has the invite routes they are answered with made-up data (`lib/demo/demo_invite.dart`). This replaces the "against the real API every entry point is hidden" part of D40; the rest of D40 stands.
+
+**Rationale:**
+- User decisions of 2026-10-13: show the feature always, with no flag to switch it on; then, after seeing "could not load" on every screen, answer it with mock data "because right now there is no API"
+- The backend answers both routes `404`, "Incorect route". A feature that can only fail shows nobody what it is
+- Everything else stays real: sign-in, booking, trips, history
+
+**What was built:**
+- `DemoInviteInterceptor` answers `GET /taxi-passenger/referral` and `GET /taxi-passenger/referral/check-code` from the QA mock backend's fixtures (`MockData.referral`, `MockData.inviteCodeCheck`), so the two cannot drift apart. Every other request goes to the network
+- `DEMO_INVITE` is on by default. `--dart-define=DEMO_INVITE=false` turns it off; the routes then reach the backend. In the driver app the same flag is off by default (DD-55)
+- **Made-up credit cannot be put on a booking** (`rideCreditUsable`, `InviteLogic.usableCredit`). The booking sheet shows no "Use ride credit" and a booking carries no `ride_credit`. The balance is still shown on Profile and in "Invite rewards"
+- QA mock mode answers the feature itself, and there credit can be used as in D40
+- **"My invite QR" is laid out as the driver app's "My QR"** (DD-45), from the user's screenshot of 2026-10-13: the QR with the PU Taxi mark and the code with a copy button in one card, a full-width share button, the rules with an icon each, and a row that opens "Invite rewards" with what was earned and how many people were invited. The passenger sheet keeps a third rule, that rewards are ride credit
+
+**What a passenger sees:** code `PS4N7Q`, ride credit $2.07, two invited people, seven rewards. Sign-up accepts `PU7K2M` (the driver app's code), `SOKHA88`, `BOPHA21`, and `PS4N7Q` itself, so the QR on one passenger's phone can be scanned at sign-up on another. The same for every account, and the same after every restart.
+
+**Tradeoffs:**
+- **It must not reach a store.** A real passenger would see $2.07 they do not have and a code that invites nobody. Build with `DEMO_INVITE=false`, or delete `lib/demo/` once the backend has the routes
+- The QR and the link carry a made-up code and the `putaxi.example` domain. Scanning it in the driver app works only against that app's own made-up data
+- An invite code typed at sign-up is checked against made-up inviters, then sent to the real backend as `invite_code`, which ignores it: nobody is credited
+- At sign-up, a `422` from the backend while a code is typed is read as "unknown code". That is right once the backend knows invite codes; until then a `422` for another reason is shown on the wrong field
+- Not seen on a device
+
+---
+
+## D42: The Sign-Up Photo Is Optional
+
+**Decision:** On Complete Profile, Create is live with a name alone. The caption under the photo circle reads "Tap to add a photo (optional)". A passenger who adds no photo is shown by their initials, as before.
+
+**Rationale:**
+- User decision of 2026-10-13: "in passenger, not require the photo upload"
+- A passenger books a ride; nothing in the trip needs their face. The driver app keeps its own rule
+- The spec (`03 §Screen 4`) called the photo optional from the start. The code required it and the roadmap (S4) pinned the code; this ends that disagreement on the spec's side
+
+**Tradeoffs:**
+- The request still carries `profile_image`, empty when there is no photo, as the code always did on that path. **No sign-up without a photo has been sent to the real backend yet.** If it refuses one, the fix is on the server, or the field is left out here
+- The spec's Skip button and its two-character minimum are still not built: a name is required, and one character is a name
+
+---
+
+## D43: Photo Source Is a Short List
+
+**Decision:** Tapping the photo circle on Complete Profile opens a sheet titled "Profile photo" with rows: "Take a photo", "Choose from gallery", and "Remove photo" when there is one. The sheet is as tall as its rows. A row closes the sheet first; the camera or the gallery opens after.
+
+**Rationale:**
+- User request of 2026-10-13, from a screenshot of the old sheet: two grey tiles in the middle of a sheet fixed at 40% of the screen, most of it empty
+- The tiles read "Gallery / រូបថត" and "Take a Photo / ថតរូប", both languages at once and outside the translations. The rows follow the language the app is in
+- The old sheet stayed open under the camera and the gallery, and was still there when the person cancelled the picker
+- A photo could only be removed with the small badge on the circle. It still can; the sheet now offers it too
+
+**Tradeoffs:**
+- `xShowModalBottomSheet` (`lib/presentation/widgets/x_showmodal_bottom.dart`) has no caller left
+- The four Khmer strings are a first draft for the product owner to review
+
+---
+
 ## D44: Driver Markers Are pu_driver's Set
 
 **Decision:** A driver on the map is drawn with the same top-down markers as pu_driver (its DD-60): one per kind of vehicle, Motor included, brand orange with dark glass and a white ring, the Alphard VIP the one dark body. Each is a 120x200 PNG in `assets/marker/vehicle_*.png`, exported from its source in `docs/markers/`, and is drawn whole in a 30x50 box (`driverMarkerIcon`, `lib/core/utils/load_custom_marker.dart`). Image and icon files no screen used are deleted.
@@ -725,6 +783,9 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 | D38 | Amounts are US dollars with cents | High | Medium |
 | D39 | Vehicle type recognised by name | Medium | Low |
 | D40 | Invite, ride credit and rewards, mock only | High | Medium |
+| D41 | Invite shown against the real backend, with made-up data | High | Medium |
+| D42 | Sign-up photo is optional | Medium | Low |
+| D43 | Photo source is a short list | Low | None |
 | D44 | Driver markers are pu_driver's set | Medium | Low |
 | D45 | Each service has its own thumbnail shape | Medium | Low |
 | D46 | Car marker carries a taxi light | Low | None |

@@ -154,9 +154,9 @@ Then drop the `MockMode` lines from `main.dart`, `app/root_main.dart`,
 `presentation/screens/map_screen/logic.dart`.
 The `PositionSource` seam is ordinary code and can stay.
 
-## Invite and ride credit (D40)
+## Invite and ride credit (D40, D41)
 
-Only in mock mode; the real backend has no routes for it.
+The screens are in every build (D41). Against the real backend, which has no invite routes yet, they show the same sample figures as below, but credit cannot be used on a booking. Only mock mode runs the whole feature.
 
 | Where | What to try |
 |---|---|

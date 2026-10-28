@@ -1,0 +1,179 @@
+=== iOS 5.0.2 listing ===
+==== passapp_01.png ====
+y=0.929 x=0.264 | Ride Hailing App
+y=0.875 x=0.289 | PassApp Taxi
+y=0.352 x=0.345 | PassAPP
+y=0.321 x=0.349 | Cambodia Taxi Booking
+y=0.137 x=0.406 | Getting data...
+y=0.109 x=0.398 | Version 2.3.6
+==== passapp_02.png ====
+y=0.929 x=0.323 | Fast Sign up
+y=0.875 x=0.222 | Taxi Booking App
+y=0.738 x=0.666 | English
+y=0.597 x=0.426 | PassApp
+y=0.584 x=0.426 | Cambodia Taxi Booking
+y=0.512 x=0.199 | Welcome
+y=0.488 x=0.196 | Sign To Continue
+y=0.449 x=0.266 | +855
+y=0.449 x=0.403 | Phone Number
+y=0.395 x=0.465 | Login
+y=0.347 x=0.351 | Not yet has an account?
+y=0.324 x=0.442 | Sign Up
+==== passapp_03.png ====
+y=0.929 x=0.243 | Simple to use App
+y=0.875 x=0.081 | And Enjoy More Promotion.
+y=0.749 x=0.408 | PassApp
+y=0.703 x=0.207 | Promotion
+y=0.592 x=0.700 | PASSAPP
+y=0.435 x=0.206 | Special Offer
+y=0.383 x=0.607 | ong nia 5%
+y=0.304 x=0.594 | R&F City Phnom Penh
+y=0.144 x=0.540 | Classic
+y=0.143 x=0.217 | Rormork
+y=0.142 x=0.708 | SUV
+y=0.142 x=0.370 | Rickshaw
+y=0.076 x=0.369 | My Booking
+y=0.076 x=0.235 | Home
+y=0.076 x=0.700 | Account
+y=0.076 x=0.543 | Support
+==== passapp_04.png ====
+y=0.929 x=0.269 | Going anywhere
+y=0.875 x=0.022 | Quick And Safe with Fair Price.
+y=0.770 x=0.527 | YubNis Bar & Bistro
+y=0.733 x=0.408 | My Location
+y=0.711 x=0.240 | Uraetei Toul Kork
+y=0.706 x=0.623 | Street 335
+y=0.657 x=0.349 | Ming yang Malatang
+y=0.606 x=0.181 | gai Phnom
+y=0.570 x=0.478 | min
+y=0.545 x=0.510 | St 536
+y=0.511 x=0.579 | Street 317
+y=0.505 x=0.729 | Street 528
+y=0.485 x=0.424 | St 538
+y=0.443 x=0.319 | St 540
+y=0.423 x=0.739 | 375
+y=0.408 x=0.437 | Brown Roastery
+y=0.393 x=0.504 | Toul Kork
+y=0.387 x=0.181 | afé
+y=0.370 x=0.252 | St 542
+y=0.349 x=0.336 | Street 317|
+y=0.343 x=0.695 | Happy Lam
+y=0.328 x=0.698 | Restaurant
+y=0.314 x=0.698 | Hr
+y=0.279 x=0.191 | Google
+y=0.246 x=0.266 | Where to?
+y=0.207 x=0.269 | Rickshaw
+y=0.163 x=0.240 | •00
+y=0.162 x=0.403 | 1%
+y=0.137 x=0.235 | Cash
+y=0.137 x=0.713 | Note
+y=0.137 x=0.545 | Option
+y=0.137 x=0.380 | Coupon
+y=0.096 x=0.401 | Confirm Booking
+==== passapp_05.png ====
+y=0.929 x=0.393 | Pick Up
+y=0.875 x=0.289 | And Drop Off.
+y=0.733 x=0.408 | My Location
+y=0.710 x=0.756 | Street
+y=0.707 x=0.682 | Street 516
+y=0.682 x=0.442 | SAMAI SQUARE
+y=0.669 x=0.202 | St 530
+y=0.666 x=0.499 | BY SMART
+y=0.630 x=0.501 | HVMW+CXM, Street...
+y=0.587 x=0.422 | Street 335
+y=0.578 x=0.594 | TK Avenue Mall
+y=0.509 x=0.225 | HVJW+WSM, Phnom...
+y=0.497 x=0.413 | Paragon International
+y=0.480 x=0.530 | University
+y=0.454 x=0.246 | St 538
+y=0.417 x=0.189 | St 540
+y=0.376 x=0.488 | Happy Lamb Hot Pot-
+y=0.361 x=0.488 | Restaurant Toul Kork
+y=0.326 x=0.641 | St 546
+y=0.317 x=0.193 | Google
+y=0.310 x=0.186 | loro Då
+y=0.310 x=0.256 | etauiront
+y=0.286 x=0.256 | HVMW+CXM, Street 317, Phnom Penh, Ca...
+y=0.249 x=0.253 | Where to?
+y=0.211 x=0.253 | Fare: 3,200 KHR
+y=0.166 x=0.401 | 2%
+y=0.142 x=0.713 | Note
+y=0.142 x=0.235 | Cash
+y=0.141 x=0.380 | Coupon
+y=0.140 x=0.543 | Option
+y=0.105 x=0.401 | Confirm Booking
+==== passapp_06.png ====
+y=0.931 x=0.313 | Two Location
+y=0.875 x=0.204 | Whatever you want.
+y=0.768 x=0.323 | Sports club
+y=0.746 x=0.543 | Tuol Kork Health Center
+y=0.733 x=0.408 | My Location
+y=0.690 x=0.307 | SAMAI SQUARE
+y=0.675 x=0.231 | St 530
+y=0.666 x=0.380 | HVMW+CXM, Street...
+y=0.662 x=0.605 | St 315
+y=0.624 x=0.403 | TK Avenue Mall
+y=0.594 x=0.212 | HVJW+W5M, Phnom...
+y=0.578 x=0.274 | Pai
+y=0.577 x=0.313 | egon International
+y=0.561 x=0.390 | University
+y=0.548 x=0.584 | The Playroom
+y=0.533 x=0.602 | - Cambodia
+y=0.530 x=0.208 | St 540
+y=0.519 x=0.791 | St
+y=0.504 x=0.408 | Happy Lamb
+y=0.501 x=0.566 | HVJX+4VQ, Phnom P...
+y=0.488 x=0.421 | Restaurant TourAonN
+y=0.485 x=0.677 | Khema cinic
+y=0.462 x=0.181 | e Restaurant
+y=0.462 x=0.501 | St 546
+y=0.447 x=0.214 | Toul Kork
+y=0.440 x=0.471 | St 548
+y=0.418 x=0.437 | St 550
+y=0.395 x=0.402 | St 552
+y=0.385 x=0.581 | Grab Office Phnom Per
+y=0.384 x=0.282 | Street 313
+y=0.329 x=0.364 | Oishi Buffet
+y=0.318 x=0.191 | Google St5.
+y=0.286 x=0.256 | HVMW+CXM, Street 317, Phnom Penh, Ca...
+y=0.247 x=0.256 | HVJX+4VQ, Phnom Penh, Cambodia
+y=0.211 x=0.253 | Fare: 3,200 KHR
+y=0.166 x=0.238 | •0•
+y=0.142 x=0.713 | Note
+y=0.142 x=0.235 | Cash
+y=0.141 x=0.380 | Coupon
+y=0.140 x=0.543 | Option
+y=0.105 x=0.401 | Confirm Booking
+==== passapp_07.png ====
+y=0.928 x=0.371 | Message
+y=0.875 x=0.126 | Easy Chat With Support.
+y=0.745 x=0.465 | Help
+y=0.710 x=0.189 | What can we help you with?
+y=0.653 x=0.204 | Report driver cheat
+y=0.591 x=0.207 | Report driver ask to cancel
+y=0.527 x=0.207 | Cannot booking.
+y=0.464 x=0.204 | Forgot stuff.
+y=0.402 x=0.204 | Cannot link with ABA
+y=0.339 x=0.207 | Other.
+y=0.076 x=0.543 | Support
+y=0.076 x=0.238 | Home
+y=0.076 x=0.372 | My Booking
+y=0.076 x=0.700 | Account
+==== passapp_08.png ====
+y=0.929 x=0.195 | Access your account,
+y=0.875 x=0.081 | Booking History And More.
+y=0.618 x=0.475 | Kor
+y=0.568 x=0.269 | Earned Points: 10
+y=0.522 x=0.773 | <
+y=0.520 x=0.269 | Referral: 12039
+y=0.473 x=0.266 | My Booking
+y=0.425 x=0.266 | Saved Places
+y=0.377 x=0.269 | Payment method
+y=0.329 x=0.266 | Settings
+y=0.283 x=0.269 | Contact Us
+y=0.234 x=0.266 | Log Out
+y=0.188 x=0.406 | Version : 2.3.6
+y=0.077 x=0.238 | Home
+y=0.076 x=0.372 | My Booking
+y=0.076 x=0.545 | Support
+y=0.076 x=0.703 | Account
