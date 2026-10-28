@@ -16,6 +16,10 @@ enum BookingFailure {
   /// The request failed or came back empty: a dropped connection, a server
   /// error. One message, because the passenger's next step is the same.
   requestFailed,
+
+  /// The server took the request, but no driver accepted it in time
+  /// (audit S-3).
+  noDriver,
 }
 
 /// The arguments the booking map opens with to start again from a trip that
@@ -106,10 +110,13 @@ Future<bool> showBookingFailedDialog(
       icon: Icons.error_outline,
       tone: TaDialogTone.error,
     ),
-    title: AppLocale.bookingFailedTitle.tr,
+    title: failure == BookingFailure.noDriver
+        ? AppLocale.driverNotFound.tr
+        : AppLocale.bookingFailedTitle.tr,
     body: switch (failure) {
       BookingFailure.noLocation => AppLocale.bookingFailedNoLocation.tr,
       BookingFailure.requestFailed => AppLocale.bookingFailedBody.tr,
+      BookingFailure.noDriver => AppLocale.driverNotFoundDes.tr,
     },
     actions: [
       TaButton(

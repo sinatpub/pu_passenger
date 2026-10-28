@@ -1,4 +1,6 @@
+import java.util.Properties
 import java.util.Base64
+import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
@@ -12,6 +14,15 @@ plugins {
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// The upload key's passwords live in `android/key.properties`, which is
+// gitignored, as in pu_driver. They used to be in the tracked
+// `gradle.properties`, with `storeFile` fixed to one developer's home folder.
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 // Flutter forwards `--dart-define`/`--dart-define-from-file` values here as
@@ -55,12 +66,17 @@ android {
     }
 
 
-    signingConfigs {
-        create("release") {
-            storeFile = file("/Users/sinatnon/open_source/keystores/upload-keystore.jks")
-            storePassword = project.property("storePassword") as String
-            keyAlias = project.property("keyAlias") as String
-            keyPassword = project.property("keyPassword") as String
+    // Only declared when `android/key.properties` is present: without it the
+    // casts below would hit null and fail the whole configuration phase,
+    // `assembleDebug` included, which never needed release keys.
+    if (keystorePropertiesFile.exists()) {
+        signingConfigs {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
         }
     }
 
@@ -71,7 +87,13 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("release")
+            // Real release keys when they're available, debug keys otherwise
+            // so `flutter run --release` still works locally.
+            signingConfig = if (keystorePropertiesFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

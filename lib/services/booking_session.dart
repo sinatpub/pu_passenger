@@ -87,9 +87,23 @@ class BookingSession extends GetxService {
     this.vehicleTypeId = vehicleTypeId;
     status = BookingRequestStatus.inFlight;
     lastFailureMessage = null;
+    answerBy = null;
   }
 
-  void markAwaitingDriver() => status = BookingRequestStatus.awaitingDriver;
+  /// When a driver should have answered by (audit S-3). Null when the server
+  /// gave no request timeout: then only the server ends the wait.
+  DateTime? answerBy;
+
+  /// Whether [answerBy] has passed at [now].
+  bool answerOverdue(DateTime now) {
+    final deadline = answerBy;
+    return deadline != null && now.isAfter(deadline);
+  }
+
+  void markAwaitingDriver({DateTime? answerBy}) {
+    status = BookingRequestStatus.awaitingDriver;
+    this.answerBy = answerBy;
+  }
 
   /// A driver has accepted, so nothing is "in progress" any more: without
   /// this the session stayed `awaitingDriver` for the rest of the app's run
@@ -115,5 +129,6 @@ class BookingSession extends GetxService {
     vehicleTypeId = null;
     status = BookingRequestStatus.idle;
     lastFailureMessage = null;
+    answerBy = null;
   }
 }

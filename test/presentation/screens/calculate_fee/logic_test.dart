@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:com.tara.passenger/app/logic.dart';
+import 'package:com.tara.passenger/core/utils/status_util.dart';
 import 'package:com.tara.passenger/data/datasources/check_request_book_source.dart';
 import 'package:com.tara.passenger/data/models/request_booking_model.dart';
 import 'package:com.tara.passenger/presentation/screens/calculate_fee/calculate_fee_screen.dart';
@@ -9,6 +10,7 @@ import 'package:com.tara.passenger/presentation/screens/rating/rating_prompt_sto
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
 import 'package:com.tara.passenger/routes/app_pages.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -45,9 +47,11 @@ class _FakeAppLogic extends AppLogic {
   }
 }
 
-RequestBookingModel _trip({String? amount = '17800'}) => RequestBookingModel(
+RequestBookingModel _trip({String? amount = '17800', int? status}) =>
+    RequestBookingModel(
       data: Data(
         id: 7,
+        status: status,
         startAddress: 'Central Market',
         driver: Driver(name: 'Dara Sok'),
         payment: Payment(amount: amount, paymentMethod: 'Wallet'),
@@ -110,8 +114,11 @@ void main() {
 
   group('CalculateFeeScreen', () {
     Future<void> pumpScreen(WidgetTester tester) async {
-      // `Get.put` runs `onInit`, which starts the first request.
-      Get.put<CalculateFeeLogic>(CalculateFeeLogic(checkBookingApi: api));
+      // `Get.put` runs `onInit`, which starts the first request. No payment
+      // poll: these tests are about the page, and a periodic timer would
+      // outlive them.
+      Get.put<CalculateFeeLogic>(
+          CalculateFeeLogic(checkBookingApi: api, paymentPollInterval: null));
       await tester.pumpWidget(
         const GetMaterialApp(home: CalculateFeeScreen()),
       );
@@ -251,6 +258,174 @@ void main() {
 
       expect(find.byKey(homeMarker), findsOneWidget);
       expect(find.byKey(receiptMarker), findsNothing);
+    });
+
+    testWidgets('the push and the poll arriving together leave once',
+        (tester) async {
+      final logic = await pumpFee(tester, loaded: _trip());
+
+      logic.syncNavigateBack();
+      logic.syncNavigateBack();
+      await settle(tester);
+
+      expect(find.byKey(receiptMarker), findsOneWidget);
+      expect((Get.find<AppLogic>() as _FakeAppLogic).socketInits, 1);
+    });
+
+    // Audit X-2: the page used to leave on the push alone.
+    testWidgets('a paid trip, seen by the poll, goes to the Thank you page',
+        (tester) async {
+      final logic = await pumpFee(tester,
+          loaded: _trip(status: BookingStatus.pendingPayment));
+
+      final check = logic.checkPayment();
+      api.calls.single.complete(RequestBookingModel(data: null));
+      await check;
+      await settle(tester);
+
+      expect(find.byKey(receiptMarker), findsOneWidget);
+      expect(((receiptArguments as Map)['booking'] as Data).id, 7);
+    });
+
+    testWidgets('a trip still waiting for payment stays', (tester) async {
+      final logic = await pumpFee(tester,
+          loaded: _trip(status: BookingStatus.pendingPayment));
+
+      final check = logic.checkPayment();
+      api.calls.single
+          .complete(_trip(status: BookingStatus.pendingPayment));
+      await check;
+      await settle(tester);
+
+      expect(find.byKey(receiptMarker), findsNothing);
+      expect(find.byKey(homeMarker), findsNothing);
+    });
+
+    testWidgets('a check that fails is asked again, not acted on',
+        (tester) async {
+      final logic = await pumpFee(tester, loaded: _trip());
+
+      final check = logic.checkPayment();
+      api.calls.single.completeError('connection error');
+      await check;
+      await settle(tester);
+
+      expect(find.byKey(receiptMarker), findsNothing);
+      expect(find.byKey(homeMarker), findsNothing);
+    });
+
+    // Audit X-3: the push came while the passenger was elsewhere.
+    testWidgets('opened with the payment confirmed, it goes straight on',
+        (tester) async {
+      receiptArguments = null;
+      SharedPreferences.setMockInitialValues({});
+      final logic = CalculateFeeLogic(
+        checkBookingApi: api,
+        promptStore: RatingPromptStore(
+          preferences: await SharedPreferences.getInstance(),
+        ),
+        paymentConfirmed: true,
+      );
+      Get.put<AppLogic>(_FakeAppLogic());
+      await tester.pumpWidget(GetMaterialApp(
+        builder: EasyLoading.init(),
+        initialRoute: '/fee',
+        getPages: [
+          GetPage(name: '/fee', page: () => const Scaffold()),
+          GetPage(
+            name: AppRoutes.RECEIPT,
+            page: () {
+              receiptArguments = Get.arguments;
+              return const Scaffold(body: SizedBox(key: receiptMarker));
+            },
+          ),
+        ],
+      ));
+
+      logic.onInit();
+      api.calls.single.complete(_trip());
+      await tester.pump();
+      await settle(tester);
+
+      expect(find.byKey(receiptMarker), findsOneWidget);
+    });
+  });
+
+  group('tripSettled (audit X-2)', () {
+    test('no booking any more: settled', () {
+      expect(
+          tripSettled(
+              loadedStatus: BookingStatus.pendingPayment,
+              now: RequestBookingModel(data: null)),
+          isTrue);
+    });
+
+    test('cancelled: settled', () {
+      expect(
+          tripSettled(
+              loadedStatus: BookingStatus.pendingPayment,
+              now: _trip(status: BookingStatus.cancel)),
+          isTrue);
+    });
+
+    test('moved on from pending payment to completed: settled', () {
+      expect(
+          tripSettled(
+              loadedStatus: BookingStatus.pendingPayment,
+              now: _trip(status: BookingStatus.completed)),
+          isTrue);
+    });
+
+    test('still pending payment: not settled', () {
+      expect(
+          tripSettled(
+              loadedStatus: BookingStatus.pendingPayment,
+              now: _trip(status: BookingStatus.pendingPayment)),
+          isFalse);
+    });
+
+    test('completed from the start is the fee page\'s own state: not settled',
+        () {
+      expect(
+          tripSettled(
+              loadedStatus: BookingStatus.completed,
+              now: _trip(status: BookingStatus.completed)),
+          isFalse);
+    });
+  });
+
+  group('the payment poll (audit X-2)', () {
+    test('asks on its interval, and stops when the page closes', () {
+      fakeAsync((async) {
+        final logic = CalculateFeeLogic(
+          checkBookingApi: api,
+          paymentPollInterval: const Duration(seconds: 5),
+        );
+        logic.onReady();
+
+        async.elapse(const Duration(seconds: 5));
+        expect(api.calls, hasLength(1));
+        api.calls.single.complete(_trip(status: BookingStatus.pendingPayment));
+        async.flushMicrotasks();
+
+        async.elapse(const Duration(seconds: 5));
+        expect(api.calls, hasLength(2));
+
+        logic.onClose();
+        async.elapse(const Duration(seconds: 30));
+        expect(api.calls, hasLength(2));
+      });
+    });
+
+    test('no interval: no poll', () {
+      fakeAsync((async) {
+        final logic =
+            CalculateFeeLogic(checkBookingApi: api, paymentPollInterval: null);
+        logic.onReady();
+
+        async.elapse(const Duration(minutes: 1));
+        expect(api.calls, isEmpty);
+      });
     });
   });
 }

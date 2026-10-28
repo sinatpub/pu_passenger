@@ -216,6 +216,16 @@ void main() {
       expect(find.text(AppLocale.bookingFailedBody), findsNothing);
     });
 
+    testWidgets('no driver: says nobody took it (audit S-3)', (tester) async {
+      await open(tester, BookingFailure.noDriver);
+
+      expect(find.text(AppLocale.driverNotFound), findsOneWidget);
+      expect(find.text(AppLocale.driverNotFoundDes), findsOneWidget);
+      expect(find.text(AppLocale.bookingFailedTitle), findsNothing);
+      expect(find.widgetWithText(TaButton, AppLocale.pleaseTryAgain),
+          findsOneWidget);
+    });
+
     testWidgets('"Try again" is a button, and answers yes', (tester) async {
       final answer = await open(tester, BookingFailure.requestFailed);
 

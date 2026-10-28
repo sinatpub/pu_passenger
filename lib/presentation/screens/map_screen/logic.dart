@@ -5,6 +5,7 @@ import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/core/utils/app_log.dart';
 import 'package:com.tara.passenger/core/utils/fare_estimate.dart';
 import 'package:com.tara.passenger/core/utils/load_custom_marker.dart';
+import 'package:com.tara.passenger/core/utils/status_util.dart';
 import 'package:com.tara.passenger/core/utils/trip_marker.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_kind.dart';
 import 'package:com.tara.passenger/core/utils/vehicle_seat_capacity.dart';
@@ -15,6 +16,7 @@ import 'package:com.tara.passenger/data/datasources/check_request_book_source.da
 import 'package:com.tara.passenger/data/datasources/driver_around_api.dart';
 import 'package:com.tara.passenger/data/datasources/request_booking_api.dart';
 import 'package:com.tara.passenger/data/datasources/update_passenger_location_api.dart';
+import 'package:com.tara.passenger/data/models/request_booking_model.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:com.tara.passenger/presentation/screens/invite/invite_feature.dart';
 import 'package:com.tara.passenger/presentation/screens/invite/invite_presentation.dart';
@@ -57,6 +59,20 @@ Future<bool> _defaultBookingErrorPresenter(BookingFailure failure) async {
 /// booking. See [MapLogic.checkAwaitedBooking].
 const Duration kAwaitDriverPollInterval = Duration(seconds: 5);
 
+/// Added to the request's `timeout_param` before the wait gives up on its own
+/// (audit S-3): the time for a driver's accept, tapped at the last second, to
+/// reach the server and come back in a check.
+const Duration kDriverAnswerGrace = Duration(seconds: 15);
+
+/// Whether the server's answer says nobody is going to take the request
+/// (audit S-3): it no longer has a booking for the passenger, or has it as
+/// cancelled. `get-request-booking-info` returns the active booking only, so a
+/// request that expired, or was dropped, comes back with no booking.
+bool requestWentUnanswered(RequestBookingModel booking) {
+  final data = booking.data;
+  return data == null || data.status == BookingStatus.cancel;
+}
+
 /// Leaves the map for the screen a booking has moved on to. Injectable
 /// because `Get.offNamed` needs a live navigator.
 typedef BookingRouteOpener = void Function(String route);
@@ -84,7 +100,9 @@ class MapLogic extends GetxController {
     CheckBookingApi? checkBookingApi,
     Duration awaitDriverPollInterval = kAwaitDriverPollInterval,
     BookingRouteOpener? openBookingRoute,
+    DateTime Function()? clock,
   })  : _presentError = errorPresenter ?? _defaultBookingErrorPresenter,
+        _now = clock ?? DateTime.now,
         _injectedBookingSession = bookingSession,
         _checkBookingApi = checkBookingApi,
         _awaitDriverPollInterval = awaitDriverPollInterval,
@@ -132,6 +150,9 @@ class MapLogic extends GetxController {
       _checkBookingApi ?? CheckBookingApi();
   final Duration _awaitDriverPollInterval;
   final BookingRouteOpener _openBookingRoute;
+
+  /// Reads the time for the wait's deadline. Injectable for tests.
+  final DateTime Function() _now;
 
   Timer? _awaitDriverTimer;
   bool _checkingAwaitedBooking = false;
@@ -580,8 +601,27 @@ class MapLogic extends GetxController {
       final booking = await checkBookingApi.checkBookingApi();
       // Cancelled, or the socket got there first, while this was in flight.
       if (session.status != BookingRequestStatus.awaitingDriver) return;
+      // Audit S-3: the overlay used to stay up for good once the server had
+      // let the request go — only an accept, or the passenger's own Cancel,
+      // ever took it down.
+      if (requestWentUnanswered(booking)) {
+        xPrettyLog(
+          message: "The awaited booking is gone (status: "
+              "${booking.data?.status}): no driver took it",
+        );
+        unawaited(_noDriverFound(cancelOnServer: false));
+        return;
+      }
       final route = bookingRedirectRoute(booking.data?.status);
-      if (route == null) return;
+      if (route == null) {
+        // Still requested after every driver's countdown is up: nobody can
+        // take it now. Withdrawn from the server, so a late accept cannot
+        // send a driver to a passenger who has been told there is none.
+        if (session.answerOverdue(_now())) {
+          unawaited(_noDriverFound(cancelOnServer: true));
+        }
+        return;
+      }
       xPrettyLog(
         message: "Booking moved on while waiting (status: "
             "${booking.data?.status}), opening $route",
@@ -597,6 +637,20 @@ class MapLogic extends GetxController {
     } finally {
       _checkingAwaitedBooking = false;
     }
+  }
+
+  /// Audit S-3: nobody took the request. The overlay comes down, the attempt
+  /// is marked failed so a new one can start, and the passenger is told, with
+  /// "Try again" sending the same request again ([_failBooking]).
+  Future<void> _noDriverFound({required bool cancelOnServer}) async {
+    _stopWatchingForDriver();
+    setBookingLoading(false);
+    session.markFailed("no driver accepted");
+    if (cancelOnServer) await cancelBookingApi();
+    await _failBooking(
+      "no driver accepted",
+      failure: BookingFailure.noDriver,
+    );
   }
 
   // ── Ride credit (D40) ────────────────────────────────────────────────────
@@ -688,7 +742,14 @@ class MapLogic extends GetxController {
           await _failBooking("server returned ok with a null booking");
           return;
         }
-        session.markAwaitingDriver();
+        // Every driver's request screen counts down from the same
+        // `timeout_param` (it goes out in the `rideRequest` emit below).
+        final answerWithin = data.data?.timeoutParam;
+        session.markAwaitingDriver(
+          answerBy: answerWithin == null || answerWithin <= 0
+              ? null
+              : _now().add(Duration(seconds: answerWithin) + kDriverAnswerGrace),
+        );
         _watchForDriver();
         socket.rideRequestSocket(
           data: data,

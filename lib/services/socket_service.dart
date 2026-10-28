@@ -326,15 +326,23 @@ PassengerSocketService._internal();
   /// through `emitEvent` is behaviour-preserving — it calls `socket.emit` —
   /// and makes both emits visible in the device log, which is what will
   /// actually settle whether they can go.
+  ///
+  /// Audit X-3: the guard here was inverted — `lazyPut` ran only when the
+  /// fee page's logic was *already* registered, so a push that arrived
+  /// anywhere else threw at `Get.find`. Off the fee page, the page is now
+  /// opened told the payment is confirmed, and goes straight on from there.
   void _handleDriverAcceptedPayment(BuildContext context, dynamic data) {
     emitEvent(SocketEvent.driverAcceptPayment, null);
-    if (Get.isRegistered<CalculateFeeLogic>()) {
-      Get.lazyPut(() => CalculateFeeLogic());
-    }
-    var paymentLogic = Get.find<CalculateFeeLogic>();
     Logger().e("Accept Payment $data");
     if (data != null) {
-      paymentLogic.syncNavigateBack();
+      if (Get.isRegistered<CalculateFeeLogic>()) {
+        Get.find<CalculateFeeLogic>().syncNavigateBack();
+      } else {
+        Get.offAllNamed(
+          AppRoutes.CALCULATEFEE,
+          arguments: {'paymentConfirmed': true},
+        );
+      }
       HapticFeedback.heavyImpact();
       // TaxiNotification.shared.notifyBooking(title: AppLocale.paymentDone.tr);
       tlog(
