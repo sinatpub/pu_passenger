@@ -26,11 +26,6 @@ void main() async {
   // Crashlytics below depends on
   await NotificationLogic().setupInteractedMessage();
 
-  // F-09 / Phase 0.6 (docs/12, docs/05): firebase_crashlytics was declared in
-  // pubspec.yaml but never referenced anywhere in lib/, so the passenger app
-  // shipped with crash reporting as a dependency and not as a feature. Wired
-  // here to match pu_driver (2026-08-29), including the debug-mode opt-out so
-  // local crashes stay out of production data.
   await FirebaseCrashlytics.instance
       .setCrashlyticsCollectionEnabled(!kDebugMode);
   FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
