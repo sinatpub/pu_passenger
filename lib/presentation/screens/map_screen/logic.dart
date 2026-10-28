@@ -672,7 +672,7 @@ class MapLogic extends GetxController {
     return rideCreditToAsk(
       use: state.useRideCredit,
       chosen: state.rideCreditAmount,
-      balance: Get.find<InviteLogic>().creditBalance,
+      balance: Get.find<InviteLogic>().usableCredit,
     );
   }
 

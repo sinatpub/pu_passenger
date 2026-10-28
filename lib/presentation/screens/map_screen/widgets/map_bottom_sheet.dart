@@ -119,7 +119,7 @@ class MapBottomSheet extends StatelessWidget {
                     // D40: shown only to a passenger who has credit to use.
                     if (inviteFeatureEnabled)
                       Obx(() {
-                        final balance = Get.find<InviteLogic>().creditBalance;
+                        final balance = Get.find<InviteLogic>().usableCredit;
                         if (balance <= 0) return const SizedBox.shrink();
                         return Padding(
                           padding: EdgeInsets.only(bottom: 12.d),

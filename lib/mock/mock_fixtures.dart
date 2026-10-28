@@ -187,6 +187,58 @@ class MockData {
             timestamp(now.subtract(Duration(days: days, hours: hours))),
       };
 
+  /// Ride credit the passenger can use now: every reward, minus what [uses]
+  /// spent on trips.
+  static double rideCreditBalance(
+    DateTime now, {
+    List<Map<String, dynamic>> uses = const [],
+  }) {
+    double cents = 0;
+    for (final reward in rewards(now)) {
+      cents += (reward['amount'] as num) * 100;
+    }
+    for (final use in uses) {
+      cents -= (use['amount'] as num) * 100;
+    }
+    return cents.round() / 100;
+  }
+
+  /// The body of `GET /taxi-passenger/referral`: one shape for the QA mock
+  /// backend and for the made-up data served on the real backend (D41).
+  static Map<String, dynamic> referral(
+    DateTime now, {
+    List<Map<String, dynamic>> uses = const [],
+  }) =>
+      {
+        'status': true,
+        'message': 'Success',
+        'data': {
+          'code': inviteCode,
+          'link': inviteLink,
+          'currency': 'USD',
+          'driver_top_up_rate': driverTopUpRate,
+          'passenger_commission_rate': passengerCommissionRate,
+          'reward_balance': rideCreditBalance(now, uses: uses),
+          'invitees': invitees(now),
+          'rewards': rewards(now),
+          'uses': uses,
+        },
+      };
+
+  /// A typed or scanned invite code as the server compares it.
+  static String inviteCodeOf(Object? raw) =>
+      (raw?.toString() ?? '').replaceAll(' ', '').toUpperCase();
+
+  /// The body of `GET /taxi-passenger/referral/check-code`.
+  static Map<String, dynamic> inviteCodeCheck(Object? rawCode) {
+    final inviter = inviteCodes[inviteCodeOf(rawCode)];
+    return {
+      'status': true,
+      'message': 'Success',
+      'data': {'valid': inviter != null, 'inviter_name': inviter},
+    };
+  }
+
   static String timestamp(DateTime t) {
     String two(int n) => n.toString().padLeft(2, '0');
     return '${t.year}-${two(t.month)}-${two(t.day)} '

@@ -300,7 +300,7 @@ get englishKey => {
       AppLocale.inviteRuleDriver: AppLocale.inviteRuleDriver,
       AppLocale.inviteRulePassenger: AppLocale.inviteRulePassenger,
       AppLocale.inviteRuleCredit: AppLocale.inviteRuleCredit,
-      AppLocale.earnedSoFar: AppLocale.earnedSoFar,
+      AppLocale.inviteSummary: AppLocale.inviteSummary,
       AppLocale.rideCredit: AppLocale.rideCredit,
       AppLocale.rideCreditCardSub: AppLocale.rideCreditCardSub,
       AppLocale.inviteRewards: AppLocale.inviteRewards,

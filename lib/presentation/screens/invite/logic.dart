@@ -12,16 +12,30 @@ import 'state.dart';
 /// the card on Profile, the rewards screen and the booking sheet all read the
 /// same answer. Nothing is fetched while the feature is off.
 class InviteLogic extends GetxController {
-  InviteLogic(this._repository, {bool Function()? enabled})
-      : _enabled = enabled ?? (() => inviteFeatureEnabled);
+  InviteLogic(
+    this._repository, {
+    bool Function()? enabled,
+    bool Function()? creditUsable,
+  })  : _enabled = enabled ?? (() => inviteFeatureEnabled),
+        _creditUsable = creditUsable ?? (() => rideCreditUsable);
 
   final ReferralRepository _repository;
   final bool Function() _enabled;
+  final bool Function() _creditUsable;
 
   final InviteState state = InviteState();
 
   /// Ride credit the passenger can use now. Zero until it is known.
   double get creditBalance => state.referral.value?.rewardBalance ?? 0;
+
+  /// The part of [creditBalance] a booking may ask for. None while the
+  /// balance is made up (D41): it is shown, but it cannot pay a driver.
+  double get usableCredit {
+    // Read first: the booking sheet's `Obx` must have a value to watch even
+    // when the answer is "none".
+    final double balance = creditBalance;
+    return _creditUsable() ? balance : 0;
+  }
 
   /// A failed refresh keeps what was on screen: stale credit is better than
   /// a blank card, and the server checks the amount again anyway.

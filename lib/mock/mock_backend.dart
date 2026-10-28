@@ -81,16 +81,8 @@ class MockBackend {
   final List<Map<String, dynamic>> _creditUses = [];
 
   /// Ride credit the passenger can use now: earned minus used.
-  double get rideCreditBalance {
-    double cents = 0;
-    for (final reward in MockData.rewards(_now())) {
-      cents += (reward['amount'] as num) * 100;
-    }
-    for (final use in _creditUses) {
-      cents -= (use['amount'] as num) * 100;
-    }
-    return cents.round() / 100;
-  }
+  double get rideCreditBalance =>
+      MockData.rideCreditBalance(_now(), uses: _creditUses);
 
   Timer? _acceptTimer;
   Timer? _expiryTimer;
@@ -226,12 +218,9 @@ class MockBackend {
   /// treats as the "can't confirm" failure and shows its retry toast.
   // ── Invite and ride credit (D40) ─────────────────────────────────────────
 
-  static String _inviteCodeOf(Object? raw) =>
-      (raw?.toString() ?? '').replaceAll(' ', '').toUpperCase();
-
   /// Sign-up refuses a code nobody has; no code at all is fine.
   MockResponse _register(MockRequest request) {
-    final code = _inviteCodeOf(request.body['invite_code']);
+    final code = MockData.inviteCodeOf(request.body['invite_code']);
     if (code.isNotEmpty && !MockData.inviteCodes.containsKey(code)) {
       return const MockResponse(
           422, {'status': false, 'message': 'Unknown invite code'});
@@ -239,30 +228,11 @@ class MockBackend {
     return _ok(MockData.registerPayload());
   }
 
-  MockResponse _checkInviteCode(MockRequest request) {
-    final inviter = MockData.inviteCodes[_inviteCodeOf(request.query['code'])];
-    return _ok({
-      'status': true,
-      'message': 'Success',
-      'data': {'valid': inviter != null, 'inviter_name': inviter},
-    });
-  }
+  MockResponse _checkInviteCode(MockRequest request) =>
+      _ok(MockData.inviteCodeCheck(request.query['code']));
 
-  MockResponse _referral() => _ok({
-        'status': true,
-        'message': 'Success',
-        'data': {
-          'code': MockData.inviteCode,
-          'link': MockData.inviteLink,
-          'currency': 'USD',
-          'driver_top_up_rate': MockData.driverTopUpRate,
-          'passenger_commission_rate': MockData.passengerCommissionRate,
-          'reward_balance': rideCreditBalance,
-          'invitees': MockData.invitees(_now()),
-          'rewards': MockData.rewards(_now()),
-          'uses': _creditUses,
-        },
-      });
+  MockResponse _referral() =>
+      _ok(MockData.referral(_now(), uses: _creditUses));
 
   MockResponse _requestBooking(MockRequest request) {
     if (settings.scenario == MockScenario.bookingFailed) {

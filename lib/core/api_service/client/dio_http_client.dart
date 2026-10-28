@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:com.tara.passenger/core/network/curl_log_interceptor.dart';
 import 'package:com.tara.passenger/core/utils/app_constant.dart';
+import 'package:com.tara.passenger/demo/demo_invite.dart';
 import 'package:com.tara.passenger/mock/mock_http_interceptor.dart';
 import 'package:com.tara.passenger/mock/mock_mode.dart';
 
@@ -26,6 +27,10 @@ class BaseHttpClient {
     // build: an entry holds the bearer token and the request body. It goes
     // first so it also sees what the mock backend below answers.
     if (!kReleaseMode) dio.interceptors.add(CurlLogInterceptor());
+
+    // The invite routes, answered with made-up data until the backend has
+    // them (D41). Every other request passes through untouched.
+    if (DemoInvite.enabled) dio.interceptors.add(DemoInviteInterceptor());
 
     // QA mock mode (`lib/mock/`). `MockMode.enabled` is a compile-time
     // constant that is false in every release build, so this is dead code

@@ -8,6 +8,9 @@ import 'package:com.tara.passenger/core/utils/app_constant.dart';
 import 'package:com.tara.passenger/data/models/driver_around_model.dart';
 import 'package:com.tara.passenger/data/models/vehical_model.dart';
 import 'package:com.tara.passenger/presentation/screens/home/logic.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/data/datasource/referral_datasource.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/data/repository/referral_repository.dart';
+import 'package:com.tara.passenger/presentation/screens/invite/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/booking_loading_overlay.dart';
 import 'package:com.tara.passenger/presentation/screens/map_screen/widgets/map_appbar.dart';
@@ -86,6 +89,12 @@ void main() {
     Get.put<AppLogic>(_FakeAppLogic(), permanent: true);
     Get.put<HomeLogic>(_HomeLogicHarness(), permanent: true);
     Get.put<MapLogic>(mapLogic, permanent: true);
+    // As `app/service.dart` does. Nothing is fetched here, so the passenger
+    // has no ride credit and the sheet shows no "Use ride credit" row.
+    Get.put<InviteLogic>(
+      InviteLogic(ReferralRepository(ReferralDatasource())),
+      permanent: true,
+    );
   });
 
   tearDown(() {

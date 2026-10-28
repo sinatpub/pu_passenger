@@ -303,7 +303,7 @@ get khmerKey => {
       AppLocale.inviteRuleDriver: "@rate% នៃរាល់ការបញ្ចូលទឹកប្រាក់របស់អ្នកបើកបរដែលអ្នកអញ្ជើញ",
       AppLocale.inviteRulePassenger: "@rate% នៃកម្រៃជើងសាររបស់យើង លើរាល់ការធ្វើដំណើររបស់អ្នកដំណើរដែលអ្នកអញ្ជើញ",
       AppLocale.inviteRuleCredit: "រង្វាន់គឺជាឥណទានធ្វើដំណើរ។ ប្រើវាដើម្បីបង់ថ្លៃធ្វើដំណើរ។",
-      AppLocale.earnedSoFar: "រកបានរហូតមកដល់ពេលនេះ៖ @amount",
+      AppLocale.inviteSummary: "ទទួលបាន @amount · អញ្ជើញបាន @count នាក់",
       AppLocale.rideCredit: "ឥណទានធ្វើដំណើរ",
       AppLocale.rideCreditCardSub: "ពីអ្នកដែលអ្នកបានអញ្ជើញ",
       AppLocale.inviteRewards: "រង្វាន់អញ្ជើញ",

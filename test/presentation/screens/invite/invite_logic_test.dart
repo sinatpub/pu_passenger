@@ -24,6 +24,7 @@ class _Repository extends ReferralRepository {
 void main() {
   late _Repository repository;
   late bool enabled;
+  late bool creditUsable;
   late InviteLogic logic;
 
   final offline = Result<ReferralModel>.err(
@@ -33,7 +34,12 @@ void main() {
   setUp(() {
     repository = _Repository();
     enabled = true;
-    logic = InviteLogic(repository, enabled: () => enabled);
+    creditUsable = true;
+    logic = InviteLogic(
+      repository,
+      enabled: () => enabled,
+      creditUsable: () => creditUsable,
+    );
   });
 
   test('nothing is asked while the feature is off', () async {
@@ -52,6 +58,24 @@ void main() {
     expect(logic.creditBalance, 2.07);
     expect(logic.state.failed.value, isFalse);
     expect(logic.state.isLoading.value, isFalse);
+  });
+
+  test('credit a booking can use is the whole balance', () async {
+    repository.answer = Result.ok(const ReferralModel(rewardBalance: 2.07));
+    await logic.fetch();
+
+    expect(logic.usableCredit, 2.07);
+  });
+
+  test('made-up credit is shown, and none of it goes on a booking', () async {
+    // D41: until the backend has the routes the balance is sample data. The
+    // real backend would ignore it and the driver would be owed the fare.
+    creditUsable = false;
+    repository.answer = Result.ok(const ReferralModel(rewardBalance: 2.07));
+    await logic.fetch();
+
+    expect(logic.creditBalance, 2.07);
+    expect(logic.usableCredit, 0);
   });
 
   test('a first fetch that fails says so', () async {

@@ -186,7 +186,9 @@ void main() {
     expect(find.text('1% of every top-up by a driver you invite'),
         findsOneWidget);
     expect(find.textContaining('10% of our commission'), findsOneWidget);
-    expect(find.text('Earned so far: \$2.07'), findsOneWidget);
+    expect(find.text('\$2.07 earned · 1 invited'), findsOneWidget);
+    expect(find.byTooltip(AppLocale.copyCode), findsOneWidget);
+    expect(find.text(AppLocale.shareInvite), findsOneWidget);
   });
 
   testWidgets('rewards: credit, earned and used, newest first', (t) async {
@@ -221,5 +223,26 @@ void main() {
 
     expect(find.text(AppLocale.noRewardsYet), findsOneWidget);
     expect(find.text(AppLocale.noPeopleYet), findsOneWidget);
+  });
+
+  testWidgets('could not load: as wide as the sheet it is alone in', (t) async {
+    // A bottom sheet takes the width of its content. Alone in "My invite QR",
+    // the message used to leave a sheet as narrow as its one line of text.
+    await t.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [InviteLoadError(onRetry: () {})],
+          ),
+        ),
+      ),
+    ));
+
+    expect(find.text(AppLocale.couldntLoadRewards), findsOneWidget);
+    expect(
+      t.getSize(find.byType(InviteLoadError)).width,
+      t.getSize(find.byType(Scaffold)).width,
+    );
   });
 }

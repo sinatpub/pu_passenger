@@ -392,7 +392,7 @@ class AppLocale {
   static var inviteRulePassenger =
       "@rate% of our commission on every trip by a passenger you invite";
   static var inviteRuleCredit = "Rewards are ride credit. Use it to pay for trips.";
-  static var earnedSoFar = "Earned so far: @amount";
+  static var inviteSummary = "@amount earned · @count invited";
   static var rideCredit = "Ride credit";
   static var rideCreditCardSub = "From people you invited";
   static var inviteRewards = "Invite rewards";
