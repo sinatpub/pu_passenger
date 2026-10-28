@@ -55,3 +55,7 @@ android/build/
 
 # Knowledge-graph output (generated)
 graphify-out/
+
+# AI tool folders (local settings), as in pu_driver
+.claude/
+.opencode/
