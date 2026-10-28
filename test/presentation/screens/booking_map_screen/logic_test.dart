@@ -30,6 +30,8 @@ class _FakeCheckBookingApi extends CheckBookingApi {
   void completeCall(int index, RequestBookingModel response) {
     _completers[index].complete(response);
   }
+
+  void failCall(int index) => _completers[index].completeError('offline');
 }
 
 /// A directions service that answers with a fixed route, at once or when the
@@ -95,6 +97,51 @@ void main() {
   });
 
   tearDown(() => Get.reset());
+
+  group('a ride that could not be loaded (audit S-7)', () {
+    test('a failure with nothing loaded is reported', () async {
+      final fake = _FakeCheckBookingApi();
+      final logic = BookingMapLogic(checkBookingApi: fake);
+
+      final call = logic.getBookingInfo(isSilent: true);
+      fake.failCall(0);
+      await call;
+
+      expect(logic.state.loadFailed, isTrue);
+    });
+
+    test('a later load clears it', () async {
+      final fake = _FakeCheckBookingApi();
+      final logic = BookingMapLogic(checkBookingApi: fake);
+      final failing = logic.getBookingInfo(isSilent: true);
+      fake.failCall(0);
+      await failing;
+
+      final retry = logic.getBookingInfo(isSilent: true);
+      fake.completeCall(1, _modelWithStatus(BookingStatus.accepted));
+      await retry;
+
+      expect(logic.state.loadFailed, isFalse);
+      expect(logic.state.bookingRequestData?.data?.status,
+          BookingStatus.accepted);
+    });
+
+    test('a failure after a load keeps the ride on screen', () async {
+      final fake = _FakeCheckBookingApi();
+      final logic = BookingMapLogic(checkBookingApi: fake);
+      final first = logic.getBookingInfo(isSilent: true);
+      fake.completeCall(0, _modelWithStatus(BookingStatus.accepted));
+      await first;
+
+      final poll = logic.getBookingInfo(isSilent: true);
+      fake.failCall(1);
+      await poll;
+
+      expect(logic.state.loadFailed, isFalse);
+      expect(logic.state.bookingRequestData?.data?.status,
+          BookingStatus.accepted);
+    });
+  });
 
   group('getBookingInfo out-of-order response guard', () {
     test('a single call updates state normally', () async {

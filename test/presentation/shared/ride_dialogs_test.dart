@@ -105,6 +105,19 @@ void main() {
       expect(find.text(AppLocale.driverCancelledTitle), findsOneWidget);
     });
 
+    // Audit X-4.
+    testWidgets('a cancel while waiting ends the attempt', (tester) async {
+      await _pumpRide(tester);
+      final waiting = lostTrip()..markAwaitingDriver();
+      expect(waiting.isBusy, isTrue);
+
+      presentDriverCancelled(session: waiting);
+      await tester.pumpAndSettle();
+
+      expect(waiting.status, BookingRequestStatus.idle);
+      expect(waiting.isBusy, isFalse, reason: 'a new booking can start');
+    });
+
     testWidgets('Close leaves the passenger on Home', (tester) async {
       await _pumpRide(tester);
       presentDriverCancelled(session: lostTrip());

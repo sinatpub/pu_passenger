@@ -163,7 +163,7 @@ class GoogleMapLogic extends GetxController {
           width: 5,
         ));
         update();
-        Logger().i("Polylines: ${parentState.polylines.value.length}");
+        Logger().i("Polylines: ${parentState.polylines.length}");
       }
     } catch (e) {
       Logger().e("Error drawing polyline: $e");

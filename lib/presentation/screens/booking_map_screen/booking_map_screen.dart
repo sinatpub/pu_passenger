@@ -8,6 +8,7 @@ import 'package:com.tara.passenger/core/theme/ta_colors.dart';
 import 'package:com.tara.passenger/core/utils/app_ext.dart';
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/logic.dart';
 import 'package:com.tara.passenger/presentation/screens/booking_map_screen/widgets/booking_sheet.dart';
+import 'package:com.tara.passenger/presentation/screens/booking_map_screen/widgets/ride_load_error_sheet.dart';
 import 'package:com.tara.passenger/presentation/widgets/widgets.dart';
 import 'package:com.tara.passenger/translations/app_locale.dart';
 
@@ -53,7 +54,11 @@ class BookingMapScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              BookingSheet(logic: logic),
+              if (logic.state.loadFailed &&
+                  logic.state.bookingRequestData == null)
+                RideLoadErrorSheet(onRetry: () => logic.getBookingInfo())
+              else
+                BookingSheet(logic: logic),
             ],
           );
         }),

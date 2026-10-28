@@ -6,7 +6,10 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 
 import '../core/utils/app_log.dart';
+import '../data/datasources/check_request_book_source.dart';
+import '../data/models/request_booking_model.dart';
 import '../firebase_options.dart';
+import '../presentation/screens/home/booking_redirect.dart';
 import '../routes/app_pages.dart';
 
 class NotificationLogic {
@@ -73,7 +76,7 @@ class NotificationLogic {
     firebaseMessaging.getInitialMessage().then((RemoteMessage? message) {
       xLog(message: "🧑🏽‍💻 Handle terminated");
       if (message != null) {
-        handleOnNotificationPress(message.data);
+        handleOnNotificationPress(message.data, isTerminate: true);
       }
     });
 
@@ -191,18 +194,47 @@ class NotificationLogic {
     );
   }
 
+  /// Audit S-4: this opened the ride screen for every tap — an announcement,
+  /// a promotion, anything — whether or not there was a ride. Now:
+  ///
+  ///  * a push about an announcement opens that announcement;
+  ///  * anything else asks the server for the passenger's booking and goes
+  ///    where Home would send them on launch ([bookingRedirectRoute]): the
+  ///    ride screen, the fee page, or nowhere;
+  ///  * a push that launched the app ([isTerminate]) navigates nowhere:
+  ///    the splash screen is still running, and Home sends the passenger
+  ///    into an active trip by itself (P-03).
   static Future<void> handleOnNotificationPress(
     Map<String, dynamic> payload, {
     bool isTerminate = false,
     RemoteNotification? remoteNotification,
+    CheckBookingApi? checkBookingApi,
   }) async {
     xPrettyLog(
         message:
             "handleOnNotificationPress: $payload - ${remoteNotification.toString()}");
-    if (Get.currentRoute != AppRoutes.BOOKING) {
-      Get.offNamed(
-        AppRoutes.BOOKING,
-      );
+    if (isTerminate) return;
+
+    final int? announcementId = announcementIdOf(payload);
+    if (announcementId != null) {
+      Get.toNamed(AppRoutes.ANNOUNCEMENTDETAIL, arguments: {'id': announcementId});
+      return;
     }
+
+    final RequestBookingModel booking;
+    try {
+      booking = await (checkBookingApi ?? CheckBookingApi()).checkBookingApi();
+    } catch (e) {
+      xPrettyLog(message: "Notification tap: could not read the booking: $e");
+      return;
+    }
+    final String? route = bookingRedirectRoute(booking.data?.status);
+    if (route != null && Get.currentRoute != route) Get.offNamed(route);
   }
 }
+
+/// The announcement a push is about, or null when it is not about one. The
+/// id is `notification_id`, the key the driver app reads off the same
+/// backend's pushes.
+int? announcementIdOf(Map<String, dynamic> payload) =>
+    int.tryParse('${payload['notification_id'] ?? ''}');

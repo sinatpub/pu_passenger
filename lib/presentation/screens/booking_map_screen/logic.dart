@@ -416,6 +416,7 @@ class BookingMapLogic extends GetxController {
       if (response.data != null) {
         // Update the local state
         state.bookingRequestData = response;
+        state.loadFailed = false;
         _bookingInfo(); // Updates UI Text/Titles
         unawaited(resolveMissingPickupAddress());
 
@@ -426,6 +427,13 @@ class BookingMapLogic extends GetxController {
       }
     } catch (e) {
       tlog("Booking Update Error: $e");
+      // Audit S-7: a failure with nothing loaded yet left an empty map and a
+      // sheet of dashes, with no word of what went wrong. A failure after a
+      // load keeps what is on screen; the next poll may well succeed.
+      if (requestId == _requestSeq && state.bookingRequestData == null) {
+        state.loadFailed = true;
+        update();
+      }
     } finally {
       if (!isSilent) EasyLoading.dismiss();
     }

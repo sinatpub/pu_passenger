@@ -86,6 +86,11 @@ void presentDriverCancelled({BookingSession? session}) {
       (Get.isRegistered<BookingSession>() ? Get.find<BookingSession>() : null);
   final vehicleTypeId = draft?.vehicleTypeId;
   final destination = draft?.destination;
+  // Audit X-4: the trip is over, so is the attempt that started it. Left as
+  // it was, a cancel that came while the passenger was still waiting kept
+  // the session "awaiting a driver": the map put the searching overlay back
+  // up, and refused a new booking. "Book again" carries what it needs above.
+  draft?.reset();
 
   Get.offAllNamed(AppRoutes.BOTTOMNAV);
   final context = Get.context;

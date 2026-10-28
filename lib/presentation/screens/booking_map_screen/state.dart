@@ -9,6 +9,11 @@ class BookingMapState {
 
   RequestBookingModel? bookingRequestData;
 
+  /// Audit S-7: the ride could not be loaded and there is nothing to show
+  /// from before. The sheet says so and offers Retry; the poll keeps asking
+  /// in the background either way.
+  bool loadFailed = false;
+
   /// How long and how far the driver's drive to the pickup is, from the
   /// route that draws the line. Null outside the accepted stage, and when
   /// the directions service did not say.
