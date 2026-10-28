@@ -49,7 +49,7 @@ signing in as the test account on a real phone. It carries that account's
 phone and password, so it is for testers only and must never be published.
 
 ```bash
-fvm flutter build apk --release --dart-define-from-file=dart_defines.json --dart-define=DEBUG_LOGIN_IN_RELEASE=true
+fvm flutter build apk --release --dart-define-from-file=dart_defines.json --dart-define=DEBUG_LOGIN_IN_RELEASE=true --dart-define=DEMO_INVITE=true
 ```
 
 - Do **not** add `USE_MOCK_DATA=true`. A red **MOCK** tab on the left edge of the screen means the mock backend is on; these cases are for the real one.
@@ -78,14 +78,13 @@ These are known and not yet built or fixed. Skip them when they show up.
 | What you see | Why |
 |---|---|
 | No route line on the map, and no "N min" arrival time on the ride screen | Google refuses the route request for the current key (`REQUEST_DENIED`). Needs a change in Google Cloud console |
-| The search for a driver never ends when no driver accepts | No "no driver found" screen yet. Tap **Cancel** |
 | The rating is not saved on the server | The backend has no rating endpoint. The rating shows on the Thank you page for this session only |
 | The **PROMO** banner on Home only shows a toast | Demo content, no promo system behind it |
 | After a failed load, Home keeps its grey placeholder rows and shows only a short message | No error state on Home yet. Tap the refresh button |
 | The driver marker moves in steps, up to a minute apart | The driver's position comes with the booking refresh, not as a live stream |
 | **Saved places** shows "coming soon" | Not built |
 | **Add a note for driver** is not seen by the driver | The note is kept on the phone and not sent |
-| **My invite QR**, **Invite rewards** and the **Ride credit** card show code `PS4N7Q`, $2.07 and the same two people for every account | Sample data: the backend has no invite routes yet. Nobody is really invited or credited |
+| **My invite QR**, **Invite rewards** and the **Ride credit** card show code `PS4N7Q`, $2.07 and the same two people for every account | Sample data: the backend has no invite routes yet. Nobody is really invited or credited. A release build without `DEMO_INVITE=true` has no invite at all (D47) |
 | No **Use ride credit** on the booking sheet | Sample credit cannot pay a driver. It works on the mock build |
 | Seat counts and "~N min" on the vehicle list are fixed per vehicle kind | The backend sends neither |
 | A trip booked before 2026-10-07 shows no pickup address on the fare page, receipt, or history | It was saved without one. The ride screen looks one up; the other pages show what the server has |

@@ -11,9 +11,10 @@ import 'package:com.tara.passenger/mock/mock_mode.dart';
 /// real: sign-in, booking, trips, history. Only the two invite routes are
 /// answered from here, with the QA mock backend's figures.
 ///
-/// **On unless a build turns it off**, with `--dart-define=DEMO_INVITE=false`
-/// (or the same key in `dart_defines.json`). That is the reverse of the
-/// driver app, where the same flag is off by default (DD-55). It is a
+/// **On in debug and profile builds, off in a release build** (D47), so a
+/// store build cannot carry it by accident. Any build can say otherwise with
+/// `--dart-define=DEMO_INVITE=true` or `=false` — the test APK passes `true`.
+/// The driver app's flag is off in every build by default (DD-55). It is a
 /// compile-time constant: a build with it off has none of this.
 ///
 /// **What is made up:** the passenger's own code and link, the people they
@@ -28,7 +29,7 @@ class DemoInvite {
   const DemoInvite._();
 
   static const bool enabled =
-      bool.fromEnvironment('DEMO_INVITE', defaultValue: true);
+      bool.fromEnvironment('DEMO_INVITE', defaultValue: !kReleaseMode);
 
   /// QA mock mode already answers the whole feature; this stands aside.
   static bool get isActive => enabled && !MockMode.isActive;

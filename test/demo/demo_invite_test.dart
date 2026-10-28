@@ -5,11 +5,20 @@ import 'package:com.tara.passenger/presentation/screens/invite/data/datasource/r
 import 'package:com.tara.passenger/presentation/screens/invite/data/models/referral_model.dart';
 import 'package:com.tara.passenger/presentation/screens/invite/invite_presentation.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kReleaseMode;
 import 'package:flutter_test/flutter_test.dart';
 
 /// D41 — the invite routes answered with made-up data on the real backend,
 /// which has none of them. Nothing else is answered here.
 void main() {
+  // D47: a store build cannot carry the sample data by accident. The release
+  // half cannot run here (tests are never a release build); this pins the
+  // half that can.
+  test('on by default outside a release build', () {
+    expect(DemoInvite.enabled, !kReleaseMode);
+    expect(DemoInvite.enabled, isTrue);
+  });
+
   /// What the stand-in for the real backend was asked.
   late List<String> reachedBackend;
   late bool demoOn;

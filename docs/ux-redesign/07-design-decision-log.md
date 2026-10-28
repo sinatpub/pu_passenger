@@ -739,6 +739,21 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 
 ---
 
+## D47: Sample Invite Data Stays Out of Release Builds
+
+**Decision:** `DEMO_INVITE` is on in debug and profile builds and off in a release build, unless the build passes `--dart-define=DEMO_INVITE=true` (the test APK does). Where neither the sample data nor the QA mock backend answers the invite routes, every invite entry point is hidden again, as in D40 (`inviteFeatureEnabled`). D41 stands for every build that is not a store build.
+
+**Rationale:**
+- D41's own tradeoff: the sample data "must not reach a store". As a default that held only if every release was built with `DEMO_INVITE=false`; it now holds by construction
+- Audit S-5 (2026-10-27), and the user's go-ahead of 2026-10-28
+- Without sample data the backend answers the invite routes `404`. A store build should not offer screens that can only fail
+
+**Tradeoffs:**
+- A release build handed to a tester shows no invite unless it is built with `DEMO_INVITE=true`; the test APK command in `docs/qa/MANUAL_TEST_CASES.md` passes it
+- When the backend has the routes, `inviteFeatureEnabled` goes back to `true` (or a server flag) and `lib/demo/` is deleted
+
+---
+
 ## Decision Summary
 
 | # | Decision | Impact | Risk |
@@ -789,3 +804,4 @@ All decisions are based on the authoritative prototype at `taarraa-ui-prototype.
 | D44 | Driver markers are pu_driver's set | Medium | Low |
 | D45 | Each service has its own thumbnail shape | Medium | Low |
 | D46 | Car marker carries a taxi light | Low | None |
+| D47 | Sample invite data stays out of release builds | High | Low |

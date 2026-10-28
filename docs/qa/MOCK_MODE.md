@@ -156,7 +156,7 @@ The `PositionSource` seam is ordinary code and can stay.
 
 ## Invite and ride credit (D40, D41)
 
-The screens are in every build (D41). Against the real backend, which has no invite routes yet, they show the same sample figures as below, but credit cannot be used on a booking. Only mock mode runs the whole feature.
+The screens are in debug, profile and test-APK builds (D41, D47); a release build without `DEMO_INVITE=true` hides them. Against the real backend, which has no invite routes yet, they show the same sample figures as below, but credit cannot be used on a booking. Only mock mode runs the whole feature.
 
 | Where | What to try |
 |---|---|
