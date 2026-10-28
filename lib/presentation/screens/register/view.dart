@@ -14,22 +14,21 @@ import 'package:com.tara.passenger/translations/app_locale.dart';
 
 /// Whether Create may be pressed.
 ///
-/// **Pinned, not "improved"** (roadmap S4 Risk / Scope): submit is disabled
-/// unless there is a name *and* a photo. `03 §Screen 4` says the photo is
-/// optional and adds a Skip button that registers with an auto-generated name;
-/// the roadmap is explicit that where the spec and the code disagree here,
-/// **the code wins**, so neither is built.
+/// A name is enough. **The photo is optional** (D42, user decision of
+/// 2026-10-13): a passenger is not asked for one to book a ride. Until then
+/// the rule also wanted a photo, pinned that way by the roadmap (S4) against
+/// `03 §Screen 4`, which called the photo optional all along.
 ///
-/// The timestamp name auto-generation in `RegisterLogic.passengerRegister`
-/// therefore stays what it is today: a defensive path at submit time that this
-/// rule makes unreachable through the UI.
+/// The spec's Skip button, which registers with an auto-generated name, is
+/// still not built: a name is required. So the timestamp name in
+/// `RegisterLogic.passengerRegister` stays a defensive path this rule makes
+/// unreachable through the UI.
 ///
 /// D40: an invite code is optional, but one that is typed has to be a real
 /// one. A code the server refused, or is still checking, blocks Create. A
 /// check that could not be made does not: the server checks again at sign-up.
 bool canSubmitRegistration(RegisterState state) =>
     state.passengerName != '' &&
-    state.profileImage != null &&
     state.inviteStatus != InviteCodeStatus.invalid &&
     state.inviteStatus != InviteCodeStatus.checking;
 
@@ -88,11 +87,10 @@ class RegisterPage extends StatelessWidget {
                         Center(child: RegisterAvatarPicker(logic: logic)),
                         const SizedBox(height: 6),
 
-                        /// The spec's caption says the photo is optional. It
-                        /// is not — `canSubmitRegistration` requires it — so
-                        /// the caption says so instead of misleading.
+                        /// D42: says what `canSubmitRegistration` does. Create
+                        /// does not wait for a photo.
                         Text(
-                          AppLocale.tapToAddPhotoRequired.tr,
+                          AppLocale.tapToAddPhotoOptional.tr,
                           textAlign: TextAlign.center,
                           style: TaTextStyles.bodySmall
                               .copyWith(color: TaColors.textMuted),

@@ -160,7 +160,11 @@ get englishKey => {
       AppLocale.startRide: AppLocale.startRide,
       AppLocale.waitingDriverArrived: AppLocale.waitingDriverArrived,
       AppLocale.weDontOperateHere: AppLocale.weDontOperateHere,
-      AppLocale.tapToAddPhotoRequired: AppLocale.tapToAddPhotoRequired,
+      AppLocale.tapToAddPhotoOptional: AppLocale.tapToAddPhotoOptional,
+      AppLocale.profilePhoto: AppLocale.profilePhoto,
+      AppLocale.takePhoto: AppLocale.takePhoto,
+      AppLocale.chooseFromGallery: AppLocale.chooseFromGallery,
+      AppLocale.removePhoto: AppLocale.removePhoto,
       AppLocale.fullName: AppLocale.fullName,
       AppLocale.enterFullName: AppLocale.enterFullName,
       // P2 — component copy

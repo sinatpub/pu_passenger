@@ -16,12 +16,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../../core/theme/ta_colors.dart';
-import '../../../core/theme/ta_text_styles.dart';
 import '../../../translations/app_locale.dart';
 import '../../widgets/error_dialog_widget.dart';
-import '../../widgets/ta_pressable.dart';
-import '../../widgets/x_showmodal_bottom.dart';
+import 'photo_source_sheet.dart';
 import 'state.dart';
 
 class RegisterLogic extends GetxController {
@@ -163,92 +160,34 @@ class RegisterLogic extends GetxController {
   }
 
   // image picker
-  Future<void> getImageFromCamera() async {
-    var imageFile = await _picker.pickImage(source: ImageSource.camera);
-    if (imageFile != null) {
-      state.profileImage = File(imageFile.path);
-      Get.back();
-      update();
-    }
+  Future<void> getImageFromCamera() => _pickImage(ImageSource.camera);
+
+  Future<void> getImageGallery() => _pickImage(ImageSource.gallery);
+
+  Future<void> _pickImage(ImageSource source) async {
+    final imageFile = await _picker.pickImage(source: source);
+    if (imageFile == null) return;
+    state.profileImage = File(imageFile.path);
+    update();
   }
 
-  Future<void> getImageGallery() async {
-    var imageFile = await _picker.pickImage(source: ImageSource.gallery);
-    if (imageFile != null) {
-      state.profileImage = File(imageFile.path);
-      Get.back();
-      update();
-    }
-  }
-
-  void showModal() async {
-    xShowModalBottomSheet(
-      initialChildSize: 0.4,
-      maxChildSize: 1.0,
-      minChildSize: 0.1,
-      context: Get.context!,
-      body: (context, scrollController) {
-        return SizedBox(
-          width: double.infinity,
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              TaPressable(
-                onTap: getImageGallery,
-                child: Container(
-                  width: 180,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: TaColors.border,
-                  ),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.image),
-                      SizedBox(
-                        height: 8,
-                      ),
-                      Text(
-                        "Gallery\nរូបថត",
-                        textAlign: TextAlign.center,
-                        style: TaTextStyles.titleMedium,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              TaPressable(
-                onTap: getImageFromCamera,
-                child: Container(
-                  width: 180,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: TaColors.border,
-                  ),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.camera_alt),
-                      SizedBox(
-                        height: 8,
-                      ),
-                      Text(
-                        "Take a Photo\nថតរូប",
-                        textAlign: TextAlign.center,
-                        style: TaTextStyles.titleMedium,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+  /// Asks where the photo comes from, then goes there. The sheet is closed
+  /// by the time the camera or the gallery opens.
+  Future<void> showModal() async {
+    final choice = await PhotoSourceSheet.show(
+      Get.context!,
+      hasPhoto: state.profileImage != null,
     );
+    switch (choice) {
+      case PhotoSourceChoice.camera:
+        await getImageFromCamera();
+      case PhotoSourceChoice.gallery:
+        await getImageGallery();
+      case PhotoSourceChoice.remove:
+        removeProfileImage();
+      case null:
+        break;
+    }
   }
 
   @override

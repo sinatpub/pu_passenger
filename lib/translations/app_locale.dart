@@ -193,7 +193,11 @@ class AppLocale {
   static var couldNotLoadAnnouncements = "Couldn't load announcements";
 
   // S4 — auth (Screen 1-4)
-  static var tapToAddPhotoRequired = "Tap to add a photo (required)";
+  static var tapToAddPhotoOptional = "Tap to add a photo (optional)";
+  static var profilePhoto = "Profile photo";
+  static var takePhoto = "Take a photo";
+  static var chooseFromGallery = "Choose from gallery";
+  static var removePhoto = "Remove photo";
   static var fullName = "Full name";
   static var enterFullName = "Enter your full name";
 

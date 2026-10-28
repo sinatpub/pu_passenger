@@ -115,7 +115,11 @@ get khmerKey => {
       AppLocale.startRide: "ចាប់ផ្ដើមដំណើរ",
       AppLocale.waitingDriverArrived: "កំពុងរង់ចាំអ្នកបើកបរមកដល់",
       AppLocale.weDontOperateHere: "យើងមិនទាន់ផ្ដល់សេវាកម្មនៅទីនេះទេ",
-      AppLocale.tapToAddPhotoRequired: "ចុចដើម្បីបន្ថែមរូបថត (ទាមទារ)",
+      AppLocale.tapToAddPhotoOptional: "ចុចដើម្បីបន្ថែមរូបថត (មិនបង្ខំ)",
+      AppLocale.profilePhoto: "រូបថតប្រវត្តិរូប",
+      AppLocale.takePhoto: "ថតរូប",
+      AppLocale.chooseFromGallery: "ជ្រើសរើសពីរូបថត",
+      AppLocale.removePhoto: "លុបរូបថត",
       AppLocale.fullName: "ឈ្មោះពេញ",
       AppLocale.enterFullName: "បញ្ចូលឈ្មោះពេញ",
       // P2 — component copy
